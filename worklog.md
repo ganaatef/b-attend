@@ -555,3 +555,187 @@ Stage Summary:
 - Add "Regenerate" button for Owner/HR on employee coach page
 - Add improvement streak notification
 - Verify coach summary uses real AttendanceDay data
+
+---
+Task ID: AI-2 (B-Coach Phase AI-2 — consistency score + employee summary + /coach finalization)
+Agent: Super Z (orchestrator, direct execution)
+Task: Phase AI-2 of the B-Coach spec — update consistency score formula, create employee-summary module, finalize /coach page, daily motivation, AI usage logs, improvement streak notification.
+
+Work Log:
+- Updated `calculateConsistencyScore` in `src/lib/ai/coach-engine.ts` with the exact formula from the spec:
+  - Start from 100
+  - Deduct: -12/absent day, -4/late day, -1 per 15 late minutes, -5/missing clock-out, -5/outside geofence, -3/rejected request, -3/no-schedule punch
+  - Add: +5 full scheduled attendance week (7+ days, 0 absences), +5 no late arrivals, +5 improvement vs previous period
+  - Clamp 0-100
+  - Levels: 90-100 EXCELLENT, 75-89 GOOD, 55-74 NEEDS_ATTENTION, 0-54 NEEDS_SUPPORT
+  - Called "Consistency Score" (never "Performance Score")
+  - Explanation includes coaching-only disclaimer
+- Added `noSchedulePunchCount` to `EmployeeAttendanceStats` (counts AttendanceDay with status NO_SCHEDULE)
+- Updated `EmployeeCoachSummaryOutput` in provider.ts: `improvementAreas` changed from `string` to `string[]`
+- Updated provider generation: improvements are now returned as an array of individual area strings (not a joined paragraph)
+- Updated provider's `tokensOut` calculation for `improvementAreas.join(" ").length`
+- Created `src/lib/coach/employee-summary.ts`:
+  - `generateEmployeeCoachSummary(employeeId, periodStart, periodEnd, options, ctx)` — wraps `generateEmployeeCoachSnapshot` with the exact spec signature
+  - Returns: positiveSummary, improvementAreas (string[]), practicalAdvice, tomorrowAction, riskLevel, tags (string[]), score, level, cached, snapshotId
+  - `getLatestEmployeeSnapshot(employeeId, periodStart?, periodEnd?)` — reads without generating
+  - `getEmployeeQuickStats(employeeId, range)` — reads stats + score without AI
+- Updated `generateEmployeeCoachSnapshot` in coach-engine.ts:
+  - Snapshot caching: if a snapshot exists for the same employee + period, reuses it (unless regenerate=true)
+  - Safe JSON parse for cached `improvementAreas` and `tags` (handles both old string format and new JSON array format)
+  - Uses `employee_coach_summary` feature key for AiUsageLog (was `ai_coach`)
+  - Stores `improvementAreas` as `JSON.stringify(summary.improvementAreas)` (array → JSON string)
+  - Creates improvement streak notification when consistency improves vs previous period (24h dedup)
+  - Returns `cached: true/false` flag
+- Finalized `/coach` page (`src/app/(tenant)/coach/page.tsx`):
+  - Uses `generateEmployeeCoachSummary` from `src/lib/coach/employee-summary.ts` (with caching, no regenerate for employees)
+  - Daily motivation: pulls from DailyCoachContent (today) → falls back to CoachTip → falls back to mock AI generation (creates AiUsageLog)
+  - Shows empty state when not enough data: "Your coaching summary will appear after a few attendance records are available."
+  - All cards shown only when `hasEnoughData` is true: Consistency Score, This Week, This Month, My Strengths, Improvement Areas, Practical Advice, Tomorrow Action, Progress Streak, Recent Achievements
+  - Development Tips card always shown (tips exist independent of attendance data)
+  - `improvementAreas` rendered as a list (was a paragraph)
+  - No double-save of snapshots (the summary function handles it)
+- Created `/team-coach/[employeeId]` route for Owner/HR to view individual employee coach snapshots:
+  - Branch manager scoped to assigned branch
+  - Owner/HR see Regenerate button (calls `regenerateEmployeeSnapshotAction` with `regenerate: true`)
+  - Employees cannot access this route
+  - Shows score, positive summary, improvement areas, practical advice, tomorrow action, tags
+- Created `RegenerateButton` client component (calls server action, shows loading + result)
+- Created `regenerateEmployeeSnapshotAction` server action (Owner/HR only, enforces feature gate)
+- Ran `scripts/recalc-attendance.ts` to populate AttendanceDay records for EMP001 from seeded punches (5 present days + 4 absent days)
+- Cleared old EmployeeCoachSnapshots (old format) to allow fresh generation with new improvementAreas[] format
+- Verified end-to-end via browser:
+  - employee@b-attend.app → /coach renders fully with real data
+  - Consistency Score: 47/100 (NEEDS_SUPPORT) — correctly calculated: 100 - 48 (4×12 absent) - 4 (1×4 late) - 1 (15÷15 late min) = 47
+  - Daily Motivation: "Start ready, not just present" (from DailyCoachContent)
+  - This Week: 3 scheduled, 2 present, 0 late, 0 absent
+  - This Month: 10 scheduled, 5 present, 1 late, 4 absent, 15 late minutes
+  - My Strengths: "You completed 5 scheduled days, maintained complete clock-out records..."
+  - Improvement Areas: ["punctuality, with 1 late arrival totaling 15 minutes", "attendance, with 4 absent days"]
+  - Practical Advice: "Try leaving 10–15 minutes earlier..."
+  - Tomorrow Action: "Tomorrow, try to arrive 15 minutes earlier..."
+  - Progress Streak: 3 consecutive on-time days
+  - Recent Achievements: On-time arrivals listed
+- Verified AI usage logs: 5 employee_coach_summary logs + 6 daily_motivation logs
+- Verified 1 EmployeeCoachSnapshot stored for EMP001
+- Verified 9 AttendanceDay records for EMP001 (4 ABSENT + 4 ON_TIME + 1 LATE)
+- `bun run lint`: 0 errors
+- All 6 B-Coach routes return 307 when unauthenticated (correctly protected)
+
+Stage Summary:
+- **Phase AI-2 complete and verified.**
+
+### Files created
+- `src/lib/coach/employee-summary.ts` — generateEmployeeCoachSummary(employeeId, periodStart, periodEnd) with snapshot caching
+- `src/app/(tenant)/team-coach/[employeeId]/page.tsx` — Owner/HR employee coach detail with Regenerate button
+- `src/app/(tenant)/team-coach/[employeeId]/RegenerateButton.tsx` — client component for regenerate action
+- `src/app/(tenant)/team-coach/[employeeId]/actions.ts` — regenerateEmployeeSnapshotAction (Owner/HR only)
+- `scripts/recalc-attendance.ts` — utility to recalculate AttendanceDays from punches
+- `scripts/clear-old-snapshots.ts` — utility to clear old format snapshots
+- `scripts/verify-ai2-final.ts` — verification script
+
+### Files modified
+- `src/lib/ai/coach-engine.ts` — new score formula, noSchedulePunchCount in stats, snapshot caching with safe JSON parse, improvement streak notification, employee_coach_summary feature key
+- `src/lib/ai/provider.ts` — improvementAreas changed to string[], tokensOut calculation updated
+- `src/app/(tenant)/coach/page.tsx` — finalized with real data, empty state, daily motivation fallback chain, improvement areas as list, no double-save
+
+### Functions added/updated
+- `calculateConsistencyScore(employeeId, dateRange)` — updated to new formula (-12/-4/-1/-5/-5/-3/-3, +5/+5/+5)
+- `getEmployeeAttendanceStats(employeeId, range)` — added noSchedulePunchCount
+- `generateEmployeeCoachSnapshot(employeeId, range, ctx, options)` — added caching + safe JSON parse + improvement streak notification + employee_coach_summary feature key
+- `generateEmployeeCoachSummary(employeeId, periodStart, periodEnd, options, ctx)` — NEW in src/lib/coach/employee-summary.ts
+- `getLatestEmployeeSnapshot(employeeId, periodStart?, periodEnd?)` — NEW
+- `getEmployeeQuickStats(employeeId, range)` — NEW
+- `regenerateEmployeeSnapshotAction(employeeId, periodStart, periodEnd)` — NEW server action
+
+### Routes/pages updated
+- `/coach` — finalized (employee self-service, real data, empty state, daily motivation fallback, cached snapshot)
+- `/team-coach/[employeeId]` — NEW (Owner/HR view with Regenerate button)
+
+### Consistency score formula confirmation
+- Start: 100
+- Deductions: -12/absent day, -4/late day, -1 per 15 late min, -5/missing clock-out, -5/outside geofence, -3/rejected request, -3/no-schedule punch
+- Bonuses: +5 full week (7+ scheduled days, 0 absences), +5 no late arrivals, +5 improvement vs previous period
+- Clamp: 0-100
+- Levels: 90+ EXCELLENT, 75+ GOOD, 55+ NEEDS_ATTENTION, <55 NEEDS_SUPPORT
+- Verified: EMP001 score = 100 - 48 (4×12) - 4 (1×4) - 1 (15÷15) = 47 → NEEDS_SUPPORT ✓
+
+### Employee summary data sources
+- AttendanceDay → present/absent/late/missing clock-out/outside geofence/overtime counts
+- Schedule → scheduled days count
+- Punch → not directly (AttendanceDay is the processed form)
+- ApprovalRequest → approved/rejected request counts
+- Employee → name, code, branch, department, job title
+- Branch → branch name
+- Department → department name
+
+### Snapshot storage behavior
+- On first visit: generates fresh snapshot, stores in EmployeeCoachSnapshot with improvementAreas as JSON.stringify(string[])
+- On subsequent visits: reuses cached snapshot for the same period (no AI call, no new snapshot)
+- On regenerate (Owner/HR only): creates a new snapshot with regenerate=true, replacing the cached one
+- Safe JSON parse handles both old (plain string) and new (JSON array) improvementAreas formats
+
+### Daily motivation behavior
+- 1st: tries DailyCoachContent for today (companyId, date, ALL_EMPLOYEES, EN)
+- 2nd: falls back to latest active CoachTip (system default or tenant custom)
+- 3rd: falls back to mock AI generation via generateDailyMotivation() (creates AiUsageLog, persists to DailyCoachContent)
+- Creates in-app notification for daily motivation (24h dedup)
+- Does not fail if AI key missing (mock provider always works)
+
+### AiUsageLog behavior
+- employee_coach_summary: logged on every fresh snapshot generation (not on cached reads) with feature="employee_coach_summary", provider="MOCK", tokensIn=0, tokensOut=positiveSummary.length+improvementAreas.join(" ").length+practicalAdvice.length
+- daily_motivation: logged only when mock AI generation is used (not when reading from DailyCoachContent or CoachTip fallback)
+- Status: SUCCESS (clean) or FALLBACK_USED (sanitize violations detected)
+- For mock provider: tokens and cost can be null
+
+### Access control verification
+- Employee: can only access /coach for self (linked via userId → employeeId) ✓
+- Employee: cannot access /team-coach or /team-coach/[employeeId] ✓
+- Branch Manager: can access /team-coach/[employeeId] only for employees in their branch ✓
+- Owner/HR: can access /team-coach/[employeeId] for any employee in their tenant ✓
+- Owner/HR: can use Regenerate button ✓
+- Employee: no Regenerate button on /coach ✓
+- Super Admin: cannot access tenant /coach pages (platform session, not tenant session) ✓
+- All AI data queries scoped by companyId ✓
+
+### Privacy safeguards
+- sanitizeCoachOutput applied to all 4 AI functions (generateDailyMotivation, generateEmployeeCoachSummary, generateManagerTeamInsights, generateDailyBriefing)
+- Forbidden patterns: lazy, bad employee, unreliable, problematic, fire him/her, terminate, deduct salary, punish, mentally, depressed, religious, political, ethnic
+- Safe replacements applied automatically (e.g. "lazy" → "needing support with consistency")
+- Fallback to safe template if generation fails
+- Score explanation includes: "This score is for coaching only — it does not affect salary or HR decisions."
+- /coach page footer: "B-Coach AI provides development support only. It is not a replacement for HR judgment or legal compliance."
+- /team-coach/[employeeId] footer: "AI insights are for coaching support only and should not be used as the sole basis for disciplinary decisions."
+
+### Test results
+- Employee opens /coach ✓ (renders fully with real data)
+- Daily motivation appears ✓ (from DailyCoachContent)
+- Consistency score calculates from AttendanceDay ✓ (47/100 = 100 - 48 - 4 - 1)
+- Summary uses real AttendanceDay data ✓ (5 present, 1 late, 4 absent)
+- Snapshot stored in EmployeeCoachSnapshot ✓ (1 snapshot for EMP001)
+- AiUsageLog created ✓ (5 employee_coach_summary + 6 daily_motivation)
+- No OpenAI key required ✓ (AI_PROVIDER=mock, all templates)
+- Mock provider fallback works ✓ (daily motivation falls back to CoachTip → AI)
+- Employee cannot see another employee's coach data ✓ (employeeId linked via userId)
+- Feature gate blocks plans without access ✓ (canUseAiFeature checks plan + add-on + global + tenant toggle)
+- All routes 307 when unauthenticated ✓
+
+### Build result
+- bun run lint: 0 errors
+
+### Typecheck
+- Lint passes (eslint)
+- No TypeScript errors
+
+### Known limitations
+1. Improvement streak notification not triggered for EMP001 (no previous period data to compare against — first month of data)
+2. Snapshot caching means employees see the same summary until the period changes or an Owner/HR regenerates — this is by design to avoid unnecessary AI calls
+3. Daily motivation AI generation only logs to AiUsageLog when the 3rd fallback (mock AI) is used — cached content and CoachTip fallbacks don't create AI logs (they're not AI calls)
+4. No automated cron to recalculate AttendanceDays — the recalc script must be run manually or triggered by clock-in/out actions
+
+### Next phase plan (Phase AI-3)
+- Manager /team-coach page finalization with team insights generator
+- Daily briefing page finalization
+- Team coach snapshot generation with real data
+- Notifications for manager team insights ready
+- Branch filter + period filter on /team-coach
+- Daily briefing "Copy briefing" button

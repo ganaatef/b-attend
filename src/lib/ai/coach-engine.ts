@@ -199,13 +199,28 @@ export async function generateEmployeeCoachSnapshot(
     });
     if (existingSnapshot) {
       // Return cached snapshot + reconstruct summary from stored data
+      // Safe JSON parse — old snapshots may have improvementAreas as plain string
+      let cachedImprovementAreas: string[] = [];
+      try {
+        const parsed = JSON.parse(existingSnapshot.improvementAreas || "[]");
+        cachedImprovementAreas = Array.isArray(parsed) ? parsed : [String(parsed)];
+      } catch {
+        cachedImprovementAreas = existingSnapshot.improvementAreas ? [existingSnapshot.improvementAreas] : [];
+      }
+      let cachedTags: string[] = [];
+      try {
+        const parsedTags = JSON.parse(existingSnapshot.tags || "[]");
+        cachedTags = Array.isArray(parsedTags) ? parsedTags : [];
+      } catch {
+        cachedTags = [];
+      }
       const cachedSummary = {
         positiveSummary: existingSnapshot.positiveSummary,
-        improvementAreas: JSON.parse(existingSnapshot.improvementAreas || "[]") as string[],
+        improvementAreas: cachedImprovementAreas,
         practicalAdvice: existingSnapshot.practicalAdvice,
         tomorrowAction: existingSnapshot.tomorrowAction,
         riskLevel: existingSnapshot.riskLevel as "LOW" | "MEDIUM" | "HIGH",
-        tags: JSON.parse(existingSnapshot.tags || "[]") as string[],
+        tags: cachedTags,
       };
       const cachedScore = {
         score: existingSnapshot.score,
