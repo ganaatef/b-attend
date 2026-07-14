@@ -29,6 +29,16 @@ import {
   Brain,
   BookOpen,
   Sunrise,
+  Briefcase,
+  FileText,
+  GraduationCap,
+  Package,
+  Wallet,
+  UserPlus,
+  UserMinus,
+  AlertTriangle,
+  FolderTree,
+  Award,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -72,6 +82,22 @@ const tenantOwnerNav: NavItem[] = [
   { href: "/kiosk", label: "Kiosk", icon: TabletSmartphone, phase: 4 },
   { href: "/approvals", label: "Approvals", icon: CheckSquare, phase: 5 },
   { href: "/reports", label: "Reports", icon: FileBarChart, phase: 6 },
+  // HR section
+  { href: "/hr", label: "HR Dashboard", icon: Briefcase, phase: 10 },
+  { href: "/hr/departments", label: "Departments", icon: FolderTree, phase: 10 },
+  { href: "/hr/job-titles", label: "Job Titles", icon: Award, phase: 10 },
+  { href: "/hr/contracts", label: "Contracts", icon: FileText, phase: 10 },
+  { href: "/hr/documents", label: "Documents", icon: ClipboardList, phase: 10 },
+  { href: "/hr/leaves", label: "Leave Management", icon: CalendarDays, phase: 10 },
+  { href: "/hr/warnings", label: "Warnings", icon: AlertTriangle, phase: 10 },
+  { href: "/hr/training", label: "Training", icon: GraduationCap, phase: 10 },
+  { href: "/hr/assets", label: "Assets & Uniforms", icon: Package, phase: 10 },
+  { href: "/hr/payroll-profiles", label: "Payroll Profiles", icon: Wallet, phase: 10 },
+  { href: "/hr/payroll-runs", label: "Payroll Runs", icon: CreditCard, phase: 10 },
+  { href: "/hr/onboarding", label: "Onboarding", icon: UserPlus, phase: 10 },
+  { href: "/hr/offboarding", label: "Offboarding", icon: UserMinus, phase: 10 },
+  { href: "/hr/reports", label: "HR Reports", icon: FileBarChart, phase: 10 },
+  // B-Coach AI
   { href: "/team-coach", label: "Team Coach AI", icon: Brain, phase: 9 },
   { href: "/daily-briefing", label: "Daily Briefing", icon: Sunrise, phase: 9 },
   { href: "/coach-library", label: "Coach Library", icon: BookOpen, phase: 9 },
@@ -87,7 +113,7 @@ const tenantEmployeeNav: NavItem[] = [
   { href: "/coach", label: "My Coach AI", icon: Sparkles, phase: 9 },
   { href: "/attendance", label: "My Attendance", icon: ClipboardList, phase: 6 },
   { href: "/requests", label: "My Requests", icon: CheckSquare, phase: 5 },
-  { href: "/profile", label: "Profile", icon: UserIcon, phase: 7 },
+  { href: "/profile", label: "My Profile", icon: UserIcon, phase: 7 },
 ];
 
 export function Sidebar({ user }: { user: SidebarUser }) {
