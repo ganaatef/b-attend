@@ -1,11 +1,15 @@
 /**
  * /coach — Employee AI Coach Dashboard.
  *
- * Shows: weekly + monthly summaries, strengths, improvement areas, daily motivation,
- * tomorrow action, progress streak, recent achievements, development tips.
+ * Shows: daily motivation, consistency score, weekly + monthly summaries, strengths,
+ * improvement areas, practical advice, tomorrow action, progress streak, recent
+ * achievements, development tips.
  *
  * Privacy: employee sees only their own coaching data.
- * Feature gate: ai_coach (Starter+), daily_motivation (Trial+).
+ * Feature gate: employee_coach_summary (Starter+), daily_motivation (Trial+).
+ *
+ * Data sources: AttendanceDay, Schedule, Punch, ApprovalRequest, Employee, Branch, Department.
+ * No static fake analytics. If not enough data, shows a clean empty state.
  */
 import Link from "next/link";
 import { db } from "@/lib/db";
@@ -21,7 +25,8 @@ import {
   getRecentAchievements,
   type DateRange,
 } from "@/lib/ai/coach-engine";
-import { generateEmployeeCoachSummary, generateDailyMotivation } from "@/lib/ai/provider";
+import { generateEmployeeCoachSummary as generateSummaryFromLib } from "@/lib/coach/employee-summary";
+import { generateDailyMotivation } from "@/lib/ai/provider";
 import { canUseAiFeature } from "@/lib/ai/feature-gates";
 
 export const dynamic = "force-dynamic";
@@ -42,7 +47,10 @@ export default async function CoachPage() {
   if (!session?.tenantId) return null;
 
   // Find employee for this user
-  const user = await db.user.findUnique({ where: { id: session.sub }, include: { employee: { include: { branch: true, department: true } } } });
+  const user = await db.user.findUnique({
+    where: { id: session.sub },
+    include: { employee: { include: { branch: true, department: true } } },
+  });
   const employee = user?.employee;
 
   if (!employee) {
@@ -54,7 +62,7 @@ export default async function CoachPage() {
   }
 
   // Feature gates
-  const coachGate = await canUseAiFeature(session.tenantId, "ai_coach");
+  const coachGate = await canUseAiFeature(session.tenantId, "employee_coach_summary");
   const motivationGate = await canUseAiFeature(session.tenantId, "daily_motivation");
 
   // If neither AI feature is available, show upgrade screen
@@ -81,10 +89,10 @@ export default async function CoachPage() {
   const monthStart = startOfMonth(now);
   const monthEnd = now;
 
-  // Calculate stats and score for current period (month)
   const monthRange: DateRange = { start: monthStart, end: monthEnd };
   const weekRange: DateRange = { start: weekStart, end: weekEnd };
 
+  // Calculate real stats and score for current period (month)
   const [weekStats, monthStats, scoreResult, streak, achievements] = await Promise.all([
     getEmployeeAttendanceStats(employee.id, weekRange),
     getEmployeeAttendanceStats(employee.id, monthRange),
@@ -93,95 +101,55 @@ export default async function CoachPage() {
     getRecentAchievements(employee.id, 5),
   ]);
 
-  // Generate AI summary (only if ai_coach is allowed)
-  let summary: Awaited<ReturnType<typeof generateEmployeeCoachSummary>> | null = null;
-  if (coachGate.allowed) {
-    const periodLength = monthEnd.getTime() - monthStart.getTime();
-    const prevStart = new Date(monthStart.getTime() - periodLength);
-    const prevEnd = new Date(monthStart.getTime() - 86400000);
-    const prevStats = await getEmployeeAttendanceStats(employee.id, { start: prevStart, end: prevEnd });
+  // Determine if there is enough data to show coaching
+  const hasEnoughData = monthStats.scheduledDays > 0 || monthStats.presentDays > 0 || weekStats.scheduledDays > 0 || weekStats.presentDays > 0;
 
-    summary = await generateEmployeeCoachSummary(
-      { companyId: session.tenantId, userId: session.sub, feature: "ai_coach" },
-      {
-        employeeName: employee.fullName,
-        employeeCode: employee.employeeCode,
-        branchName: employee.branch?.name,
-        departmentName: employee.department?.name,
-        jobTitle: employee.jobTitle ?? undefined,
-        periodStart: monthStart,
-        periodEnd: monthEnd,
-        ...monthStats,
-        previousLateDays: prevStats.lateDays,
-        previousAbsentDays: prevStats.absentDays,
-        score: scoreResult.score,
-        level: scoreResult.level,
-      },
-    );
-  }
-
-  // Generate daily motivation (only if allowed)
-  let motivation: Awaited<ReturnType<typeof generateDailyMotivation>> | null = null;
+  // ── Daily Motivation ──
+  // 1. Try DailyCoachContent for today
+  // 2. Fall back to a random active CoachTip
+  // 3. Fall back to mock AI generation (creates AiUsageLog)
+  let motivation: { title: string; body: string; theme: string; source: string } | null = null;
   if (motivationGate.allowed) {
-    motivation = await generateDailyMotivation(
-      { companyId: session.tenantId, userId: session.sub, feature: "daily_motivation" },
-      { date: now, language: "EN", audience: "ALL_EMPLOYEES" },
-    );
-  }
-
-  // Fetch a few coaching tips
-  const tips = await db.coachTip.findMany({
-    where: { OR: [{ companyId: session.tenantId }, { isSystemDefault: true }], active: true, language: "EN" },
-    orderBy: [{ isSystemDefault: "asc" }, { createdAt: "desc" }],
-    take: 6,
-  });
-
-  // Save daily motivation to DB if generated
-  if (motivation) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
-    try {
-      await db.dailyCoachContent.upsert({
-        where: { companyId_date_audience_language: { companyId: session.tenantId, date: today, audience: "ALL_EMPLOYEES", language: "EN" } },
-        update: {},
-        create: {
-          companyId: session.tenantId,
-          date: today,
-          title: motivation.title,
-          body: motivation.body,
-          theme: motivation.theme as any,
-          language: "EN",
-          audience: "ALL_EMPLOYEES",
-          createdByAi: true,
-        },
+    const existingContent = await db.dailyCoachContent.findUnique({
+      where: { companyId_date_audience_language: { companyId: session.tenantId, date: today, audience: "ALL_EMPLOYEES", language: "EN" } },
+    });
+    if (existingContent) {
+      motivation = { title: existingContent.title, body: existingContent.body, theme: existingContent.theme, source: "cached" };
+    } else {
+      // Fall back to a CoachTip
+      const tip = await db.coachTip.findFirst({
+        where: { OR: [{ companyId: session.tenantId }, { isSystemDefault: true }], active: true, language: "EN" },
+        orderBy: { createdAt: "desc" },
       });
-    } catch {}
-  }
+      if (tip) {
+        motivation = { title: tip.title, body: tip.body, theme: tip.theme, source: "tip-fallback" };
+      } else {
+        // Last resort: generate via mock AI provider (creates AiUsageLog)
+        const generated = await generateDailyMotivation(
+          { companyId: session.tenantId, userId: session.sub, feature: "daily_motivation" },
+          { date: now, language: "EN", audience: "ALL_EMPLOYEES" },
+        );
+        motivation = { title: generated.title, body: generated.body, theme: generated.theme, source: "ai-generated" };
+        // Persist the generated content for future loads
+        try {
+          await db.dailyCoachContent.create({
+            data: {
+              companyId: session.tenantId,
+              date: today,
+              title: generated.title,
+              body: generated.body,
+              theme: generated.theme as any,
+              language: "EN",
+              audience: "ALL_EMPLOYEES",
+              createdByAi: true,
+            },
+          });
+        } catch {}
+      }
+    }
 
-  // Save snapshot
-  if (summary) {
-    try {
-      await db.employeeCoachSnapshot.create({
-        data: {
-          companyId: session.tenantId,
-          employeeId: employee.id,
-          periodStart: monthStart,
-          periodEnd: monthEnd,
-          score: scoreResult.score,
-          level: scoreResult.level as any,
-          positiveSummary: summary.positiveSummary,
-          improvementAreas: summary.improvementAreas,
-          practicalAdvice: summary.practicalAdvice,
-          tomorrowAction: summary.tomorrowAction,
-          riskLevel: summary.riskLevel as any,
-          tags: JSON.stringify(summary.tags),
-          generatedBy: "mock",
-        },
-      });
-    } catch {}
-  }
-
-  // Create notification for daily motivation (best-effort, idempotent)
-  if (motivationGate.allowed) {
+    // Create notification for daily motivation (best-effort, idempotent within 24h)
     try {
       const existingNotif = await db.notification.findFirst({
         where: { companyId: session.tenantId, userId: session.sub, eventType: "daily_motivation", createdAt: { gte: new Date(now.getTime() - 86400000) } },
@@ -200,6 +168,31 @@ export default async function CoachPage() {
       }
     } catch {}
   }
+
+  // ── Employee Coach Summary ──
+  // Uses the new generateEmployeeCoachSummary from src/lib/coach/employee-summary.ts
+  // which handles snapshot caching + AiUsageLog creation + improvement streak notification.
+  let summary: Awaited<ReturnType<typeof generateSummaryFromLib>> | null = null;
+  if (coachGate.allowed && hasEnoughData) {
+    try {
+      summary = await generateSummaryFromLib(
+        employee.id,
+        monthStart,
+        monthEnd,
+        { regenerate: false }, // Employee never triggers regenerate — uses cached snapshot
+        { companyId: session.tenantId, userId: session.sub },
+      );
+    } catch (e) {
+      console.error("[coach] summary generation failed:", e);
+    }
+  }
+
+  // Fetch a few coaching tips for the Development Tip card
+  const tips = await db.coachTip.findMany({
+    where: { OR: [{ companyId: session.tenantId }, { isSystemDefault: true }], active: true, language: "EN" },
+    orderBy: [{ isSystemDefault: "asc" }, { createdAt: "desc" }],
+    take: 6,
+  });
 
   const levelColor: Record<string, string> = {
     EXCELLENT: "bg-brand-success text-white",
@@ -242,77 +235,94 @@ export default async function CoachPage() {
         </Card>
       )}
 
-      {/* Consistency score */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold text-foreground">Consistency Score (this month)</CardTitle>
-            <Badge className={`${levelColor[scoreResult.level]} text-xs`}>{scoreResult.level.replace(/_/g, " ")}</Badge>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-end gap-4">
-            <div>
-              <p className={`text-5xl font-bold ${scoreColor[scoreResult.level]}`}>{scoreResult.score}</p>
-              <p className="text-xs text-muted-foreground">out of 100</p>
-            </div>
-            <div className="flex-1 text-sm text-muted-foreground">
-              <p className="leading-relaxed">{scoreResult.explanation}</p>
-            </div>
-          </div>
-          {scoreResult.positiveSignals.length > 0 && (
-            <div className="mt-4">
-              <p className="text-xs font-semibold text-brand-success uppercase tracking-wider">Positive signals</p>
-              <ul className="mt-1 space-y-0.5">
-                {scoreResult.positiveSignals.map((s, i) => <li key={i} className="text-xs text-foreground/90">✓ {s}</li>)}
-              </ul>
-            </div>
-          )}
-          {scoreResult.improvementSignals.length > 0 && (
-            <div className="mt-3">
-              <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Development areas</p>
-              <ul className="mt-1 space-y-0.5">
-                {scoreResult.improvementSignals.map((s, i) => <li key={i} className="text-xs text-foreground/90">→ {s}</li>)}
-              </ul>
-            </div>
-          )}
-          <p className="mt-4 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-            This score is for coaching only. It does not affect your salary, evaluation, or HR decisions. Use it as a self-development tool.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* Weekly + Monthly summaries */}
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/* Empty state when not enough data */}
+      {!hasEnoughData && (
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">This week</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <Stat label="Scheduled" value={weekStats.scheduledDays} />
-              <Stat label="Present" value={weekStats.presentDays} />
-              <Stat label="Late" value={weekStats.lateDays} />
-              <Stat label="Absent" value={weekStats.absentDays} />
-              <Stat label="Late minutes" value={weekStats.totalLateMinutes} />
-              <Stat label="Overtime (min)" value={weekStats.overtimeMinutes} />
-            </div>
+          <CardContent className="py-8">
+            <EmptyState
+              title="Your coaching summary will appear after a few attendance records are available."
+              description="Once you have scheduled shifts and clock-in records, your AI coach will generate personalized insights, consistency score, and development tips."
+              icon={Sparkles}
+            />
           </CardContent>
         </Card>
+      )}
+
+      {/* Consistency score — only show when there is data */}
+      {hasEnoughData && (
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">This month</CardTitle></CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-3 text-sm">
-              <Stat label="Scheduled" value={monthStats.scheduledDays} />
-              <Stat label="Present" value={monthStats.presentDays} />
-              <Stat label="Late" value={monthStats.lateDays} />
-              <Stat label="Absent" value={monthStats.absentDays} />
-              <Stat label="Late minutes" value={monthStats.totalLateMinutes} />
-              <Stat label="Overtime (min)" value={monthStats.overtimeMinutes} />
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-foreground">Consistency Score (this month)</CardTitle>
+              <Badge className={`${levelColor[scoreResult.level]} text-xs`}>{scoreResult.level.replace(/_/g, " ")}</Badge>
             </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-end gap-4">
+              <div>
+                <p className={`text-5xl font-bold ${scoreColor[scoreResult.level]}`}>{scoreResult.score}</p>
+                <p className="text-xs text-muted-foreground">out of 100</p>
+              </div>
+              <div className="flex-1 text-sm text-muted-foreground">
+                <p className="leading-relaxed">{scoreResult.explanation}</p>
+              </div>
+            </div>
+            {scoreResult.positiveSignals.length > 0 && (
+              <div className="mt-4">
+                <p className="text-xs font-semibold text-brand-success uppercase tracking-wider">Positive signals</p>
+                <ul className="mt-1 space-y-0.5">
+                  {scoreResult.positiveSignals.map((s, i) => <li key={i} className="text-xs text-foreground/90">✓ {s}</li>)}
+                </ul>
+              </div>
+            )}
+            {scoreResult.improvementSignals.length > 0 && (
+              <div className="mt-3">
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Development areas</p>
+                <ul className="mt-1 space-y-0.5">
+                  {scoreResult.improvementSignals.map((s, i) => <li key={i} className="text-xs text-foreground/90">→ {s}</li>)}
+                </ul>
+              </div>
+            )}
+            <p className="mt-4 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
+              This score is for coaching only. It does not affect your salary, evaluation, or HR decisions. Use it as a self-development tool.
+            </p>
           </CardContent>
         </Card>
-      </div>
+      )}
 
-      {/* AI summary cards */}
+      {/* Weekly + Monthly summaries — only show when there is data */}
+      {hasEnoughData && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">This week</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <Stat label="Scheduled" value={weekStats.scheduledDays} />
+                <Stat label="Present" value={weekStats.presentDays} />
+                <Stat label="Late" value={weekStats.lateDays} />
+                <Stat label="Absent" value={weekStats.absentDays} />
+                <Stat label="Late minutes" value={weekStats.totalLateMinutes} />
+                <Stat label="Overtime (min)" value={weekStats.overtimeMinutes} />
+              </div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">This month</CardTitle></CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <Stat label="Scheduled" value={monthStats.scheduledDays} />
+                <Stat label="Present" value={monthStats.presentDays} />
+                <Stat label="Late" value={monthStats.lateDays} />
+                <Stat label="Absent" value={monthStats.absentDays} />
+                <Stat label="Late minutes" value={monthStats.totalLateMinutes} />
+                <Stat label="Overtime (min)" value={monthStats.overtimeMinutes} />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* AI summary cards — only show when summary exists */}
       {summary && (
         <>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -325,17 +335,28 @@ export default async function CoachPage() {
               </CardHeader>
               <CardContent>
                 <p className="text-sm leading-relaxed text-foreground/90">{summary.positiveSummary}</p>
+                {summary.cached && (
+                  <p className="mt-2 text-xs text-muted-foreground">Cached snapshot from a previous visit.</p>
+                )}
               </CardContent>
             </Card>
             <Card className="border-amber-300">
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-amber-600" />
-                  <CardTitle className="text-sm font-semibold text-foreground">Development areas</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-foreground">Improvement areas</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
-                <p className="text-sm leading-relaxed text-foreground/90">{summary.improvementAreas}</p>
+                {summary.improvementAreas.length > 0 ? (
+                  <ul className="space-y-1.5">
+                    {summary.improvementAreas.map((area, i) => (
+                      <li key={i} className="text-sm text-foreground/90">→ {area}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">No specific improvement areas this period.</p>
+                )}
                 <p className="mt-3 text-xs font-medium text-amber-700">Practical advice</p>
                 <p className="mt-1 text-sm text-foreground/90">{summary.practicalAdvice}</p>
               </CardContent>
@@ -357,47 +378,49 @@ export default async function CoachPage() {
         </>
       )}
 
-      {/* Streak + Achievements */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Heart className="h-4 w-4 text-brand-accent" />
-              <CardTitle className="text-sm font-semibold text-foreground">My progress streak</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-brand-accent">{streak}</p>
-            <p className="text-xs text-muted-foreground">consecutive on-time days</p>
-            <p className="mt-2 text-xs text-muted-foreground">A streak counts days you arrived on time with no late or absent records. Keep it growing!</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-amber-500" />
-              <CardTitle className="text-sm font-semibold text-foreground">Recent achievements</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {achievements.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No achievements yet this month. Your first on-time arrival will appear here.</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {achievements.map((a, i) => <li key={i} className="text-xs text-foreground/90">🏆 {a}</li>)}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+      {/* Streak + Achievements — only show when there is data */}
+      {hasEnoughData && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Heart className="h-4 w-4 text-brand-accent" />
+                <CardTitle className="text-sm font-semibold text-foreground">My progress streak</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-brand-accent">{streak}</p>
+              <p className="text-xs text-muted-foreground">consecutive on-time days</p>
+              <p className="mt-2 text-xs text-muted-foreground">A streak counts days you arrived on time with no late or absent records. Keep it growing!</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-amber-500" />
+                <CardTitle className="text-sm font-semibold text-foreground">Recent achievements</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {achievements.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No achievements yet this month. Your first on-time arrival will appear here.</p>
+              ) : (
+                <ul className="space-y-1.5">
+                  {achievements.map((a, i) => <li key={i} className="text-xs text-foreground/90">🏆 {a}</li>)}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-      {/* Development tips */}
+      {/* Development tips — always show (tips exist independent of attendance data) */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-brand-accent" />
-              <CardTitle className="text-sm font-semibold text-foreground">Development tips</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">Development tip</CardTitle>
             </div>
             <Link href="/coach-library" className="text-xs text-brand-accent hover:underline">View all →</Link>
           </div>

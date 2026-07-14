@@ -69,7 +69,7 @@ export interface EmployeeCoachSummaryInput {
 
 export interface EmployeeCoachSummaryOutput {
   positiveSummary: string;
-  improvementAreas: string;
+  improvementAreas: string[];
   practicalAdvice: string;
   tomorrowAction: string;
   riskLevel: "LOW" | "MEDIUM" | "HIGH";
@@ -321,9 +321,9 @@ export async function generateEmployeeCoachSummary(ctx: AiContext, input: Employ
     improvements.push(`attendance, with ${input.absentDays} absent day${input.absentDays === 1 ? "" : "s"}`);
   }
 
-  const improvementAreas = improvements.length > 0
-    ? `The main development ${improvements.length === 1 ? "area is" : "areas are"} ${improvements.join("; ")}. These are common shift challenges — small adjustments make a big difference.`
-    : "No specific improvement areas this period. Maintain your current rhythm and look for ways to help your team.";
+  const improvementAreas: string[] = improvements.length > 0
+    ? improvements
+    : ["No specific improvement areas this period — maintain your current rhythm and look for ways to help your team."];
 
   // Practical advice
   const adviceParts: string[] = [];
@@ -362,10 +362,11 @@ export async function generateEmployeeCoachSummary(ctx: AiContext, input: Employ
 
   const raw = { positiveSummary, improvementAreas, practicalAdvice, tomorrowAction, riskLevel, tags };
   const { output, safe } = sanitizeCoachOutput(raw);
+  const tokensOut = positiveSummary.length + improvementAreas.join(" ").length + practicalAdvice.length;
   if (!safe) {
-    await logUsage(ctx, provider, "FALLBACK_USED", { tokensIn: 0, tokensOut: positiveSummary.length + improvementAreas.length, errorMessage: "sanitize violations detected, replacements applied" });
+    await logUsage(ctx, provider, "FALLBACK_USED", { tokensIn: 0, tokensOut, errorMessage: "sanitize violations detected, replacements applied" });
   } else {
-    await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: positiveSummary.length + improvementAreas.length });
+    await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut });
   }
 
   return output as EmployeeCoachSummaryOutput;
