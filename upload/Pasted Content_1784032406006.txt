@@ -1,0 +1,2481 @@
+You are building a production-ready SaaS platform called B-Attend.
+
+B-Attend is a smart attendance, shift control, approvals, reporting, and payroll-ready workforce platform for restaurants, cafes, central kitchens, retail chains, gyms, clinics, warehouses, security companies, cleaning companies, and operational teams in Egypt and the MENA region.
+
+This is not a simple demo.
+This must be built as a commercial SaaS product ready to sell, activate, manage, and operate for multiple paying companies.
+
+Important:
+Do not copy BlueWorks, OnShift, Deputy, Jibble, Homebase, or any competitor UI, wording, branding, layouts, icons, color system, or protected design.
+Use them only as market reference for expected feature depth.
+Build an original Egyptian/MENA-ready SaaS experience.
+
+Product name:
+B-Attend
+
+Arabic name:
+بي اتيند
+
+Positioning:
+Smart attendance and shift control for operational teams
+
+Arabic positioning:
+نظام حضور وورديات ذكي للشركات والمطاعم
+
+Primary tagline:
+Be present. Be verified.
+
+Arabic tagline:
+حضور موثّق وورديات تحت السيطرة
+
+Core promise:
+B-Attend helps companies control attendance, shifts, branches, approvals, and payroll-ready reports from one clean dashboard.
+
+Business goal:
+Build a sellable SaaS where B-Attend’s internal team can create customers, activate subscriptions, control plans, suspend accounts, manage limits, track invoices, and support customers from a Super Admin dashboard.
+
+Primary customers:
+Restaurants
+Cafes
+Cloud kitchens
+Central kitchens
+Small retail chains
+Gyms
+Clinics
+Warehouses
+Security companies
+Cleaning companies
+Multi-branch operational teams
+
+Core personas:
+
+1. B-Attend Super Admin
+2. B-Attend Sales/Admin Operator
+3. B-Attend Support Agent
+4. Customer Company Owner
+5. Customer HR Admin
+6. Customer Branch Manager
+7. Customer Employee
+
+Build the platform as a real multi-tenant SaaS.
+
+Every tenant/company must be isolated by companyId.
+No user should ever see data from another company unless they are B-Attend Super Admin using audited support tools.
+
+Use strict tenant scoping on every query.
+Never rely on frontend filtering for security.
+Access control must be enforced server-side.
+
+Technology stack:
+Next.js App Router
+TypeScript
+PostgreSQL as production database
+Prisma ORM
+Prisma Migrate
+Tailwind CSS
+shadcn/ui if available
+Zod validation
+React Hook Form if available
+bcrypt or argon2 for password hashing
+Secure HttpOnly cookies or Auth.js if compatible
+Server Actions or Route Handlers, but use one consistent approach per module
+CSV export with UTF-8 BOM
+Responsive design
+PWA-ready structure
+Arabic RTL-ready architecture
+English UI first, Arabic-ready labels and translation structure
+
+Local development:
+Use Docker Compose for PostgreSQL if possible.
+Provide fallback instructions if Docker is not available.
+Do not use SQLite for the final commercial version unless only as a temporary local fallback.
+
+Required environments:
+DATABASE_URL
+APP_URL
+SESSION_SECRET
+EMAIL_FROM
+SMTP_HOST
+SMTP_PORT
+SMTP_USER
+SMTP_PASS
+PAYMENT_PROVIDER
+STRIPE_SECRET_KEY placeholder
+STRIPE_WEBHOOK_SECRET placeholder
+MANUAL_ACTIVATION_MODE
+SUPER_ADMIN_EMAIL
+SUPER_ADMIN_PASSWORD
+
+Do not require live payment integration to run locally.
+Payment provider must be abstracted.
+Manual payment approval must work first for Egypt/MENA B2B sales.
+Stripe-compatible structure can exist as a placeholder or optional integration, but do not block the product on Stripe.
+
+Build these top-level areas:
+
+A. Public marketing website
+B. Customer signup and onboarding
+C. Customer app dashboard
+D. Employee self-service app
+E. Kiosk mode
+F. Super Admin control center
+G. Subscription and activation system
+H. Reports and exports
+I. Audit and compliance
+J. Settings and feature flags
+K. README, demo, testing, deployment docs
+
+==================================================
+
+1. PUBLIC MARKETING WEBSITE
+   ==================================================
+
+Create public pages:
+
+/
+Landing page
+
+/pricing
+Pricing plans
+
+/features
+Features overview
+
+/contact
+Lead/contact form
+
+/request-demo
+Demo request form
+
+/login
+Customer login
+
+/signup
+Company signup request
+
+/legal/privacy
+Privacy policy placeholder
+
+/legal/terms
+Terms placeholder
+
+Marketing website must be clean, premium, Egyptian/MENA B2B SaaS style.
+
+Landing page sections:
+Hero
+Problem
+Solution
+Features
+How it works
+Use cases
+Pricing preview
+Testimonials placeholder
+FAQ
+CTA
+
+Hero copy:
+B-Attend
+Attendance and shift control for operational teams
+Track attendance, verify location, manage shifts, approve exceptions, and export payroll-ready reports.
+
+Arabic-friendly copy should be easy to add later.
+
+Marketing features:
+Mobile clock in/out
+GPS geofence validation
+Branch kiosk mode
+Shift scheduling
+Approval workflow
+Leave and permission requests
+Overtime control
+Payroll-ready reports
+CSV export
+Audit log
+Multi-branch management
+Role-based access
+Subscription plans
+Super admin activation
+
+Do not create fake claims like “trusted by 10,000 companies” unless seeded as placeholder clearly marked.
+
+Lead capture:
+Store demo/contact requests in database.
+Fields:
+Name
+Company
+Phone
+Email
+Business type
+Employees count
+Branches count
+Message
+Source page
+Status: NEW, CONTACTED, QUALIFIED, WON, LOST
+Assigned sales user
+Created at
+Updated at
+
+Super Admin/Sales team must see leads in admin dashboard.
+
+==================================================
+2. SAAS SUBSCRIPTION PLANS
+==========================
+
+Create pricing and plan system.
+
+Plans must be database-driven, not hard-coded only in UI.
+
+Default plans in seed:
+
+Trial
+Price: 0 EGP
+Duration: 14 days
+Branches: 1
+Employees: 10
+Managers: 1
+Kiosks: 1
+Reports: basic
+CSV export: enabled
+Approvals: enabled
+Audit log retention: 30 days
+Support: self-service
+Payment required: false
+
+Starter
+Price: 999 EGP/month
+Annual price: 9,990 EGP/year
+Branches: 1
+Employees: 25
+Managers: 2
+Kiosks: 1
+Reports: basic
+CSV export: enabled
+Approvals: enabled
+Audit log retention: 90 days
+Support: standard
+
+Growth
+Price: 2,499 EGP/month
+Annual price: 24,990 EGP/year
+Branches: 3
+Employees: 75
+Managers: 6
+Kiosks: 3
+Reports: advanced
+CSV export: enabled
+Approvals: enabled
+Bulk schedules: enabled
+Leave management: enabled
+Audit log retention: 180 days
+Support: priority
+
+Pro
+Price: 4,999 EGP/month
+Annual price: 49,990 EGP/year
+Branches: 10
+Employees: 250
+Managers: 20
+Kiosks: 10
+Reports: advanced
+CSV export: enabled
+Approvals: enabled
+Bulk schedules: enabled
+Leave management: enabled
+Advanced geofence: enabled
+API access: placeholder
+Audit log retention: 365 days
+Support: priority
+
+Enterprise
+Price: Custom
+Branches: custom
+Employees: custom
+Managers: custom
+Kiosks: custom
+All features
+Custom onboarding
+Custom support
+Manual contract
+Dedicated account manager placeholder
+
+Plans must support:
+Monthly billing
+Annual billing
+Trial
+Manual activation
+Coupon/discount
+Custom limits
+Feature flags
+Grace period
+Suspension
+Cancellation
+Read-only mode
+
+Subscription statuses:
+TRIALING
+PENDING_PAYMENT
+ACTIVE
+PAST_DUE
+GRACE_PERIOD
+SUSPENDED
+CANCELLED
+EXPIRED
+MANUAL_REVIEW
+
+Plan limit enforcement:
+Max branches
+Max employees
+Max managers
+Max kiosks
+Max monthly CSV exports if needed
+Feature access
+Audit retention
+Reports access
+API access placeholder
+
+Important:
+If company exceeds limits, show clear upgrade message.
+Do not crash.
+Do not allow creating more branches/employees than plan limit unless Super Admin override exists.
+Super Admin can override limits per tenant.
+
+==================================================
+3. CUSTOMER SIGNUP AND ACTIVATION FLOW
+======================================
+
+Build signup flow:
+
+Step 1:
+Company owner submits signup:
+Full name
+Email
+Phone
+Password
+Company name
+Business type
+Employees count
+Branches count
+Preferred plan
+Billing cycle
+City
+Message optional
+
+Step 2:
+Create Company with status PENDING_ACTIVATION.
+Create CompanyOwner user.
+Create TrialSubscription or PendingSubscription depending on selected plan.
+Show pending activation screen if manual activation mode is enabled.
+
+Step 3:
+Super Admin reviews signup in admin panel.
+Super Admin can:
+Approve trial
+Activate paid plan
+Request payment
+Create invoice
+Mark invoice paid
+Reject signup
+Suspend company
+Edit plan and limits
+Send activation email placeholder
+
+Step 4:
+After activation, company owner can access onboarding wizard.
+
+Company statuses:
+PENDING_ACTIVATION
+TRIAL_ACTIVE
+ACTIVE
+PAST_DUE
+SUSPENDED
+CANCELLED
+REJECTED
+
+Activation rules:
+Pending companies cannot use operational pages.
+Trial companies can use features within trial plan limits.
+Suspended companies cannot clock in/out or manage data.
+Suspended companies can access billing page and support message.
+Cancelled companies are read-only unless reactivated.
+
+Create activation screen:
+“Your account is being reviewed”
+“Your trial is active”
+“Your subscription is suspended”
+“Payment required”
+“Contact support”
+
+==================================================
+4. SUPER ADMIN CONTROL CENTER
+=============================
+
+Create a separate Super Admin area:
+
+/admin
+Super Admin dashboard
+
+/admin/tenants
+All companies
+
+/admin/tenants/[id]
+Company detail
+
+/admin/subscriptions
+Subscriptions
+
+/admin/plans
+Plan management
+
+/admin/invoices
+Invoices and payments
+
+/admin/leads
+Demo/contact leads
+
+/admin/users
+Platform users
+
+/admin/support
+Support tickets
+
+/admin/audit
+Platform audit log
+
+/admin/settings
+Platform settings
+
+/admin/system
+System health
+
+Super Admin roles:
+SUPER_ADMIN
+SALES_ADMIN
+SUPPORT_AGENT
+BILLING_ADMIN
+
+Super Admin permissions:
+SUPER_ADMIN: everything
+SALES_ADMIN: leads, tenants read, activation requests, demo requests
+SUPPORT_AGENT: tenants read, support tickets, limited impersonation with reason
+BILLING_ADMIN: plans, invoices, subscriptions, payments
+
+Super Admin dashboard cards:
+Total companies
+Active companies
+Trial companies
+Pending activation
+Suspended companies
+MRR
+ARR
+New signups this month
+Churned companies
+Pending invoices
+Overdue invoices
+Total active employees across tenants
+Total active branches across tenants
+Support tickets open
+Clock actions today across system
+
+Tenant detail page must show:
+Company info
+Owner info
+Plan
+Subscription status
+Billing cycle
+Current limits
+Usage:
+Employees used / allowed
+Branches used / allowed
+Managers used / allowed
+Kiosks used / allowed
+CSV exports this month
+Last login
+Last clock action
+Recent audit events
+Invoices
+Support notes
+Admin actions
+
+Admin tenant actions:
+Activate trial
+Activate paid plan
+Change plan
+Override limits
+Extend trial
+Suspend company
+Reactivate company
+Cancel company
+Mark invoice paid
+Create manual invoice
+Reset owner password
+Send password reset placeholder
+Impersonate owner with reason
+View tenant audit log
+Add internal note
+
+Impersonation:
+Super Admin/Support can impersonate a company owner only with reason.
+Every impersonation must create audit log.
+Show visible banner:
+“You are impersonating [Company].”
+Add “Stop impersonating” button.
+Never allow silent impersonation.
+
+==================================================
+5. BILLING, INVOICES, PAYMENTS
+==============================
+
+Build billing module with manual payment workflow first.
+
+Models:
+Plan
+Subscription
+Invoice
+Payment
+Coupon
+PlanFeature
+UsageLimit
+BillingEvent
+
+Payment providers:
+MANUAL
+STRIPE_PLACEHOLDER
+PAYMOB_PLACEHOLDER
+FAWRY_PLACEHOLDER
+BANK_TRANSFER
+CASH
+
+Do not implement real payment gateway unless environment keys exist.
+Manual payment approval must work.
+
+Invoice fields:
+Invoice number
+Company
+Subscription
+Plan
+Billing period start
+Billing period end
+Subtotal
+Discount
+Tax
+Total
+Currency
+Status
+Due date
+Paid at
+Payment method
+Notes
+PDF placeholder URL
+Created by
+Created at
+Updated at
+
+Invoice statuses:
+DRAFT
+ISSUED
+PENDING_PAYMENT
+PAID
+OVERDUE
+VOID
+REFUNDED
+
+Payment fields:
+Company
+Invoice
+Amount
+Currency
+Provider
+Reference number
+Status
+Paid at
+Proof attachment placeholder
+Created by
+
+Payment statuses:
+PENDING
+CONFIRMED
+FAILED
+REFUNDED
+
+Billing pages for customer owner:
+/billing
+Current plan
+Subscription status
+Usage limits
+Invoices
+Payment instructions
+Upgrade request
+Contact sales
+
+Customer owner can:
+View plan
+View invoices
+Request upgrade
+Upload payment proof placeholder
+Contact billing support
+
+Super Admin/Billing Admin can:
+Create invoice
+Mark invoice paid
+Record manual payment
+Change subscription status
+Change renewal date
+Add discount
+Apply coupon
+Suspend for non-payment
+Reactivate after payment
+
+Billing enforcement:
+If invoice overdue, subscription becomes PAST_DUE.
+After configurable grace period, becomes SUSPENDED.
+In SUSPENDED:
+Owner can access billing and support.
+HR/Managers see suspended message.
+Employees cannot clock in/out unless emergency override enabled by Super Admin.
+Reports become read-only.
+CSV export disabled.
+
+Subscription lifecycle:
+Signup → Pending Activation
+Trial → Active
+Active → Past Due
+Past Due → Grace Period
+Grace Period → Suspended
+Suspended → Reactivated or Cancelled
+Cancelled → Read-only archived tenant
+
+==================================================
+6. CUSTOMER APP ROLES AND PERMISSIONS
+=====================================
+
+Customer roles:
+COMPANY_OWNER
+HR_ADMIN
+BRANCH_MANAGER
+EMPLOYEE
+
+Optional future roles:
+AREA_MANAGER
+PAYROLL_ADMIN
+REPORT_VIEWER
+
+Permissions must be capability-based, not only role-name checks.
+
+Create permissions:
+VIEW_DASHBOARD
+MANAGE_BRANCHES
+MANAGE_EMPLOYEES
+MANAGE_SHIFT_POLICIES
+MANAGE_SCHEDULES
+CLOCK_SELF
+USE_KIOSK
+VIEW_LIVE_ATTENDANCE
+MANAGE_APPROVALS
+VIEW_REPORTS
+EXPORT_REPORTS
+VIEW_AUDIT_LOG
+MANAGE_SETTINGS
+VIEW_BILLING
+MANAGE_BILLING
+MANAGE_USERS
+MANAGE_ROLES
+
+Default permissions:
+Company Owner:
+All tenant permissions including billing and settings
+
+HR Admin:
+Operational full access except billing payment changes unless allowed
+
+Branch Manager:
+Assigned branch only:
+Dashboard
+Live attendance
+Schedules view
+Approvals for branch
+Employees view
+Reports branch-scoped
+Kiosk
+
+Employee:
+Own pages only:
+Today
+Clock in/out
+Attendance history
+Requests
+Profile
+
+Create user management:
+/users
+Invite user
+Create user
+Edit role
+Deactivate user
+Reset password placeholder
+
+User statuses:
+ACTIVE
+INVITED
+SUSPENDED
+LEFT
+
+Invite flow:
+Company Owner/HR creates user.
+System creates temporary password or invite token.
+Email placeholder or copy invite link.
+First login forces password change.
+
+==================================================
+7. ONBOARDING WIZARD
+====================
+
+After activation, company owner sees onboarding wizard:
+
+Step 1:
+Company profile
+Company name
+Industry
+Timezone
+Currency
+Default language
+
+Step 2:
+Create first branch
+Name
+Address
+Latitude
+Longitude
+Geofence radius
+
+Step 3:
+Create departments
+Kitchen
+Service
+Cashier
+Delivery
+Stewarding
+Management
+Custom departments
+
+Step 4:
+Create shift policies
+Morning
+Evening
+Night
+Double shift
+Part time
+
+Step 5:
+Add employees
+Manual add
+CSV import placeholder
+Employee code
+Name
+Phone
+Email
+Branch
+Department
+Job title
+Role
+PIN
+
+Step 6:
+Generate first schedules
+Branch
+Employees
+Date range
+Shift policy
+Weekend/off days
+
+Step 7:
+Review
+Show setup progress
+Show missing items
+
+Onboarding progress:
+Company profile completed
+Branch created
+Departments created
+Shift policies created
+Employees added
+Schedules generated
+First clock test done
+
+Dashboard must show setup progress until complete.
+
+==================================================
+8. BRANCHES
+===========
+
+Branch fields:
+Company
+Name
+Code
+Address
+City
+Area
+Latitude
+Longitude
+Geofence radius
+Manager
+Status
+Opening hours placeholder
+Notes
+Created at
+Updated at
+
+Branch statuses:
+ACTIVE
+INACTIVE
+ARCHIVED
+
+Pages:
+Branches list
+Branch create
+Branch edit
+Branch detail
+
+Branch detail:
+Employees
+Schedules today
+Attendance today
+Pending approvals
+Geofence settings
+Recent exceptions
+
+Plan enforcement:
+Cannot create branch if plan branch limit reached unless override.
+
+==================================================
+9. EMPLOYEES
+============
+
+Employee fields:
+Company
+Employee code
+Full name
+Phone
+Email
+National ID optional placeholder
+Job title
+Department
+Branch
+Manager
+Employment type
+Status
+Start date
+End date optional
+Default shift policy
+PIN code
+User account link
+Salary placeholder optional
+Notes
+
+Employment types:
+FULL_TIME
+PART_TIME
+DAILY_WORKER
+TEMPORARY
+CONTRACTOR
+
+Statuses:
+ACTIVE
+SUSPENDED
+LEFT
+ON_LEAVE
+
+Pages:
+Employee list
+Employee create
+Employee edit
+Employee profile
+
+Employee profile:
+Basic info
+Branch
+Department
+Manager
+Shift policy
+Current month attendance summary
+Recent attendance
+Recent requests
+Warnings/exceptions
+Audit trail filtered by employee
+
+Plan enforcement:
+Cannot create employee if plan employee limit reached unless override.
+
+==================================================
+10. SHIFT POLICIES
+==================
+
+Shift policy fields:
+Company
+Name
+Start time
+End time
+Break minutes
+Late grace minutes
+Early leave grace minutes
+Overtime starts after minutes
+Weekend days
+Requires overtime approval
+Allows mobile clock-in
+Allows kiosk clock-in
+Allow no schedule clock-in
+Status
+
+Pages:
+Policy list
+Create
+Edit
+
+Support overnight shifts:
+Example 17:00 to 01:00 next day must calculate correctly.
+
+==================================================
+11. SCHEDULES
+=============
+
+Schedule fields:
+Company
+Employee
+Branch
+Date
+Shift policy
+Expected start
+Expected end
+Status
+Notes
+
+Statuses:
+SCHEDULED
+OFF
+LEAVE
+ABSENT
+CANCELLED
+
+Pages:
+Schedule table
+Schedule calendar-like table
+Create single schedule
+Edit schedule
+Bulk schedule generation
+
+Bulk generation:
+Select branch
+Select employees
+Select date range
+Select shift policy
+Select weekend/off days
+Generate
+Avoid duplicate employee/date schedules
+Show created count
+Show skipped duplicates
+Show errors
+
+Access:
+Owner/HR can manage all
+Branch Manager can view assigned branch schedules only
+Branch Manager cannot create/edit schedules unless enabled by setting
+
+==================================================
+12. CLOCK IN / CLOCK OUT
+========================
+
+Employee clock page:
+/clock
+
+Employee sees:
+Today’s shift
+Branch
+Expected start/end
+Current status
+Clock In button
+Clock Out button
+Last action
+Location status
+Month summary
+Pending request alert
+
+Clock in/out must:
+Require valid geolocation for MOBILE_WEB
+Capture timestamp
+Capture latitude
+Capture longitude
+Calculate distance from branch
+Compare with geofence radius
+Save Punch
+Create/update AttendanceDay
+Create audit log
+Return clear result
+
+If geolocation blocked:
+Show friendly error.
+Do not submit punch.
+Show “Submit manual request” link.
+
+Punch fields:
+Company
+Employee
+Branch
+Schedule
+Type
+Timestamp
+Latitude
+Longitude
+Distance meters
+Inside geofence
+Source
+Status
+Device info placeholder
+IP placeholder
+User agent
+Created at
+
+Punch types:
+CLOCK_IN
+CLOCK_OUT
+
+Punch sources:
+MOBILE_WEB
+KIOSK
+MANUAL_ADJUSTMENT
+ADMIN
+
+Punch statuses:
+ACCEPTED
+NEEDS_APPROVAL
+REJECTED
+
+Invalid actions:
+Duplicate clock in
+Clock out before clock in
+Clock in after completed day
+Inactive employee
+No schedule unless allowed
+Outside geofence
+Invalid coordinates
+
+All errors must be user-friendly.
+
+==================================================
+13. GEOFENCE AND ANTI-FAKE LOCATION
+===================================
+
+Implement:
+Haversine distance
+Branch radius
+Inside/outside geofence
+Distance saved in meters
+Outside geofence approval workflow
+
+Add placeholders for:
+Mock location detection
+Device fingerprinting
+Root/jailbreak detection
+VPN suspicious indicator
+Repeated device across employees
+Impossible travel detection
+
+Do not claim these advanced detections are fully implemented unless implemented.
+Show as coming later or feature flag.
+
+==================================================
+14. KIOSK MODE
+==============
+
+Kiosk page:
+/kiosk
+
+Access:
+Owner/HR: any branch
+Branch Manager: assigned branch only
+Employee: no access unless kiosk session mode exists
+
+Kiosk flow:
+Select branch
+Enter employee code or PIN
+Find employee
+Show employee name and shift
+Clock In / Clock Out
+Save Punch source = KIOSK
+Assume insideGeofence true
+distanceMeters = 0
+Create/update AttendanceDay
+Create audit log
+
+Kiosk UI:
+Full screen
+Large buttons
+Fast lookup
+Clear success/error messages
+Face verification placeholder
+Offline mode placeholder
+
+No real face recognition in first production version unless explicit consent/compliance is built.
+
+==================================================
+15. ATTENDANCE ENGINE
+=====================
+
+Create reusable server-side engine:
+recalculateAttendanceDay(employeeId, date)
+
+It must:
+Load employee
+Load company settings
+Load schedule
+Load punches
+Calculate all metrics
+Upsert AttendanceDay
+
+AttendanceDay fields:
+Company
+Employee
+Branch
+Schedule
+Date
+Scheduled start
+Scheduled end
+Actual clock in
+Actual clock out
+Late minutes
+Early leave minutes
+Break minutes
+Worked minutes
+Overtime minutes
+Status
+Exception flags
+Requires approval
+Finalized
+Payroll locked
+Notes
+Created at
+Updated at
+
+Statuses:
+ON_TIME
+LATE
+ABSENT
+EARLY_LEAVE
+LATE_AND_EARLY_LEAVE
+OVERTIME
+MISSING_CLOCK_OUT
+OUTSIDE_GEOFENCE
+NO_SCHEDULE
+PENDING_APPROVAL
+OFF
+LEAVE
+
+Rules:
+If scheduled and no clock in after day passes → ABSENT
+If schedule OFF → OFF, never ABSENT
+If schedule LEAVE → LEAVE
+If clock in after grace → LATE
+If clock out before allowed end → EARLY_LEAVE
+If worked more than threshold → OVERTIME
+If no clock out → MISSING_CLOCK_OUT
+If any punch outside geofence → OUTSIDE_GEOFENCE
+If no schedule but punch exists → NO_SCHEDULE and requires approval
+If normal → ON_TIME
+
+Important:
+Do not lose multiple exceptions.
+Store primary status and exceptionFlags.
+Example:
+Primary: OUTSIDE_GEOFENCE
+Flags: LATE, OVERTIME
+
+==================================================
+16. ABSENCE AUTO MARKING
+========================
+
+Build helper:
+markAbsentForPastScheduledDays(date)
+
+It should:
+Find scheduled shifts where day has passed
+Skip OFF
+Skip LEAVE
+Skip existing AttendanceDay
+Skip employees with clock-in
+Create AttendanceDay status ABSENT
+Update schedule status ABSENT if needed
+Create audit log
+
+Create admin-only API:
+POST /api/system/mark-absent
+
+Access:
+Super Admin for all companies if needed
+Company Owner/HR for own company
+Optional daysBack 1-90
+
+Add future cron placeholder.
+
+==================================================
+17. APPROVALS
+=============
+
+Approval request types:
+MANUAL_CLOCK_IN
+MANUAL_CLOCK_OUT
+OUTSIDE_GEOFENCE
+MISSING_CLOCK_OUT
+OVERTIME
+ATTENDANCE_ADJUSTMENT
+LEAVE_REQUEST
+PERMISSION_REQUEST
+
+Approval statuses:
+PENDING
+APPROVED
+REJECTED
+CANCELLED
+
+Approval fields:
+Company
+Employee
+Branch
+Date
+Type
+Original data JSON
+Requested data JSON
+Reason
+Status
+Requested by
+Approved by
+Approved at
+Rejected by
+Rejected at
+Manager notes
+Related punch optional
+Created at
+Updated at
+
+Employee can submit:
+Forgot Clock In
+Forgot Clock Out
+Permission Request
+Leave Request
+Attendance Correction
+
+Employee sees:
+Pending
+Approved
+Rejected
+Cancelled
+Manager notes
+
+Manager/HR approval pages:
+/approvals
+/approvals/[id]
+
+Approval detail must show:
+Employee
+Branch
+Schedule
+AttendanceDay
+Punches
+Original data
+Requested data
+Reason
+Status
+Requester
+History
+Manager notes
+Approve
+Reject
+
+Approval effects:
+MANUAL_CLOCK_IN:
+Create manual Punch CLOCK_IN
+Source MANUAL_ADJUSTMENT
+Status ACCEPTED
+Recalculate day
+
+MANUAL_CLOCK_OUT:
+Create manual Punch CLOCK_OUT
+Recalculate day
+
+MISSING_CLOCK_OUT:
+Create manual Punch CLOCK_OUT
+Recalculate day
+
+OUTSIDE_GEOFENCE:
+Update linked punch status ACCEPTED
+Recalculate day
+Do not erase distance data
+Keep geofence event visible for reports as approved
+
+OVERTIME:
+Do not remove overtime fact
+Keep overtimeMinutes
+Mark overtime approved
+Set requiresApproval false if overtime was the only pending reason
+Keep report visibility
+
+ATTENDANCE_ADJUSTMENT:
+Create manual adjustment punches rather than overwriting original punches
+Preserve audit trail
+Recalculate
+
+LEAVE_REQUEST:
+Set schedule LEAVE for date or range
+Upsert AttendanceDay status LEAVE
+Do not mark absent
+
+PERMISSION_REQUEST:
+Store approval
+Add permission flag/notes to AttendanceDay if relevant
+Do not erase original punch data
+
+Rejected:
+No data changes except request status and notes.
+
+Audit all approval actions.
+
+==================================================
+18. LEAVE AND PERMISSION MANAGEMENT
+===================================
+
+Build practical leave/permission workflow.
+
+Leave request:
+Single date or date range
+Reason
+Status
+Approver
+
+Permission request:
+Date
+From time
+To time
+Reason
+Status
+
+Future placeholders:
+Leave balance
+Annual leave
+Sick leave
+Unpaid leave
+Egypt labor law settings placeholder
+
+Do not build complex leave balance unless simple and stable.
+
+==================================================
+19. REPORTS
+===========
+
+Reports page:
+/reports
+
+Reports:
+Daily Attendance
+Monthly Summary
+Exceptions
+Overtime
+Branch Attendance
+Payroll Export
+Subscription Usage Report for Super Admin
+
+Filters:
+Date
+Month
+Date range
+Branch
+Department
+Employee
+Status
+
+Access:
+Owner/HR all tenant data
+Branch Manager assigned branch only
+Employee no access
+Super Admin system reports in /admin/reports
+
+Daily Attendance columns:
+Date
+Employee code
+Employee name
+Branch
+Department
+Shift
+Scheduled start
+Scheduled end
+Clock in
+Clock out
+Late minutes
+Early leave minutes
+Worked minutes
+Overtime minutes
+Status
+Exception flags
+Requires approval
+
+Monthly Summary columns:
+Employee code
+Employee name
+Branch
+Department
+Scheduled days
+Present days
+Absent days
+Leave days
+Off days
+Late days
+Total late minutes
+Total early leave minutes
+Total worked hours
+Total overtime minutes
+Missing clock out count
+Outside geofence count
+Pending approval count
+Approved adjustment count
+Final status summary
+
+Exceptions Report:
+Rows where requiresApproval true OR exceptionFlags not empty OR status in:
+LATE
+EARLY_LEAVE
+MISSING_CLOCK_OUT
+OUTSIDE_GEOFENCE
+NO_SCHEDULE
+ABSENT
+PENDING_APPROVAL
+
+Overtime Report:
+All rows where overtimeMinutes > 0
+Must show overtime even after approval
+Show approval status
+
+Branch Attendance:
+Group by branch:
+Scheduled days
+Present days
+Absent days
+Late days
+Worked hours
+Overtime hours
+Pending approvals
+Outside geofence
+Missing clock out
+
+Payroll Export:
+Employee code
+Name
+Branch
+Department
+Scheduled days
+Present
+Absent
+Leave
+Off
+Late minutes
+Early leave minutes
+Worked hours
+Overtime minutes
+Missing clock out count
+Outside geofence count
+Approved adjustments
+Pending approvals
+Payroll notes
+
+CSV:
+All reports export CSV
+UTF-8 BOM
+Escaped quotes/commas/newlines
+Meaningful filenames
+Respect filters
+Real DB only
+
+==================================================
+20. DASHBOARDS
+==============
+
+Customer Owner/HR dashboard:
+Active employees
+Branches
+Departments
+Shift policies
+Scheduled today
+Present today
+Late today
+Absent today
+Missing clock out
+Outside geofence
+Overtime today
+Pending approvals
+Monthly summary
+Recent exceptions
+Pending approvals preview
+Top branches by exceptions
+Live attendance preview
+Subscription status card
+Plan usage card
+
+Branch Manager dashboard:
+Assigned branch only
+Scheduled today
+Present
+Late
+Absent
+Missing clock out
+Pending approvals
+Live attendance
+Branch exceptions
+Branch monthly summary
+
+Employee dashboard:
+/today
+Today shift
+Clock status
+Pending requests
+Month summary
+Recent attendance
+Quick actions
+
+Super Admin dashboard:
+Total tenants
+Active tenants
+Trial tenants
+Suspended tenants
+MRR
+ARR
+New leads
+Pending activations
+Overdue invoices
+Open support tickets
+Total users
+Clock actions today
+System health
+
+No dashboard number can be static.
+Every card must be database-backed.
+
+==================================================
+21. AUDIT LOGS
+==============
+
+Create two audit systems:
+
+Tenant AuditLog:
+Company-scoped.
+Shows customer operational actions.
+
+Platform AuditLog:
+Super Admin scoped.
+Shows platform actions across tenants.
+
+Tenant audit page:
+/audit
+Owner/HR only
+
+Platform audit page:
+/admin/audit
+Super Admin only
+
+Audit fields:
+Company optional
+Actor
+Action
+Entity type
+Entity ID
+Before value JSON
+After value JSON
+Reason
+IP placeholder
+User agent
+Created at
+
+Audit actions:
+LOGIN
+LOGOUT
+EMPLOYEE_CREATED
+EMPLOYEE_EDITED
+BRANCH_CREATED
+BRANCH_EDITED
+SHIFT_POLICY_CREATED
+SCHEDULE_CREATED
+SCHEDULE_GENERATED
+CLOCK_IN
+CLOCK_OUT
+KIOSK_CLOCK_IN
+KIOSK_CLOCK_OUT
+ATTENDANCE_RECALCULATED
+APPROVAL_SUBMITTED
+APPROVAL_APPROVED
+APPROVAL_REJECTED
+SETTINGS_UPDATED
+REPORT_EXPORTED
+CSV_EXPORTED
+PLAN_CHANGED
+SUBSCRIPTION_ACTIVATED
+SUBSCRIPTION_SUSPENDED
+INVOICE_CREATED
+PAYMENT_RECORDED
+TENANT_IMPERSONATED
+
+Every important action must create an audit log.
+
+==================================================
+22. SETTINGS
+============
+
+Customer settings:
+/settings
+
+Fields:
+Company name
+Industry
+Timezone
+Currency
+Default language
+Default geofence radius
+Default grace period
+Default overtime threshold
+Enable mobile clock-in
+Enable kiosk clock-in
+Require approval outside geofence
+Require approval overtime
+Allow no-schedule clock-in
+Allow manual requests
+Enable employee self-service
+Enable branch manager approvals
+Payroll integration placeholder
+WhatsApp notifications placeholder
+Email notifications placeholder
+
+Every settings update:
+Validate
+Save to DB
+Create audit log
+Show success/error
+
+Super Admin platform settings:
+/admin/settings
+
+Fields:
+Default trial days
+Default grace period days
+Default currency
+Manual activation mode
+Support email
+Billing email
+Platform maintenance mode placeholder
+Default plan IDs
+Payment provider mode
+
+==================================================
+23. NOTIFICATIONS
+=================
+
+Build notification architecture, not full integration.
+
+Models:
+Notification
+NotificationPreference
+NotificationTemplate
+
+Notification channels:
+IN_APP
+EMAIL_PLACEHOLDER
+WHATSAPP_PLACEHOLDER
+
+Events:
+Clock missing
+Approval submitted
+Approval approved
+Approval rejected
+Subscription activated
+Invoice issued
+Payment confirmed
+Subscription suspended
+Trial ending
+Employee invited
+
+For now:
+Create in-app notifications if simple.
+Email/WhatsApp placeholders only.
+Do not integrate real providers unless env vars exist.
+
+==================================================
+24. SUPPORT TICKETS
+===================
+
+Customer support page:
+/support
+
+Customer can create ticket:
+Subject
+Category
+Message
+Priority
+Attachment placeholder
+
+Ticket statuses:
+OPEN
+IN_PROGRESS
+WAITING_CUSTOMER
+RESOLVED
+CLOSED
+
+Super Admin support:
+/admin/support
+
+Support Agent can:
+View tickets
+Assign ticket
+Reply placeholder
+Change status
+Add internal note
+Impersonate with reason if needed
+
+==================================================
+25. DATA PRIVACY AND COMPLIANCE
+===============================
+
+Because the platform processes employee personal data, location data, attendance data, and potentially biometric placeholders:
+
+Do not implement real face recognition unless explicit consent flow exists.
+Add consent placeholders:
+Employee consent to location tracking during clock in/out
+Employee consent to kiosk photo/face verification if enabled in future
+Privacy policy placeholder
+Data retention settings
+Data export placeholder
+Data deletion/deactivation workflow
+
+Location tracking rule:
+Only capture location at clock in/out.
+Do not track employee continuously.
+Do not show live GPS tracking unless explicitly built and consented.
+
+Biometric rule:
+Face verification must remain placeholder unless compliance steps are implemented.
+Do not store biometric templates in MVP.
+
+Add compliance notes in README:
+Not legal advice.
+Production use requires legal review for Egypt/MENA data protection.
+Employer must inform employees and obtain required consents.
+
+==================================================
+26. DATABASE MODELS
+===================
+
+Create Prisma schema with clear models.
+
+Platform/SaaS:
+PlatformUser
+PlatformRole or platform role enum
+Tenant/Company
+Plan
+PlanFeature
+Subscription
+Invoice
+Payment
+Coupon
+Lead
+SupportTicket
+SupportMessage
+PlatformAuditLog
+SystemSetting
+
+Tenant:
+User
+Role/Permission
+CompanySettings
+Branch
+Department
+Employee
+ShiftPolicy
+Schedule
+Punch
+AttendanceDay
+ApprovalRequest
+Notification
+AuditLog
+ReportExportLog
+
+Important:
+All tenant data must include companyId.
+Use indexes:
+companyId
+branchId
+employeeId
+date
+status
+subscriptionStatus
+createdAt
+
+Use unique constraints:
+Employee code unique per company
+Email unique where appropriate
+Schedule unique employee/date/company
+AttendanceDay unique employee/date/company
+Plan slug unique
+
+Use soft-delete where useful:
+deletedAt optional for employees, branches, plans if needed.
+
+==================================================
+27. SECURITY
+============
+
+Authentication:
+Secure password hashing
+HttpOnly cookies
+Session expiration
+CSRF protection or safe server actions
+Rate limit login placeholder
+Password reset placeholder
+Force password change for temp passwords
+Logout
+
+Authorization:
+Server-side role/permission checks
+Tenant scoping
+Plan feature gating
+Subscription gating
+Branch scoping
+Admin scoping
+
+Security headers:
+Use Next.js headers if simple
+No secrets in client code
+Never log passwords
+Never expose full database errors to users
+
+Input validation:
+Zod for all writes
+Validate IDs
+Validate dates
+Validate coordinates
+Validate money values
+Validate plan limits
+
+==================================================
+28. FEATURE GATES
+=================
+
+Build central feature gate helper:
+canUseFeature(companyId, featureKey)
+
+Features:
+mobile_clock
+kiosk
+bulk_schedules
+advanced_reports
+csv_export
+leave_requests
+permission_requests
+audit_log
+multi_branch
+advanced_geofence
+api_access
+notifications
+support_tickets
+
+If feature not allowed:
+Show upgrade prompt.
+Do not crash.
+Do not hide data already created, unless plan requires read-only mode.
+
+==================================================
+29. SUBSCRIPTION GATING
+=======================
+
+Create middleware or server helper:
+requireActiveSubscription(companyId)
+
+Rules:
+Public pages no subscription needed
+Signup no subscription needed
+Billing page accessible when suspended
+Support page accessible when suspended
+Operational pages require active/trial/grace subscription
+Employee clock requires active/trial/grace unless emergency override
+CSV export requires active and feature csv_export
+Reports require active and feature reports
+Settings require active except billing settings
+
+Show subscription banners:
+Trial ends in X days
+Payment pending
+Invoice overdue
+Grace period
+Suspended account
+Upgrade required
+
+==================================================
+30. EMAILS AND TEMPLATES
+========================
+
+Create email template placeholders:
+Welcome
+Activation approved
+Trial started
+Trial ending
+Invoice issued
+Payment received
+Subscription suspended
+Password reset
+Employee invitation
+Approval submitted
+Approval approved
+Approval rejected
+
+If SMTP env vars missing:
+Do not fail.
+Log email to console or EmailLog table.
+
+==================================================
+31. CSV IMPORT AND EXPORT
+=========================
+
+Exports:
+All reports
+Employees
+Schedules
+Payroll-ready report
+
+Imports:
+Employee CSV import placeholder or simple implementation:
+Employee code
+Name
+Phone
+Email
+Branch
+Department
+Job title
+Employment type
+Start date
+PIN
+
+Validate import rows.
+Show errors before saving.
+Do not silently ignore invalid rows.
+
+==================================================
+32. UI DESIGN
+=============
+
+Style:
+Premium
+Clean
+Business-grade
+Modern SaaS
+Egypt/MENA friendly
+Mobile-first
+Readable tables
+Clear badges
+Professional spacing
+No childish colors
+
+Brand colors:
+Primary: deep navy or dark teal
+Accent: modern blue or green
+Background: light neutral
+Success: green
+Warning: amber
+Danger: red
+Muted: gray
+
+Required UI components:
+App shell
+Sidebar
+Header
+Mobile bottom nav
+Cards
+Tables
+Filters
+Forms
+Status badges
+Plan badges
+Subscription banners
+Empty states
+Error states
+Loading skeletons
+Confirm dialogs
+Toast notifications
+Tabs
+
+Important:
+Do not make static fake screens.
+All operational UI must use database data.
+If data missing, show EmptyState.
+
+==================================================
+33. ROUTES SUMMARY
+==================
+
+Public:
+/
+/pricing
+/features
+/contact
+/request-demo
+/signup
+/login
+/legal/privacy
+/legal/terms
+
+Customer:
+/activate
+/onboarding
+/dashboard
+/live
+/employees
+/employees/new
+/employees/[id]
+/branches
+/branches/new
+/branches/[id]
+/policies
+/policies/new
+/schedules
+/schedules/new
+/schedules/bulk
+/clock
+/kiosk
+/approvals
+/approvals/[id]
+/reports
+/audit
+/settings
+/billing
+/support
+
+Employee:
+/today
+/clock
+/attendance
+/requests
+/profile
+
+Super Admin:
+/admin
+/admin/tenants
+/admin/tenants/[id]
+/admin/plans
+/admin/subscriptions
+/admin/invoices
+/admin/payments
+/admin/leads
+/admin/users
+/admin/support
+/admin/audit
+/admin/settings
+/admin/system
+/admin/reports
+
+API:
+Auth APIs
+Tenant APIs
+Clock APIs
+Kiosk APIs
+Reports export APIs
+Billing APIs
+Admin APIs
+Settings APIs
+Support APIs
+
+==================================================
+34. SEED DATA
+=============
+
+Seed must include:
+
+Platform:
+Super Admin
+Sales Admin
+Support Agent
+Billing Admin
+
+Plans:
+Trial
+Starter
+Growth
+Pro
+Enterprise
+
+Demo tenant:
+B-Attend Demo Restaurant Group
+Status ACTIVE
+Plan Growth
+3 branches:
+New Cairo
+Nasr City
+Maadi
+
+Users:
+Company Owner
+HR Admin
+2 Branch Managers
+15 Employees
+
+Departments:
+Kitchen
+Service
+Cashier
+Delivery
+Stewarding
+Management
+
+Shift policies:
+Morning
+Evening
+Night
+Kitchen Double
+Part Time
+
+Schedules:
+Full current month
+
+Attendance samples:
+On time
+Late
+Absent
+Overtime
+Missing clock out
+Outside geofence
+No schedule
+Leave
+Permission
+Manual adjustment
+
+Approvals:
+Pending
+Approved
+Rejected
+
+Billing:
+Trial subscription sample
+Active subscription sample
+Paid invoice
+Pending invoice
+Overdue invoice
+
+Leads:
+3 demo leads
+
+Support:
+2 tickets
+
+Demo accounts:
+[super@b-attend.app](mailto:super@b-attend.app) / demo1234
+[sales@b-attend.app](mailto:sales@b-attend.app) / demo1234
+[support@b-attend.app](mailto:support@b-attend.app) / demo1234
+[billing@b-attend.app](mailto:billing@b-attend.app) / demo1234
+[owner@b-attend.app](mailto:owner@b-attend.app) / demo1234
+[hr@b-attend.app](mailto:hr@b-attend.app) / demo1234
+[manager@b-attend.app](mailto:manager@b-attend.app) / demo1234
+[manager2@b-attend.app](mailto:manager2@b-attend.app) / demo1234
+[employee@b-attend.app](mailto:employee@b-attend.app) / demo1234
+
+Document all accounts in README.
+
+==================================================
+35. BUILD ORDER
+===============
+
+Build in phases and stop after each phase with a report.
+
+Phase 1:
+Project setup
+PostgreSQL
+Prisma schema
+Seed
+Auth
+Roles
+Tenant scoping
+Base layout
+Public pages
+
+Phase 2:
+Super Admin
+Plans
+Subscriptions
+Tenant activation
+Billing/invoices manual flow
+Lead management
+
+Phase 3:
+Customer onboarding
+Branches
+Departments
+Employees
+Shift policies
+Schedules
+Bulk scheduling
+
+Phase 4:
+Clock in/out
+Geolocation
+Geofence
+Kiosk
+Attendance engine
+Absent helper
+
+Phase 5:
+Approvals
+Leave/permission
+Manual adjustments
+Audit logs
+
+Phase 6:
+Reports
+CSV exports
+Payroll export
+Dashboards
+
+Phase 7:
+Settings
+Billing page
+Support tickets
+Notifications placeholders
+Feature gates
+Subscription gates
+
+Phase 8:
+UI polish
+Access control QA
+Security hardening
+README
+DEMO
+TESTING
+Deployment docs
+Final browser smoke test
+
+After each phase, provide:
+Files created/modified
+Routes created
+Models created/modified
+What was implemented
+How to test
+Known limitations
+Build result
+Typecheck result
+Next phase plan
+
+Do not continue to next phase until current phase passes.
+
+==================================================
+36. ACCEPTANCE CRITERIA
+=======================
+
+The project is accepted only if:
+
+SaaS:
+Super Admin can create/activate/suspend tenants.
+Plans and subscriptions exist.
+Limits are enforced.
+Billing manual workflow works.
+Invoices exist.
+Payment recording works.
+Company activation works.
+Signup request works.
+Lead capture works.
+
+Customer:
+Owner can onboard company.
+Owner/HR can manage branches.
+Owner/HR can manage employees.
+Owner/HR can manage shift policies.
+Owner/HR can generate schedules.
+Employee can clock in/out.
+Kiosk works.
+AttendanceDay recalculates.
+Approvals work.
+Reports work.
+CSV export works.
+Audit logs work.
+Settings save.
+Billing page shows subscription.
+
+Security:
+Tenant isolation enforced.
+Role access enforced.
+Branch Manager scoped to assigned branch.
+Employee sees only own data.
+Super Admin access audited.
+Impersonation requires reason.
+No static fake dashboards.
+
+Subscription:
+Trial works.
+Active works.
+Past due/suspended states block operational access.
+Plan limits work.
+Feature gates work.
+Upgrade prompt works.
+
+Reports:
+Daily report real data.
+Monthly summary real data.
+Exceptions real data.
+Overtime real data.
+Branch report real data.
+Payroll export real data.
+CSV BOM and escaping work.
+
+Technical:
+Build passes.
+Typecheck passes.
+Lint passes if configured.
+README complete.
+DEMO complete.
+TESTING checklist complete.
+No runtime crashes on main flows.
+
+==================================================
+37. FINAL README REQUIREMENTS
+=============================
+
+README must include:
+Project name
+Description
+Tech stack
+Architecture
+Multi-tenancy explanation
+Subscription model
+Roles and permissions
+Setup instructions
+Environment variables
+Database setup
+Seed command
+Run command
+Build command
+Typecheck command
+Lint command
+Demo accounts
+Main features
+Known limitations
+Production checklist
+Deployment notes
+Compliance notes
+
+Create:
+README.md
+DEMO.md
+TESTING.md
+DEPLOYMENT.md
+
+==================================================
+38. FINAL DEMO FLOW
+===================
+
+DEMO.md must include:
+
+Super Admin demo:
+Login
+View SaaS dashboard
+View tenants
+Activate pending tenant
+Change plan
+Create invoice
+Mark payment paid
+Suspend/reactivate tenant
+View platform audit
+
+Customer Owner demo:
+Login
+Onboarding
+Dashboard
+Branches
+Employees
+Schedules
+Reports
+Billing
+Settings
+
+Employee demo:
+Login
+Today
+Clock in/out
+Attendance history
+Submit request
+View request status
+
+Manager demo:
+Login
+Branch dashboard
+Live attendance
+Kiosk
+Approvals
+Reports
+
+Billing demo:
+Pending invoice
+Payment recorded
+Subscription active
+Suspended account behavior
+
+==================================================
+39. FINAL TESTING
+=================
+
+TESTING.md must include test checklist for:
+
+Auth
+Tenant isolation
+Subscription gating
+Plan limits
+Super Admin
+Signup
+Activation
+Billing
+Branches
+Employees
+Schedules
+Clock
+Kiosk
+Geofence
+Attendance engine
+Absent marking
+Approvals
+Reports
+CSV
+Audit
+Settings
+Support
+Mobile responsiveness
+Error states
+Security access control
+
+==================================================
+40. IMPORTANT FINAL INSTRUCTION
+===============================
+
+Build a real working product.
+Do not deliver screenshots only.
+Do not deliver static pages.
+Do not skip billing/subscription/activation.
+Do not skip Super Admin.
+Do not skip tenant isolation.
+Do not skip access control.
+Do not skip plan limits.
+Do not skip audit logs.
+Do not skip CSV export.
+Do not skip README/DEMO/TESTING docs.
+
+If something is too complex for the first implementation:
+Create the database model.
+Create the UI placeholder.
+Add clear “Coming later” label.
+Document it in limitations.
+Do not pretend it is fully implemented.
+
+Final output after all phases:
+What was built
+How to run
+Demo accounts
+How to test
+Known limitations
+Production-readiness checklist
+Recommended next steps
+
+Start now with Phase 1 only.
+Do not continue to Phase 2 until Phase 1 is complete, tested, and reported.

@@ -1,0 +1,2002 @@
+     1→     1→You are building a production-ready SaaS platform called B-Attend.
+     2→     2→
+     3→     3→B-Attend is a smart attendance, shift control, approvals, reporting, and payroll-ready workforce platform for restaurants, cafes, central kitchens, retail chains, gyms, clinics, warehouses, security companies, cleaning companies, and operational teams in Egypt and the MENA region.
+     4→     4→
+     5→     5→This is not a simple demo.
+     6→     6→This must be built as a commercial SaaS product ready to sell, activate, manage, and operate for multiple paying companies.
+     7→     7→
+     8→     8→Important:
+     9→     9→Do not copy BlueWorks, OnShift, Deputy, Jibble, Homebase, or any competitor UI, wording, branding, layouts, icons, color system, or protected design.
+    10→    10→Use them only as market reference for expected feature depth.
+    11→    11→Build an original Egyptian/MENA-ready SaaS experience.
+    12→    12→
+    13→    13→Product name:
+    14→    14→B-Attend
+    15→    15→
+    16→    16→Arabic name:
+    17→    17→بي اتيند
+    18→    18→
+    19→    19→Positioning:
+    20→    20→Smart attendance and shift control for operational teams
+    21→    21→
+    22→    22→Arabic positioning:
+    23→    23→نظام حضور وورديات ذكي للشركات والمطاعم
+    24→    24→
+    25→    25→Primary tagline:
+    26→    26→Be present. Be verified.
+    27→    27→
+    28→    28→Arabic tagline:
+    29→    29→حضور موثّق وورديات تحت السيطرة
+    30→    30→
+    31→    31→Core promise:
+    32→    32→B-Attend helps companies control attendance, shifts, branches, approvals, and payroll-ready reports from one clean dashboard.
+    33→    33→
+    34→    34→Business goal:
+    35→    35→Build a sellable SaaS where B-Attend’s internal team can create customers, activate subscriptions, control plans, suspend accounts, manage limits, track invoices, and support customers from a Super Admin dashboard.
+    36→    36→
+    37→    37→Primary customers:
+    38→    38→Restaurants
+    39→    39→Cafes
+    40→    40→Cloud kitchens
+    41→    41→Central kitchens
+    42→    42→Small retail chains
+    43→    43→Gyms
+    44→    44→Clinics
+    45→    45→Warehouses
+    46→    46→Security companies
+    47→    47→Cleaning companies
+    48→    48→Multi-branch operational teams
+    49→    49→
+    50→    50→Core personas:
+    51→    51→
+    52→    52→1. B-Attend Super Admin
+    53→    53→2. B-Attend Sales/Admin Operator
+    54→    54→3. B-Attend Support Agent
+    55→    55→4. Customer Company Owner
+    56→    56→5. Customer HR Admin
+    57→    57→6. Customer Branch Manager
+    58→    58→7. Customer Employee
+    59→    59→
+    60→    60→Build the platform as a real multi-tenant SaaS.
+    61→    61→
+    62→    62→Every tenant/company must be isolated by companyId.
+    63→    63→No user should ever see data from another company unless they are B-Attend Super Admin using audited support tools.
+    64→    64→
+    65→    65→Use strict tenant scoping on every query.
+    66→    66→Never rely on frontend filtering for security.
+    67→    67→Access control must be enforced server-side.
+    68→    68→
+    69→    69→Technology stack:
+    70→    70→Next.js App Router
+    71→    71→TypeScript
+    72→    72→PostgreSQL as production database
+    73→    73→Prisma ORM
+    74→    74→Prisma Migrate
+    75→    75→Tailwind CSS
+    76→    76→shadcn/ui if available
+    77→    77→Zod validation
+    78→    78→React Hook Form if available
+    79→    79→bcrypt or argon2 for password hashing
+    80→    80→Secure HttpOnly cookies or Auth.js if compatible
+    81→    81→Server Actions or Route Handlers, but use one consistent approach per module
+    82→    82→CSV export with UTF-8 BOM
+    83→    83→Responsive design
+    84→    84→PWA-ready structure
+    85→    85→Arabic RTL-ready architecture
+    86→    86→English UI first, Arabic-ready labels and translation structure
+    87→    87→
+    88→    88→Local development:
+    89→    89→Use Docker Compose for PostgreSQL if possible.
+    90→    90→Provide fallback instructions if Docker is not available.
+    91→    91→Do not use SQLite for the final commercial version unless only as a temporary local fallback.
+    92→    92→
+    93→    93→Required environments:
+    94→    94→DATABASE_URL
+    95→    95→APP_URL
+    96→    96→SESSION_SECRET
+    97→    97→EMAIL_FROM
+    98→    98→SMTP_HOST
+    99→    99→SMTP_PORT
+   100→   100→SMTP_USER
+   101→   101→SMTP_PASS
+   102→   102→PAYMENT_PROVIDER
+   103→   103→STRIPE_SECRET_KEY placeholder
+   104→   104→STRIPE_WEBHOOK_SECRET placeholder
+   105→   105→MANUAL_ACTIVATION_MODE
+   106→   106→SUPER_ADMIN_EMAIL
+   107→   107→SUPER_ADMIN_PASSWORD
+   108→   108→
+   109→   109→Do not require live payment integration to run locally.
+   110→   110→Payment provider must be abstracted.
+   111→   111→Manual payment approval must work first for Egypt/MENA B2B sales.
+   112→   112→Stripe-compatible structure can exist as a placeholder or optional integration, but do not block the product on Stripe.
+   113→   113→
+   114→   114→Build these top-level areas:
+   115→   115→
+   116→   116→A. Public marketing website
+   117→   117→B. Customer signup and onboarding
+   118→   118→C. Customer app dashboard
+   119→   119→D. Employee self-service app
+   120→   120→E. Kiosk mode
+   121→   121→F. Super Admin control center
+   122→   122→G. Subscription and activation system
+   123→   123→H. Reports and exports
+   124→   124→I. Audit and compliance
+   125→   125→J. Settings and feature flags
+   126→   126→K. README, demo, testing, deployment docs
+   127→   127→
+   128→   128→==================================================
+   129→   129→
+   130→   130→1. PUBLIC MARKETING WEBSITE
+   131→   131→   ==================================================
+   132→   132→
+   133→   133→Create public pages:
+   134→   134→
+   135→   135→/
+   136→   136→Landing page
+   137→   137→
+   138→   138→/pricing
+   139→   139→Pricing plans
+   140→   140→
+   141→   141→/features
+   142→   142→Features overview
+   143→   143→
+   144→   144→/contact
+   145→   145→Lead/contact form
+   146→   146→
+   147→   147→/request-demo
+   148→   148→Demo request form
+   149→   149→
+   150→   150→/login
+   151→   151→Customer login
+   152→   152→
+   153→   153→/signup
+   154→   154→Company signup request
+   155→   155→
+   156→   156→/legal/privacy
+   157→   157→Privacy policy placeholder
+   158→   158→
+   159→   159→/legal/terms
+   160→   160→Terms placeholder
+   161→   161→
+   162→   162→Marketing website must be clean, premium, Egyptian/MENA B2B SaaS style.
+   163→   163→
+   164→   164→Landing page sections:
+   165→   165→Hero
+   166→   166→Problem
+   167→   167→Solution
+   168→   168→Features
+   169→   169→How it works
+   170→   170→Use cases
+   171→   171→Pricing preview
+   172→   172→Testimonials placeholder
+   173→   173→FAQ
+   174→   174→CTA
+   175→   175→
+   176→   176→Hero copy:
+   177→   177→B-Attend
+   178→   178→Attendance and shift control for operational teams
+   179→   179→Track attendance, verify location, manage shifts, approve exceptions, and export payroll-ready reports.
+   180→   180→
+   181→   181→Arabic-friendly copy should be easy to add later.
+   182→   182→
+   183→   183→Marketing features:
+   184→   184→Mobile clock in/out
+   185→   185→GPS geofence validation
+   186→   186→Branch kiosk mode
+   187→   187→Shift scheduling
+   188→   188→Approval workflow
+   189→   189→Leave and permission requests
+   190→   190→Overtime control
+   191→   191→Payroll-ready reports
+   192→   192→CSV export
+   193→   193→Audit log
+   194→   194→Multi-branch management
+   195→   195→Role-based access
+   196→   196→Subscription plans
+   197→   197→Super admin activation
+   198→   198→
+   199→   199→Do not create fake claims like “trusted by 10,000 companies” unless seeded as placeholder clearly marked.
+   200→   200→
+   201→   201→Lead capture:
+   202→   202→Store demo/contact requests in database.
+   203→   203→Fields:
+   204→   204→Name
+   205→   205→Company
+   206→   206→Phone
+   207→   207→Email
+   208→   208→Business type
+   209→   209→Employees count
+   210→   210→Branches count
+   211→   211→Message
+   212→   212→Source page
+   213→   213→Status: NEW, CONTACTED, QUALIFIED, WON, LOST
+   214→   214→Assigned sales user
+   215→   215→Created at
+   216→   216→Updated at
+   217→   217→
+   218→   218→Super Admin/Sales team must see leads in admin dashboard.
+   219→   219→
+   220→   220→==================================================
+   221→   221→2. SAAS SUBSCRIPTION PLANS
+   222→   222→==========================
+   223→   223→
+   224→   224→Create pricing and plan system.
+   225→   225→
+   226→   226→Plans must be database-driven, not hard-coded only in UI.
+   227→   227→
+   228→   228→Default plans in seed:
+   229→   229→
+   230→   230→Trial
+   231→   231→Price: 0 EGP
+   232→   232→Duration: 14 days
+   233→   233→Branches: 1
+   234→   234→Employees: 10
+   235→   235→Managers: 1
+   236→   236→Kiosks: 1
+   237→   237→Reports: basic
+   238→   238→CSV export: enabled
+   239→   239→Approvals: enabled
+   240→   240→Audit log retention: 30 days
+   241→   241→Support: self-service
+   242→   242→Payment required: false
+   243→   243→
+   244→   244→Starter
+   245→   245→Price: 999 EGP/month
+   246→   246→Annual price: 9,990 EGP/year
+   247→   247→Branches: 1
+   248→   248→Employees: 25
+   249→   249→Managers: 2
+   250→   250→Kiosks: 1
+   251→   251→Reports: basic
+   252→   252→CSV export: enabled
+   253→   253→Approvals: enabled
+   254→   254→Audit log retention: 90 days
+   255→   255→Support: standard
+   256→   256→
+   257→   257→Growth
+   258→   258→Price: 2,499 EGP/month
+   259→   259→Annual price: 24,990 EGP/year
+   260→   260→Branches: 3
+   261→   261→Employees: 75
+   262→   262→Managers: 6
+   263→   263→Kiosks: 3
+   264→   264→Reports: advanced
+   265→   265→CSV export: enabled
+   266→   266→Approvals: enabled
+   267→   267→Bulk schedules: enabled
+   268→   268→Leave management: enabled
+   269→   269→Audit log retention: 180 days
+   270→   270→Support: priority
+   271→   271→
+   272→   272→Pro
+   273→   273→Price: 4,999 EGP/month
+   274→   274→Annual price: 49,990 EGP/year
+   275→   275→Branches: 10
+   276→   276→Employees: 250
+   277→   277→Managers: 20
+   278→   278→Kiosks: 10
+   279→   279→Reports: advanced
+   280→   280→CSV export: enabled
+   281→   281→Approvals: enabled
+   282→   282→Bulk schedules: enabled
+   283→   283→Leave management: enabled
+   284→   284→Advanced geofence: enabled
+   285→   285→API access: placeholder
+   286→   286→Audit log retention: 365 days
+   287→   287→Support: priority
+   288→   288→
+   289→   289→Enterprise
+   290→   290→Price: Custom
+   291→   291→Branches: custom
+   292→   292→Employees: custom
+   293→   293→Managers: custom
+   294→   294→Kiosks: custom
+   295→   295→All features
+   296→   296→Custom onboarding
+   297→   297→Custom support
+   298→   298→Manual contract
+   299→   299→Dedicated account manager placeholder
+   300→   300→
+   301→   301→Plans must support:
+   302→   302→Monthly billing
+   303→   303→Annual billing
+   304→   304→Trial
+   305→   305→Manual activation
+   306→   306→Coupon/discount
+   307→   307→Custom limits
+   308→   308→Feature flags
+   309→   309→Grace period
+   310→   310→Suspension
+   311→   311→Cancellation
+   312→   312→Read-only mode
+   313→   313→
+   314→   314→Subscription statuses:
+   315→   315→TRIALING
+   316→   316→PENDING_PAYMENT
+   317→   317→ACTIVE
+   318→   318→PAST_DUE
+   319→   319→GRACE_PERIOD
+   320→   320→SUSPENDED
+   321→   321→CANCELLED
+   322→   322→EXPIRED
+   323→   323→MANUAL_REVIEW
+   324→   324→
+   325→   325→Plan limit enforcement:
+   326→   326→Max branches
+   327→   327→Max employees
+   328→   328→Max managers
+   329→   329→Max kiosks
+   330→   330→Max monthly CSV exports if needed
+   331→   331→Feature access
+   332→   332→Audit retention
+   333→   333→Reports access
+   334→   334→API access placeholder
+   335→   335→
+   336→   336→Important:
+   337→   337→If company exceeds limits, show clear upgrade message.
+   338→   338→Do not crash.
+   339→   339→Do not allow creating more branches/employees than plan limit unless Super Admin override exists.
+   340→   340→Super Admin can override limits per tenant.
+   341→   341→
+   342→   342→==================================================
+   343→   343→3. CUSTOMER SIGNUP AND ACTIVATION FLOW
+   344→   344→======================================
+   345→   345→
+   346→   346→Build signup flow:
+   347→   347→
+   348→   348→Step 1:
+   349→   349→Company owner submits signup:
+   350→   350→Full name
+   351→   351→Email
+   352→   352→Phone
+   353→   353→Password
+   354→   354→Company name
+   355→   355→Business type
+   356→   356→Employees count
+   357→   357→Branches count
+   358→   358→Preferred plan
+   359→   359→Billing cycle
+   360→   360→City
+   361→   361→Message optional
+   362→   362→
+   363→   363→Step 2:
+   364→   364→Create Company with status PENDING_ACTIVATION.
+   365→   365→Create CompanyOwner user.
+   366→   366→Create TrialSubscription or PendingSubscription depending on selected plan.
+   367→   367→Show pending activation screen if manual activation mode is enabled.
+   368→   368→
+   369→   369→Step 3:
+   370→   370→Super Admin reviews signup in admin panel.
+   371→   371→Super Admin can:
+   372→   372→Approve trial
+   373→   373→Activate paid plan
+   374→   374→Request payment
+   375→   375→Create invoice
+   376→   376→Mark invoice paid
+   377→   377→Reject signup
+   378→   378→Suspend company
+   379→   379→Edit plan and limits
+   380→   380→Send activation email placeholder
+   381→   381→
+   382→   382→Step 4:
+   383→   383→After activation, company owner can access onboarding wizard.
+   384→   384→
+   385→   385→Company statuses:
+   386→   386→PENDING_ACTIVATION
+   387→   387→TRIAL_ACTIVE
+   388→   388→ACTIVE
+   389→   389→PAST_DUE
+   390→   390→SUSPENDED
+   391→   391→CANCELLED
+   392→   392→REJECTED
+   393→   393→
+   394→   394→Activation rules:
+   395→   395→Pending companies cannot use operational pages.
+   396→   396→Trial companies can use features within trial plan limits.
+   397→   397→Suspended companies cannot clock in/out or manage data.
+   398→   398→Suspended companies can access billing page and support message.
+   399→   399→Cancelled companies are read-only unless reactivated.
+   400→   400→
+   401→   401→Create activation screen:
+   402→   402→“Your account is being reviewed”
+   403→   403→“Your trial is active”
+   404→   404→“Your subscription is suspended”
+   405→   405→“Payment required”
+   406→   406→“Contact support”
+   407→   407→
+   408→   408→==================================================
+   409→   409→4. SUPER ADMIN CONTROL CENTER
+   410→   410→=============================
+   411→   411→
+   412→   412→Create a separate Super Admin area:
+   413→   413→
+   414→   414→/admin
+   415→   415→Super Admin dashboard
+   416→   416→
+   417→   417→/admin/tenants
+   418→   418→All companies
+   419→   419→
+   420→   420→/admin/tenants/[id]
+   421→   421→Company detail
+   422→   422→
+   423→   423→/admin/subscriptions
+   424→   424→Subscriptions
+   425→   425→
+   426→   426→/admin/plans
+   427→   427→Plan management
+   428→   428→
+   429→   429→/admin/invoices
+   430→   430→Invoices and payments
+   431→   431→
+   432→   432→/admin/leads
+   433→   433→Demo/contact leads
+   434→   434→
+   435→   435→/admin/users
+   436→   436→Platform users
+   437→   437→
+   438→   438→/admin/support
+   439→   439→Support tickets
+   440→   440→
+   441→   441→/admin/audit
+   442→   442→Platform audit log
+   443→   443→
+   444→   444→/admin/settings
+   445→   445→Platform settings
+   446→   446→
+   447→   447→/admin/system
+   448→   448→System health
+   449→   449→
+   450→   450→Super Admin roles:
+   451→   451→SUPER_ADMIN
+   452→   452→SALES_ADMIN
+   453→   453→SUPPORT_AGENT
+   454→   454→BILLING_ADMIN
+   455→   455→
+   456→   456→Super Admin permissions:
+   457→   457→SUPER_ADMIN: everything
+   458→   458→SALES_ADMIN: leads, tenants read, activation requests, demo requests
+   459→   459→SUPPORT_AGENT: tenants read, support tickets, limited impersonation with reason
+   460→   460→BILLING_ADMIN: plans, invoices, subscriptions, payments
+   461→   461→
+   462→   462→Super Admin dashboard cards:
+   463→   463→Total companies
+   464→   464→Active companies
+   465→   465→Trial companies
+   466→   466→Pending activation
+   467→   467→Suspended companies
+   468→   468→MRR
+   469→   469→ARR
+   470→   470→New signups this month
+   471→   471→Churned companies
+   472→   472→Pending invoices
+   473→   473→Overdue invoices
+   474→   474→Total active employees across tenants
+   475→   475→Total active branches across tenants
+   476→   476→Support tickets open
+   477→   477→Clock actions today across system
+   478→   478→
+   479→   479→Tenant detail page must show:
+   480→   480→Company info
+   481→   481→Owner info
+   482→   482→Plan
+   483→   483→Subscription status
+   484→   484→Billing cycle
+   485→   485→Current limits
+   486→   486→Usage:
+   487→   487→Employees used / allowed
+   488→   488→Branches used / allowed
+   489→   489→Managers used / allowed
+   490→   490→Kiosks used / allowed
+   491→   491→CSV exports this month
+   492→   492→Last login
+   493→   493→Last clock action
+   494→   494→Recent audit events
+   495→   495→Invoices
+   496→   496→Support notes
+   497→   497→Admin actions
+   498→   498→
+   499→   499→Admin tenant actions:
+   500→   500→Activate trial
+   501→   501→Activate paid plan
+   502→   502→Change plan
+   503→   503→Override limits
+   504→   504→Extend trial
+   505→   505→Suspend company
+   506→   506→Reactivate company
+   507→   507→Cancel company
+   508→   508→Mark invoice paid
+   509→   509→Create manual invoice
+   510→   510→Reset owner password
+   511→   511→Send password reset placeholder
+   512→   512→Impersonate owner with reason
+   513→   513→View tenant audit log
+   514→   514→Add internal note
+   515→   515→
+   516→   516→Impersonation:
+   517→   517→Super Admin/Support can impersonate a company owner only with reason.
+   518→   518→Every impersonation must create audit log.
+   519→   519→Show visible banner:
+   520→   520→“You are impersonating [Company].”
+   521→   521→Add “Stop impersonating” button.
+   522→   522→Never allow silent impersonation.
+   523→   523→
+   524→   524→==================================================
+   525→   525→5. BILLING, INVOICES, PAYMENTS
+   526→   526→==============================
+   527→   527→
+   528→   528→Build billing module with manual payment workflow first.
+   529→   529→
+   530→   530→Models:
+   531→   531→Plan
+   532→   532→Subscription
+   533→   533→Invoice
+   534→   534→Payment
+   535→   535→Coupon
+   536→   536→PlanFeature
+   537→   537→UsageLimit
+   538→   538→BillingEvent
+   539→   539→
+   540→   540→Payment providers:
+   541→   541→MANUAL
+   542→   542→STRIPE_PLACEHOLDER
+   543→   543→PAYMOB_PLACEHOLDER
+   544→   544→FAWRY_PLACEHOLDER
+   545→   545→BANK_TRANSFER
+   546→   546→CASH
+   547→   547→
+   548→   548→Do not implement real payment gateway unless environment keys exist.
+   549→   549→Manual payment approval must work.
+   550→   550→
+   551→   551→Invoice fields:
+   552→   552→Invoice number
+   553→   553→Company
+   554→   554→Subscription
+   555→   555→Plan
+   556→   556→Billing period start
+   557→   557→Billing period end
+   558→   558→Subtotal
+   559→   559→Discount
+   560→   560→Tax
+   561→   561→Total
+   562→   562→Currency
+   563→   563→Status
+   564→   564→Due date
+   565→   565→Paid at
+   566→   566→Payment method
+   567→   567→Notes
+   568→   568→PDF placeholder URL
+   569→   569→Created by
+   570→   570→Created at
+   571→   571→Updated at
+   572→   572→
+   573→   573→Invoice statuses:
+   574→   574→DRAFT
+   575→   575→ISSUED
+   576→   576→PENDING_PAYMENT
+   577→   577→PAID
+   578→   578→OVERDUE
+   579→   579→VOID
+   580→   580→REFUNDED
+   581→   581→
+   582→   582→Payment fields:
+   583→   583→Company
+   584→   584→Invoice
+   585→   585→Amount
+   586→   586→Currency
+   587→   587→Provider
+   588→   588→Reference number
+   589→   589→Status
+   590→   590→Paid at
+   591→   591→Proof attachment placeholder
+   592→   592→Created by
+   593→   593→
+   594→   594→Payment statuses:
+   595→   595→PENDING
+   596→   596→CONFIRMED
+   597→   597→FAILED
+   598→   598→REFUNDED
+   599→   599→
+   600→   600→Billing pages for customer owner:
+   601→   601→/billing
+   602→   602→Current plan
+   603→   603→Subscription status
+   604→   604→Usage limits
+   605→   605→Invoices
+   606→   606→Payment instructions
+   607→   607→Upgrade request
+   608→   608→Contact sales
+   609→   609→
+   610→   610→Customer owner can:
+   611→   611→View plan
+   612→   612→View invoices
+   613→   613→Request upgrade
+   614→   614→Upload payment proof placeholder
+   615→   615→Contact billing support
+   616→   616→
+   617→   617→Super Admin/Billing Admin can:
+   618→   618→Create invoice
+   619→   619→Mark invoice paid
+   620→   620→Record manual payment
+   621→   621→Change subscription status
+   622→   622→Change renewal date
+   623→   623→Add discount
+   624→   624→Apply coupon
+   625→   625→Suspend for non-payment
+   626→   626→Reactivate after payment
+   627→   627→
+   628→   628→Billing enforcement:
+   629→   629→If invoice overdue, subscription becomes PAST_DUE.
+   630→   630→After configurable grace period, becomes SUSPENDED.
+   631→   631→In SUSPENDED:
+   632→   632→Owner can access billing and support.
+   633→   633→HR/Managers see suspended message.
+   634→   634→Employees cannot clock in/out unless emergency override enabled by Super Admin.
+   635→   635→Reports become read-only.
+   636→   636→CSV export disabled.
+   637→   637→
+   638→   638→Subscription lifecycle:
+   639→   639→Signup → Pending Activation
+   640→   640→Trial → Active
+   641→   641→Active → Past Due
+   642→   642→Past Due → Grace Period
+   643→   643→Grace Period → Suspended
+   644→   644→Suspended → Reactivated or Cancelled
+   645→   645→Cancelled → Read-only archived tenant
+   646→   646→
+   647→   647→==================================================
+   648→   648→6. CUSTOMER APP ROLES AND PERMISSIONS
+   649→   649→=====================================
+   650→   650→
+   651→   651→Customer roles:
+   652→   652→COMPANY_OWNER
+   653→   653→HR_ADMIN
+   654→   654→BRANCH_MANAGER
+   655→   655→EMPLOYEE
+   656→   656→
+   657→   657→Optional future roles:
+   658→   658→AREA_MANAGER
+   659→   659→PAYROLL_ADMIN
+   660→   660→REPORT_VIEWER
+   661→   661→
+   662→   662→Permissions must be capability-based, not only role-name checks.
+   663→   663→
+   664→   664→Create permissions:
+   665→   665→VIEW_DASHBOARD
+   666→   666→MANAGE_BRANCHES
+   667→   667→MANAGE_EMPLOYEES
+   668→   668→MANAGE_SHIFT_POLICIES
+   669→   669→MANAGE_SCHEDULES
+   670→   670→CLOCK_SELF
+   671→   671→USE_KIOSK
+   672→   672→VIEW_LIVE_ATTENDANCE
+   673→   673→MANAGE_APPROVALS
+   674→   674→VIEW_REPORTS
+   675→   675→EXPORT_REPORTS
+   676→   676→VIEW_AUDIT_LOG
+   677→   677→MANAGE_SETTINGS
+   678→   678→VIEW_BILLING
+   679→   679→MANAGE_BILLING
+   680→   680→MANAGE_USERS
+   681→   681→MANAGE_ROLES
+   682→   682→
+   683→   683→Default permissions:
+   684→   684→Company Owner:
+   685→   685→All tenant permissions including billing and settings
+   686→   686→
+   687→   687→HR Admin:
+   688→   688→Operational full access except billing payment changes unless allowed
+   689→   689→
+   690→   690→Branch Manager:
+   691→   691→Assigned branch only:
+   692→   692→Dashboard
+   693→   693→Live attendance
+   694→   694→Schedules view
+   695→   695→Approvals for branch
+   696→   696→Employees view
+   697→   697→Reports branch-scoped
+   698→   698→Kiosk
+   699→   699→
+   700→   700→Employee:
+   701→   701→Own pages only:
+   702→   702→Today
+   703→   703→Clock in/out
+   704→   704→Attendance history
+   705→   705→Requests
+   706→   706→Profile
+   707→   707→
+   708→   708→Create user management:
+   709→   709→/users
+   710→   710→Invite user
+   711→   711→Create user
+   712→   712→Edit role
+   713→   713→Deactivate user
+   714→   714→Reset password placeholder
+   715→   715→
+   716→   716→User statuses:
+   717→   717→ACTIVE
+   718→   718→INVITED
+   719→   719→SUSPENDED
+   720→   720→LEFT
+   721→   721→
+   722→   722→Invite flow:
+   723→   723→Company Owner/HR creates user.
+   724→   724→System creates temporary password or invite token.
+   725→   725→Email placeholder or copy invite link.
+   726→   726→First login forces password change.
+   727→   727→
+   728→   728→==================================================
+   729→   729→7. ONBOARDING WIZARD
+   730→   730→====================
+   731→   731→
+   732→   732→After activation, company owner sees onboarding wizard:
+   733→   733→
+   734→   734→Step 1:
+   735→   735→Company profile
+   736→   736→Company name
+   737→   737→Industry
+   738→   738→Timezone
+   739→   739→Currency
+   740→   740→Default language
+   741→   741→
+   742→   742→Step 2:
+   743→   743→Create first branch
+   744→   744→Name
+   745→   745→Address
+   746→   746→Latitude
+   747→   747→Longitude
+   748→   748→Geofence radius
+   749→   749→
+   750→   750→Step 3:
+   751→   751→Create departments
+   752→   752→Kitchen
+   753→   753→Service
+   754→   754→Cashier
+   755→   755→Delivery
+   756→   756→Stewarding
+   757→   757→Management
+   758→   758→Custom departments
+   759→   759→
+   760→   760→Step 4:
+   761→   761→Create shift policies
+   762→   762→Morning
+   763→   763→Evening
+   764→   764→Night
+   765→   765→Double shift
+   766→   766→Part time
+   767→   767→
+   768→   768→Step 5:
+   769→   769→Add employees
+   770→   770→Manual add
+   771→   771→CSV import placeholder
+   772→   772→Employee code
+   773→   773→Name
+   774→   774→Phone
+   775→   775→Email
+   776→   776→Branch
+   777→   777→Department
+   778→   778→Job title
+   779→   779→Role
+   780→   780→PIN
+   781→   781→
+   782→   782→Step 6:
+   783→   783→Generate first schedules
+   784→   784→Branch
+   785→   785→Employees
+   786→   786→Date range
+   787→   787→Shift policy
+   788→   788→Weekend/off days
+   789→   789→
+   790→   790→Step 7:
+   791→   791→Review
+   792→   792→Show setup progress
+   793→   793→Show missing items
+   794→   794→
+   795→   795→Onboarding progress:
+   796→   796→Company profile completed
+   797→   797→Branch created
+   798→   798→Departments created
+   799→   799→Shift policies created
+   800→   800→Employees added
+   801→   801→Schedules generated
+   802→   802→First clock test done
+   803→   803→
+   804→   804→Dashboard must show setup progress until complete.
+   805→   805→
+   806→   806→==================================================
+   807→   807→8. BRANCHES
+   808→   808→===========
+   809→   809→
+   810→   810→Branch fields:
+   811→   811→Company
+   812→   812→Name
+   813→   813→Code
+   814→   814→Address
+   815→   815→City
+   816→   816→Area
+   817→   817→Latitude
+   818→   818→Longitude
+   819→   819→Geofence radius
+   820→   820→Manager
+   821→   821→Status
+   822→   822→Opening hours placeholder
+   823→   823→Notes
+   824→   824→Created at
+   825→   825→Updated at
+   826→   826→
+   827→   827→Branch statuses:
+   828→   828→ACTIVE
+   829→   829→INACTIVE
+   830→   830→ARCHIVED
+   831→   831→
+   832→   832→Pages:
+   833→   833→Branches list
+   834→   834→Branch create
+   835→   835→Branch edit
+   836→   836→Branch detail
+   837→   837→
+   838→   838→Branch detail:
+   839→   839→Employees
+   840→   840→Schedules today
+   841→   841→Attendance today
+   842→   842→Pending approvals
+   843→   843→Geofence settings
+   844→   844→Recent exceptions
+   845→   845→
+   846→   846→Plan enforcement:
+   847→   847→Cannot create branch if plan branch limit reached unless override.
+   848→   848→
+   849→   849→==================================================
+   850→   850→9. EMPLOYEES
+   851→   851→============
+   852→   852→
+   853→   853→Employee fields:
+   854→   854→Company
+   855→   855→Employee code
+   856→   856→Full name
+   857→   857→Phone
+   858→   858→Email
+   859→   859→National ID optional placeholder
+   860→   860→Job title
+   861→   861→Department
+   862→   862→Branch
+   863→   863→Manager
+   864→   864→Employment type
+   865→   865→Status
+   866→   866→Start date
+   867→   867→End date optional
+   868→   868→Default shift policy
+   869→   869→PIN code
+   870→   870→User account link
+   871→   871→Salary placeholder optional
+   872→   872→Notes
+   873→   873→
+   874→   874→Employment types:
+   875→   875→FULL_TIME
+   876→   876→PART_TIME
+   877→   877→DAILY_WORKER
+   878→   878→TEMPORARY
+   879→   879→CONTRACTOR
+   880→   880→
+   881→   881→Statuses:
+   882→   882→ACTIVE
+   883→   883→SUSPENDED
+   884→   884→LEFT
+   885→   885→ON_LEAVE
+   886→   886→
+   887→   887→Pages:
+   888→   888→Employee list
+   889→   889→Employee create
+   890→   890→Employee edit
+   891→   891→Employee profile
+   892→   892→
+   893→   893→Employee profile:
+   894→   894→Basic info
+   895→   895→Branch
+   896→   896→Department
+   897→   897→Manager
+   898→   898→Shift policy
+   899→   899→Current month attendance summary
+   900→   900→Recent attendance
+   901→   901→Recent requests
+   902→   902→Warnings/exceptions
+   903→   903→Audit trail filtered by employee
+   904→   904→
+   905→   905→Plan enforcement:
+   906→   906→Cannot create employee if plan employee limit reached unless override.
+   907→   907→
+   908→   908→==================================================
+   909→   909→10. SHIFT POLICIES
+   910→   910→==================
+   911→   911→
+   912→   912→Shift policy fields:
+   913→   913→Company
+   914→   914→Name
+   915→   915→Start time
+   916→   916→End time
+   917→   917→Break minutes
+   918→   918→Late grace minutes
+   919→   919→Early leave grace minutes
+   920→   920→Overtime starts after minutes
+   921→   921→Weekend days
+   922→   922→Requires overtime approval
+   923→   923→Allows mobile clock-in
+   924→   924→Allows kiosk clock-in
+   925→   925→Allow no schedule clock-in
+   926→   926→Status
+   927→   927→
+   928→   928→Pages:
+   929→   929→Policy list
+   930→   930→Create
+   931→   931→Edit
+   932→   932→
+   933→   933→Support overnight shifts:
+   934→   934→Example 17:00 to 01:00 next day must calculate correctly.
+   935→   935→
+   936→   936→==================================================
+   937→   937→11. SCHEDULES
+   938→   938→=============
+   939→   939→
+   940→   940→Schedule fields:
+   941→   941→Company
+   942→   942→Employee
+   943→   943→Branch
+   944→   944→Date
+   945→   945→Shift policy
+   946→   946→Expected start
+   947→   947→Expected end
+   948→   948→Status
+   949→   949→Notes
+   950→   950→
+   951→   951→Statuses:
+   952→   952→SCHEDULED
+   953→   953→OFF
+   954→   954→LEAVE
+   955→   955→ABSENT
+   956→   956→CANCELLED
+   957→   957→
+   958→   958→Pages:
+   959→   959→Schedule table
+   960→   960→Schedule calendar-like table
+   961→   961→Create single schedule
+   962→   962→Edit schedule
+   963→   963→Bulk schedule generation
+   964→   964→
+   965→   965→Bulk generation:
+   966→   966→Select branch
+   967→   967→Select employees
+   968→   968→Select date range
+   969→   969→Select shift policy
+   970→   970→Select weekend/off days
+   971→   971→Generate
+   972→   972→Avoid duplicate employee/date schedules
+   973→   973→Show created count
+   974→   974→Show skipped duplicates
+   975→   975→Show errors
+   976→   976→
+   977→   977→Access:
+   978→   978→Owner/HR can manage all
+   979→   979→Branch Manager can view assigned branch schedules only
+   980→   980→Branch Manager cannot create/edit schedules unless enabled by setting
+   981→   981→
+   982→   982→==================================================
+   983→   983→12. CLOCK IN / CLOCK OUT
+   984→   984→========================
+   985→   985→
+   986→   986→Employee clock page:
+   987→   987→/clock
+   988→   988→
+   989→   989→Employee sees:
+   990→   990→Today’s shift
+   991→   991→Branch
+   992→   992→Expected start/end
+   993→   993→Current status
+   994→   994→Clock In button
+   995→   995→Clock Out button
+   996→   996→Last action
+   997→   997→Location status
+   998→   998→Month summary
+   999→   999→Pending request alert
+  1000→  1000→
+  1001→  1001→Clock in/out must:
+  1002→  1002→Require valid geolocation for MOBILE_WEB
+  1003→  1003→Capture timestamp
+  1004→  1004→Capture latitude
+  1005→  1005→Capture longitude
+  1006→  1006→Calculate distance from branch
+  1007→  1007→Compare with geofence radius
+  1008→  1008→Save Punch
+  1009→  1009→Create/update AttendanceDay
+  1010→  1010→Create audit log
+  1011→  1011→Return clear result
+  1012→  1012→
+  1013→  1013→If geolocation blocked:
+  1014→  1014→Show friendly error.
+  1015→  1015→Do not submit punch.
+  1016→  1016→Show “Submit manual request” link.
+  1017→  1017→
+  1018→  1018→Punch fields:
+  1019→  1019→Company
+  1020→  1020→Employee
+  1021→  1021→Branch
+  1022→  1022→Schedule
+  1023→  1023→Type
+  1024→  1024→Timestamp
+  1025→  1025→Latitude
+  1026→  1026→Longitude
+  1027→  1027→Distance meters
+  1028→  1028→Inside geofence
+  1029→  1029→Source
+  1030→  1030→Status
+  1031→  1031→Device info placeholder
+  1032→  1032→IP placeholder
+  1033→  1033→User agent
+  1034→  1034→Created at
+  1035→  1035→
+  1036→  1036→Punch types:
+  1037→  1037→CLOCK_IN
+  1038→  1038→CLOCK_OUT
+  1039→  1039→
+  1040→  1040→Punch sources:
+  1041→  1041→MOBILE_WEB
+  1042→  1042→KIOSK
+  1043→  1043→MANUAL_ADJUSTMENT
+  1044→  1044→ADMIN
+  1045→  1045→
+  1046→  1046→Punch statuses:
+  1047→  1047→ACCEPTED
+  1048→  1048→NEEDS_APPROVAL
+  1049→  1049→REJECTED
+  1050→  1050→
+  1051→  1051→Invalid actions:
+  1052→  1052→Duplicate clock in
+  1053→  1053→Clock out before clock in
+  1054→  1054→Clock in after completed day
+  1055→  1055→Inactive employee
+  1056→  1056→No schedule unless allowed
+  1057→  1057→Outside geofence
+  1058→  1058→Invalid coordinates
+  1059→  1059→
+  1060→  1060→All errors must be user-friendly.
+  1061→  1061→
+  1062→  1062→==================================================
+  1063→  1063→13. GEOFENCE AND ANTI-FAKE LOCATION
+  1064→  1064→===================================
+  1065→  1065→
+  1066→  1066→Implement:
+  1067→  1067→Haversine distance
+  1068→  1068→Branch radius
+  1069→  1069→Inside/outside geofence
+  1070→  1070→Distance saved in meters
+  1071→  1071→Outside geofence approval workflow
+  1072→  1072→
+  1073→  1073→Add placeholders for:
+  1074→  1074→Mock location detection
+  1075→  1075→Device fingerprinting
+  1076→  1076→Root/jailbreak detection
+  1077→  1077→VPN suspicious indicator
+  1078→  1078→Repeated device across employees
+  1079→  1079→Impossible travel detection
+  1080→  1080→
+  1081→  1081→Do not claim these advanced detections are fully implemented unless implemented.
+  1082→  1082→Show as coming later or feature flag.
+  1083→  1083→
+  1084→  1084→==================================================
+  1085→  1085→14. KIOSK MODE
+  1086→  1086→==============
+  1087→  1087→
+  1088→  1088→Kiosk page:
+  1089→  1089→/kiosk
+  1090→  1090→
+  1091→  1091→Access:
+  1092→  1092→Owner/HR: any branch
+  1093→  1093→Branch Manager: assigned branch only
+  1094→  1094→Employee: no access unless kiosk session mode exists
+  1095→  1095→
+  1096→  1096→Kiosk flow:
+  1097→  1097→Select branch
+  1098→  1098→Enter employee code or PIN
+  1099→  1099→Find employee
+  1100→  1100→Show employee name and shift
+  1101→  1101→Clock In / Clock Out
+  1102→  1102→Save Punch source = KIOSK
+  1103→  1103→Assume insideGeofence true
+  1104→  1104→distanceMeters = 0
+  1105→  1105→Create/update AttendanceDay
+  1106→  1106→Create audit log
+  1107→  1107→
+  1108→  1108→Kiosk UI:
+  1109→  1109→Full screen
+  1110→  1110→Large buttons
+  1111→  1111→Fast lookup
+  1112→  1112→Clear success/error messages
+  1113→  1113→Face verification placeholder
+  1114→  1114→Offline mode placeholder
+  1115→  1115→
+  1116→  1116→No real face recognition in first production version unless explicit consent/compliance is built.
+  1117→  1117→
+  1118→  1118→==================================================
+  1119→  1119→15. ATTENDANCE ENGINE
+  1120→  1120→=====================
+  1121→  1121→
+  1122→  1122→Create reusable server-side engine:
+  1123→  1123→recalculateAttendanceDay(employeeId, date)
+  1124→  1124→
+  1125→  1125→It must:
+  1126→  1126→Load employee
+  1127→  1127→Load company settings
+  1128→  1128→Load schedule
+  1129→  1129→Load punches
+  1130→  1130→Calculate all metrics
+  1131→  1131→Upsert AttendanceDay
+  1132→  1132→
+  1133→  1133→AttendanceDay fields:
+  1134→  1134→Company
+  1135→  1135→Employee
+  1136→  1136→Branch
+  1137→  1137→Schedule
+  1138→  1138→Date
+  1139→  1139→Scheduled start
+  1140→  1140→Scheduled end
+  1141→  1141→Actual clock in
+  1142→  1142→Actual clock out
+  1143→  1143→Late minutes
+  1144→  1144→Early leave minutes
+  1145→  1145→Break minutes
+  1146→  1146→Worked minutes
+  1147→  1147→Overtime minutes
+  1148→  1148→Status
+  1149→  1149→Exception flags
+  1150→  1150→Requires approval
+  1151→  1151→Finalized
+  1152→  1152→Payroll locked
+  1153→  1153→Notes
+  1154→  1154→Created at
+  1155→  1155→Updated at
+  1156→  1156→
+  1157→  1157→Statuses:
+  1158→  1158→ON_TIME
+  1159→  1159→LATE
+  1160→  1160→ABSENT
+  1161→  1161→EARLY_LEAVE
+  1162→  1162→LATE_AND_EARLY_LEAVE
+  1163→  1163→OVERTIME
+  1164→  1164→MISSING_CLOCK_OUT
+  1165→  1165→OUTSIDE_GEOFENCE
+  1166→  1166→NO_SCHEDULE
+  1167→  1167→PENDING_APPROVAL
+  1168→  1168→OFF
+  1169→  1169→LEAVE
+  1170→  1170→
+  1171→  1171→Rules:
+  1172→  1172→If scheduled and no clock in after day passes → ABSENT
+  1173→  1173→If schedule OFF → OFF, never ABSENT
+  1174→  1174→If schedule LEAVE → LEAVE
+  1175→  1175→If clock in after grace → LATE
+  1176→  1176→If clock out before allowed end → EARLY_LEAVE
+  1177→  1177→If worked more than threshold → OVERTIME
+  1178→  1178→If no clock out → MISSING_CLOCK_OUT
+  1179→  1179→If any punch outside geofence → OUTSIDE_GEOFENCE
+  1180→  1180→If no schedule but punch exists → NO_SCHEDULE and requires approval
+  1181→  1181→If normal → ON_TIME
+  1182→  1182→
+  1183→  1183→Important:
+  1184→  1184→Do not lose multiple exceptions.
+  1185→  1185→Store primary status and exceptionFlags.
+  1186→  1186→Example:
+  1187→  1187→Primary: OUTSIDE_GEOFENCE
+  1188→  1188→Flags: LATE, OVERTIME
+  1189→  1189→
+  1190→  1190→==================================================
+  1191→  1191→16. ABSENCE AUTO MARKING
+  1192→  1192→========================
+  1193→  1193→
+  1194→  1194→Build helper:
+  1195→  1195→markAbsentForPastScheduledDays(date)
+  1196→  1196→
+  1197→  1197→It should:
+  1198→  1198→Find scheduled shifts where day has passed
+  1199→  1199→Skip OFF
+  1200→  1200→Skip LEAVE
+  1201→  1201→Skip existing AttendanceDay
+  1202→  1202→Skip employees with clock-in
+  1203→  1203→Create AttendanceDay status ABSENT
+  1204→  1204→Update schedule status ABSENT if needed
+  1205→  1205→Create audit log
+  1206→  1206→
+  1207→  1207→Create admin-only API:
+  1208→  1208→POST /api/system/mark-absent
+  1209→  1209→
+  1210→  1210→Access:
+  1211→  1211→Super Admin for all companies if needed
+  1212→  1212→Company Owner/HR for own company
+  1213→  1213→Optional daysBack 1-90
+  1214→  1214→
+  1215→  1215→Add future cron placeholder.
+  1216→  1216→
+  1217→  1217→==================================================
+  1218→  1218→17. APPROVALS
+  1219→  1219→=============
+  1220→  1220→
+  1221→  1221→Approval request types:
+  1222→  1222→MANUAL_CLOCK_IN
+  1223→  1223→MANUAL_CLOCK_OUT
+  1224→  1224→OUTSIDE_GEOFENCE
+  1225→  1225→MISSING_CLOCK_OUT
+  1226→  1226→OVERTIME
+  1227→  1227→ATTENDANCE_ADJUSTMENT
+  1228→  1228→LEAVE_REQUEST
+  1229→  1229→PERMISSION_REQUEST
+  1230→  1230→
+  1231→  1231→Approval statuses:
+  1232→  1232→PENDING
+  1233→  1233→APPROVED
+  1234→  1234→REJECTED
+  1235→  1235→CANCELLED
+  1236→  1236→
+  1237→  1237→Approval fields:
+  1238→  1238→Company
+  1239→  1239→Employee
+  1240→  1240→Branch
+  1241→  1241→Date
+  1242→  1242→Type
+  1243→  1243→Original data JSON
+  1244→  1244→Requested data JSON
+  1245→  1245→Reason
+  1246→  1246→Status
+  1247→  1247→Requested by
+  1248→  1248→Approved by
+  1249→  1249→Approved at
+  1250→  1250→Rejected by
+  1251→  1251→Rejected at
+  1252→  1252→Manager notes
+  1253→  1253→Related punch optional
+  1254→  1254→Created at
+  1255→  1255→Updated at
+  1256→  1256→
+  1257→  1257→Employee can submit:
+  1258→  1258→Forgot Clock In
+  1259→  1259→Forgot Clock Out
+  1260→  1260→Permission Request
+  1261→  1261→Leave Request
+  1262→  1262→Attendance Correction
+  1263→  1263→
+  1264→  1264→Employee sees:
+  1265→  1265→Pending
+  1266→  1266→Approved
+  1267→  1267→Rejected
+  1268→  1268→Cancelled
+  1269→  1269→Manager notes
+  1270→  1270→
+  1271→  1271→Manager/HR approval pages:
+  1272→  1272→/approvals
+  1273→  1273→/approvals/[id]
+  1274→  1274→
+  1275→  1275→Approval detail must show:
+  1276→  1276→Employee
+  1277→  1277→Branch
+  1278→  1278→Schedule
+  1279→  1279→AttendanceDay
+  1280→  1280→Punches
+  1281→  1281→Original data
+  1282→  1282→Requested data
+  1283→  1283→Reason
+  1284→  1284→Status
+  1285→  1285→Requester
+  1286→  1286→History
+  1287→  1287→Manager notes
+  1288→  1288→Approve
+  1289→  1289→Reject
+  1290→  1290→
+  1291→  1291→Approval effects:
+  1292→  1292→MANUAL_CLOCK_IN:
+  1293→  1293→Create manual Punch CLOCK_IN
+  1294→  1294→Source MANUAL_ADJUSTMENT
+  1295→  1295→Status ACCEPTED
+  1296→  1296→Recalculate day
+  1297→  1297→
+  1298→  1298→MANUAL_CLOCK_OUT:
+  1299→  1299→Create manual Punch CLOCK_OUT
+  1300→  1300→Recalculate day
+  1301→  1301→
+  1302→  1302→MISSING_CLOCK_OUT:
+  1303→  1303→Create manual Punch CLOCK_OUT
+  1304→  1304→Recalculate day
+  1305→  1305→
+  1306→  1306→OUTSIDE_GEOFENCE:
+  1307→  1307→Update linked punch status ACCEPTED
+  1308→  1308→Recalculate day
+  1309→  1309→Do not erase distance data
+  1310→  1310→Keep geofence event visible for reports as approved
+  1311→  1311→
+  1312→  1312→OVERTIME:
+  1313→  1313→Do not remove overtime fact
+  1314→  1314→Keep overtimeMinutes
+  1315→  1315→Mark overtime approved
+  1316→  1316→Set requiresApproval false if overtime was the only pending reason
+  1317→  1317→Keep report visibility
+  1318→  1318→
+  1319→  1319→ATTENDANCE_ADJUSTMENT:
+  1320→  1320→Create manual adjustment punches rather than overwriting original punches
+  1321→  1321→Preserve audit trail
+  1322→  1322→Recalculate
+  1323→  1323→
+  1324→  1324→LEAVE_REQUEST:
+  1325→  1325→Set schedule LEAVE for date or range
+  1326→  1326→Upsert AttendanceDay status LEAVE
+  1327→  1327→Do not mark absent
+  1328→  1328→
+  1329→  1329→PERMISSION_REQUEST:
+  1330→  1330→Store approval
+  1331→  1331→Add permission flag/notes to AttendanceDay if relevant
+  1332→  1332→Do not erase original punch data
+  1333→  1333→
+  1334→  1334→Rejected:
+  1335→  1335→No data changes except request status and notes.
+  1336→  1336→
+  1337→  1337→Audit all approval actions.
+  1338→  1338→
+  1339→  1339→==================================================
+  1340→  1340→18. LEAVE AND PERMISSION MANAGEMENT
+  1341→  1341→===================================
+  1342→  1342→
+  1343→  1343→Build practical leave/permission workflow.
+  1344→  1344→
+  1345→  1345→Leave request:
+  1346→  1346→Single date or date range
+  1347→  1347→Reason
+  1348→  1348→Status
+  1349→  1349→Approver
+  1350→  1350→
+  1351→  1351→Permission request:
+  1352→  1352→Date
+  1353→  1353→From time
+  1354→  1354→To time
+  1355→  1355→Reason
+  1356→  1356→Status
+  1357→  1357→
+  1358→  1358→Future placeholders:
+  1359→  1359→Leave balance
+  1360→  1360→Annual leave
+  1361→  1361→Sick leave
+  1362→  1362→Unpaid leave
+  1363→  1363→Egypt labor law settings placeholder
+  1364→  1364→
+  1365→  1365→Do not build complex leave balance unless simple and stable.
+  1366→  1366→
+  1367→  1367→==================================================
+  1368→  1368→19. REPORTS
+  1369→  1369→===========
+  1370→  1370→
+  1371→  1371→Reports page:
+  1372→  1372→/reports
+  1373→  1373→
+  1374→  1374→Reports:
+  1375→  1375→Daily Attendance
+  1376→  1376→Monthly Summary
+  1377→  1377→Exceptions
+  1378→  1378→Overtime
+  1379→  1379→Branch Attendance
+  1380→  1380→Payroll Export
+  1381→  1381→Subscription Usage Report for Super Admin
+  1382→  1382→
+  1383→  1383→Filters:
+  1384→  1384→Date
+  1385→  1385→Month
+  1386→  1386→Date range
+  1387→  1387→Branch
+  1388→  1388→Department
+  1389→  1389→Employee
+  1390→  1390→Status
+  1391→  1391→
+  1392→  1392→Access:
+  1393→  1393→Owner/HR all tenant data
+  1394→  1394→Branch Manager assigned branch only
+  1395→  1395→Employee no access
+  1396→  1396→Super Admin system reports in /admin/reports
+  1397→  1397→
+  1398→  1398→Daily Attendance columns:
+  1399→  1399→Date
+  1400→  1400→Employee code
+  1401→  1401→Employee name
+  1402→  1402→Branch
+  1403→  1403→Department
+  1404→  1404→Shift
+  1405→  1405→Scheduled start
+  1406→  1406→Scheduled end
+  1407→  1407→Clock in
+  1408→  1408→Clock out
+  1409→  1409→Late minutes
+  1410→  1410→Early leave minutes
+  1411→  1411→Worked minutes
+  1412→  1412→Overtime minutes
+  1413→  1413→Status
+  1414→  1414→Exception flags
+  1415→  1415→Requires approval
+  1416→  1416→
+  1417→  1417→Monthly Summary columns:
+  1418→  1418→Employee code
+  1419→  1419→Employee name
+  1420→  1420→Branch
+  1421→  1421→Department
+  1422→  1422→Scheduled days
+  1423→  1423→Present days
+  1424→  1424→Absent days
+  1425→  1425→Leave days
+  1426→  1426→Off days
+  1427→  1427→Late days
+  1428→  1428→Total late minutes
+  1429→  1429→Total early leave minutes
+  1430→  1430→Total worked hours
+  1431→  1431→Total overtime minutes
+  1432→  1432→Missing clock out count
+  1433→  1433→Outside geofence count
+  1434→  1434→Pending approval count
+  1435→  1435→Approved adjustment count
+  1436→  1436→Final status summary
+  1437→  1437→
+  1438→  1438→Exceptions Report:
+  1439→  1439→Rows where requiresApproval true OR exceptionFlags not empty OR status in:
+  1440→  1440→LATE
+  1441→  1441→EARLY_LEAVE
+  1442→  1442→MISSING_CLOCK_OUT
+  1443→  1443→OUTSIDE_GEOFENCE
+  1444→  1444→NO_SCHEDULE
+  1445→  1445→ABSENT
+  1446→  1446→PENDING_APPROVAL
+  1447→  1447→
+  1448→  1448→Overtime Report:
+  1449→  1449→All rows where overtimeMinutes > 0
+  1450→  1450→Must show overtime even after approval
+  1451→  1451→Show approval status
+  1452→  1452→
+  1453→  1453→Branch Attendance:
+  1454→  1454→Group by branch:
+  1455→  1455→Scheduled days
+  1456→  1456→Present days
+  1457→  1457→Absent days
+  1458→  1458→Late days
+  1459→  1459→Worked hours
+  1460→  1460→Overtime hours
+  1461→  1461→Pending approvals
+  1462→  1462→Outside geofence
+  1463→  1463→Missing clock out
+  1464→  1464→
+  1465→  1465→Payroll Export:
+  1466→  1466→Employee code
+  1467→  1467→Name
+  1468→  1468→Branch
+  1469→  1469→Department
+  1470→  1470→Scheduled days
+  1471→  1471→Present
+  1472→  1472→Absent
+  1473→  1473→Leave
+  1474→  1474→Off
+  1475→  1475→Late minutes
+  1476→  1476→Early leave minutes
+  1477→  1477→Worked hours
+  1478→  1478→Overtime minutes
+  1479→  1479→Missing clock out count
+  1480→  1480→Outside geofence count
+  1481→  1481→Approved adjustments
+  1482→  1482→Pending approvals
+  1483→  1483→Payroll notes
+  1484→  1484→
+  1485→  1485→CSV:
+  1486→  1486→All reports export CSV
+  1487→  1487→UTF-8 BOM
+  1488→  1488→Escaped quotes/commas/newlines
+  1489→  1489→Meaningful filenames
+  1490→  1490→Respect filters
+  1491→  1491→Real DB only
+  1492→  1492→
+  1493→  1493→==================================================
+  1494→  1494→20. DASHBOARDS
+  1495→  1495→==============
+  1496→  1496→
+  1497→  1497→Customer Owner/HR dashboard:
+  1498→  1498→Active employees
+  1499→  1499→Branches
+  1500→  1500→Departments
+  1501→  1501→Shift policies
+  1502→  1502→Scheduled today
+  1503→  1503→Present today
+  1504→  1504→Late today
+  1505→  1505→Absent today
+  1506→  1506→Missing clock out
+  1507→  1507→Outside geofence
+  1508→  1508→Overtime today
+  1509→  1509→Pending approvals
+  1510→  1510→Monthly summary
+  1511→  1511→Recent exceptions
+  1512→  1512→Pending approvals preview
+  1513→  1513→Top branches by exceptions
+  1514→  1514→Live attendance preview
+  1515→  1515→Subscription status card
+  1516→  1516→Plan usage card
+  1517→  1517→
+  1518→  1518→Branch Manager dashboard:
+  1519→  1519→Assigned branch only
+  1520→  1520→Scheduled today
+  1521→  1521→Present
+  1522→  1522→Late
+  1523→  1523→Absent
+  1524→  1524→Missing clock out
+  1525→  1525→Pending approvals
+  1526→  1526→Live attendance
+  1527→  1527→Branch exceptions
+  1528→  1528→Branch monthly summary
+  1529→  1529→
+  1530→  1530→Employee dashboard:
+  1531→  1531→/today
+  1532→  1532→Today shift
+  1533→  1533→Clock status
+  1534→  1534→Pending requests
+  1535→  1535→Month summary
+  1536→  1536→Recent attendance
+  1537→  1537→Quick actions
+  1538→  1538→
+  1539→  1539→Super Admin dashboard:
+  1540→  1540→Total tenants
+  1541→  1541→Active tenants
+  1542→  1542→Trial tenants
+  1543→  1543→Suspended tenants
+  1544→  1544→MRR
+  1545→  1545→ARR
+  1546→  1546→New leads
+  1547→  1547→Pending activations
+  1548→  1548→Overdue invoices
+  1549→  1549→Open support tickets
+  1550→  1550→Total users
+  1551→  1551→Clock actions today
+  1552→  1552→System health
+  1553→  1553→
+  1554→  1554→No dashboard number can be static.
+  1555→  1555→Every card must be database-backed.
+  1556→  1556→
+  1557→  1557→==================================================
+  1558→  1558→21. AUDIT LOGS
+  1559→  1559→==============
+  1560→  1560→
+  1561→  1561→Create two audit systems:
+  1562→  1562→
+  1563→  1563→Tenant AuditLog:
+  1564→  1564→Company-scoped.
+  1565→  1565→Shows customer operational actions.
+  1566→  1566→
+  1567→  1567→Platform AuditLog:
+  1568→  1568→Super Admin scoped.
+  1569→  1569→Shows platform actions across tenants.
+  1570→  1570→
+  1571→  1571→Tenant audit page:
+  1572→  1572→/audit
+  1573→  1573→Owner/HR only
+  1574→  1574→
+  1575→  1575→Platform audit page:
+  1576→  1576→/admin/audit
+  1577→  1577→Super Admin only
+  1578→  1578→
+  1579→  1579→Audit fields:
+  1580→  1580→Company optional
+  1581→  1581→Actor
+  1582→  1582→Action
+  1583→  1583→Entity type
+  1584→  1584→Entity ID
+  1585→  1585→Before value JSON
+  1586→  1586→After value JSON
+  1587→  1587→Reason
+  1588→  1588→IP placeholder
+  1589→  1589→User agent
+  1590→  1590→Created at
+  1591→  1591→
+  1592→  1592→Audit actions:
+  1593→  1593→LOGIN
+  1594→  1594→LOGOUT
+  1595→  1595→EMPLOYEE_CREATED
+  1596→  1596→EMPLOYEE_EDITED
+  1597→  1597→BRANCH_CREATED
+  1598→  1598→BRANCH_EDITED
+  1599→  1599→SHIFT_POLICY_CREATED
+  1600→  1600→SCHEDULE_CREATED
+  1601→  1601→SCHEDULE_GENERATED
+  1602→  1602→CLOCK_IN
+  1603→  1603→CLOCK_OUT
+  1604→  1604→KIOSK_CLOCK_IN
+  1605→  1605→KIOSK_CLOCK_OUT
+  1606→  1606→ATTENDANCE_RECALCULATED
+  1607→  1607→APPROVAL_SUBMITTED
+  1608→  1608→APPROVAL_APPROVED
+  1609→  1609→APPROVAL_REJECTED
+  1610→  1610→SETTINGS_UPDATED
+  1611→  1611→REPORT_EXPORTED
+  1612→  1612→CSV_EXPORTED
+  1613→  1613→PLAN_CHANGED
+  1614→  1614→SUBSCRIPTION_ACTIVATED
+  1615→  1615→SUBSCRIPTION_SUSPENDED
+  1616→  1616→INVOICE_CREATED
+  1617→  1617→PAYMENT_RECORDED
+  1618→  1618→TENANT_IMPERSONATED
+  1619→  1619→
+  1620→  1620→Every important action must create an audit log.
+  1621→  1621→
+  1622→  1622→==================================================
+  1623→  1623→22. SETTINGS
+  1624→  1624→============
+  1625→  1625→
+  1626→  1626→Customer settings:
+  1627→  1627→/settings
+  1628→  1628→
+  1629→  1629→Fields:
+  1630→  1630→Company name
+  1631→  1631→Industry
+  1632→  1632→Timezone
+  1633→  1633→Currency
+  1634→  1634→Default language
+  1635→  1635→Default geofence radius
+  1636→  1636→Default grace period
+  1637→  1637→Default overtime threshold
+  1638→  1638→Enable mobile clock-in
+  1639→  1639→Enable kiosk clock-in
+  1640→  1640→Require approval outside geofence
+  1641→  1641→Require approval overtime
+  1642→  1642→Allow no-schedule clock-in
+  1643→  1643→Allow manual requests
+  1644→  1644→Enable employee self-service
+  1645→  1645→Enable branch manager approvals
+  1646→  1646→Payroll integration placeholder
+  1647→  1647→WhatsApp notifications placeholder
+  1648→  1648→Email notifications placeholder
+  1649→  1649→
+  1650→  1650→Every settings update:
+  1651→  1651→Validate
+  1652→  1652→Save to DB
+  1653→  1653→Create audit log
+  1654→  1654→Show success/error
+  1655→  1655→
+  1656→  1656→Super Admin platform settings:
+  1657→  1657→/admin/settings
+  1658→  1658→
+  1659→  1659→Fields:
+  1660→  1660→Default trial days
+  1661→  1661→Default grace period days
+  1662→  1662→Default currency
+  1663→  1663→Manual activation mode
+  1664→  1664→Support email
+  1665→  1665→Billing email
+  1666→  1666→Platform maintenance mode placeholder
+  1667→  1667→Default plan IDs
+  1668→  1668→Payment provider mode
+  1669→  1669→
+  1670→  1670→==================================================
+  1671→  1671→23. NOTIFICATIONS
+  1672→  1672→=================
+  1673→  1673→
+  1674→  1674→Build notification architecture, not full integration.
+  1675→  1675→
+  1676→  1676→Models:
+  1677→  1677→Notification
+  1678→  1678→NotificationPreference
+  1679→  1679→NotificationTemplate
+  1680→  1680→
+  1681→  1681→Notification channels:
+  1682→  1682→IN_APP
+  1683→  1683→EMAIL_PLACEHOLDER
+  1684→  1684→WHATSAPP_PLACEHOLDER
+  1685→  1685→
+  1686→  1686→Events:
+  1687→  1687→Clock missing
+  1688→  1688→Approval submitted
+  1689→  1689→Approval approved
+  1690→  1690→Approval rejected
+  1691→  1691→Subscription activated
+  1692→  1692→Invoice issued
+  1693→  1693→Payment confirmed
+  1694→  1694→Subscription suspended
+  1695→  1695→Trial ending
+  1696→  1696→Employee invited
+  1697→  1697→
+  1698→  1698→For now:
+  1699→  1699→Create in-app notifications if simple.
+  1700→  1700→Email/WhatsApp placeholders only.
+  1701→  1701→Do not integrate real providers unless env vars exist.
+  1702→  1702→
+  1703→  1703→==================================================
+  1704→  1704→24. SUPPORT TICKETS
+  1705→  1705→===================
+  1706→  1706→
+  1707→  1707→Customer support page:
+  1708→  1708→/support
+  1709→  1709→
+  1710→  1710→Customer can create ticket:
+  1711→  1711→Subject
+  1712→  1712→Category
+  1713→  1713→Message
+  1714→  1714→Priority
+  1715→  1715→Attachment placeholder
+  1716→  1716→
+  1717→  1717→Ticket statuses:
+  1718→  1718→OPEN
+  1719→  1719→IN_PROGRESS
+  1720→  1720→WAITING_CUSTOMER
+  1721→  1721→RESOLVED
+  1722→  1722→CLOSED
+  1723→  1723→
+  1724→  1724→Super Admin support:
+  1725→  1725→/admin/support
+  1726→  1726→
+  1727→  1727→Support Agent can:
+  1728→  1728→View tickets
+  1729→  1729→Assign ticket
+  1730→  1730→Reply placeholder
+  1731→  1731→Change status
+  1732→  1732→Add internal note
+  1733→  1733→Impersonate with reason if needed
+  1734→  1734→
+  1735→  1735→==================================================
+  1736→  1736→25. DATA PRIVACY AND COMPLIANCE
+  1737→  1737→===============================
+  1738→  1738→
+  1739→  1739→Because the platform processes employee personal data, location data, attendance data, and potentially biometric placeholders:
+  1740→  1740→
+  1741→  1741→Do not implement real face recognition unless explicit consent flow exists.
+  1742→  1742→Add consent placeholders:
+  1743→  1743→Employee consent to location tracking during clock in/out
+  1744→  1744→Employee consent to kiosk photo/face verification if enabled in future
+  1745→  1745→Privacy policy placeholder
+  1746→  1746→Data retention settings
+  1747→  1747→Data export placeholder
+  1748→  1748→Data deletion/deactivation workflow
+  1749→  1749→
+  1750→  1750→Location tracking rule:
+  1751→  1751→Only capture location at clock in/out.
+  1752→  1752→Do not track employee continuously.
+  1753→  1753→Do not show live GPS tracking unless explicitly built and consented.
+  1754→  1754→
+  1755→  1755→Biometric rule:
+  1756→  1756→Face verification must remain placeholder unless compliance steps are implemented.
+  1757→  1757→Do not store biometric templates in MVP.
+  1758→  1758→
+  1759→  1759→Add compliance notes in README:
+  1760→  1760→Not legal advice.
+  1761→  1761→Production use requires legal review for Egypt/MENA data protection.
+  1762→  1762→Employer must inform employees and obtain required consents.
+  1763→  1763→
+  1764→  1764→==================================================
+  1765→  1765→26. DATABASE MODELS
+  1766→  1766→===================
+  1767→  1767→
+  1768→  1768→Create Prisma schema with clear models.
+  1769→  1769→
+  1770→  1770→Platform/SaaS:
+  1771→  1771→PlatformUser
+  1772→  1772→PlatformRole or platform role enum
+  1773→  1773→Tenant/Company
+  1774→  1774→Plan
+  1775→  1775→PlanFeature
+  1776→  1776→Subscription
+  1777→  1777→Invoice
+  1778→  1778→Payment
+  1779→  1779→Coupon
+  1780→  1780→Lead
+  1781→  1781→SupportTicket
+  1782→  1782→SupportMessage
+  1783→  1783→PlatformAuditLog
+  1784→  1784→SystemSetting
+  1785→  1785→
+  1786→  1786→Tenant:
+  1787→  1787→User
+  1788→  1788→Role/Permission
+  1789→  1789→CompanySettings
+  1790→  1790→Branch
+  1791→  1791→Department
+  1792→  1792→Employee
+  1793→  1793→ShiftPolicy
+  1794→  1794→Schedule
+  1795→  1795→Punch
+  1796→  1796→AttendanceDay
+  1797→  1797→ApprovalRequest
+  1798→  1798→Notification
+  1799→  1799→AuditLog
+  1800→  1800→ReportExportLog
+  1801→  1801→
+  1802→  1802→Important:
+  1803→  1803→All tenant data must include companyId.
+  1804→  1804→Use indexes:
+  1805→  1805→companyId
+  1806→  1806→branchId
+  1807→  1807→employeeId
+  1808→  1808→date
+  1809→  1809→status
+  1810→  1810→subscriptionStatus
+  1811→  1811→createdAt
+  1812→  1812→
+  1813→  1813→Use unique constraints:
+  1814→  1814→Employee code unique per company
+  1815→  1815→Email unique where appropriate
+  1816→  1816→Schedule unique employee/date/company
+  1817→  1817→AttendanceDay unique employee/date/company
+  1818→  1818→Plan slug unique
+  1819→  1819→
+  1820→  1820→Use soft-delete where useful:
+  1821→  1821→deletedAt optional for employees, branches, plans if needed.
+  1822→  1822→
+  1823→  1823→==================================================
+  1824→  1824→27. SECURITY
+  1825→  1825→============
+  1826→  1826→
+  1827→  1827→Authentication:
+  1828→  1828→Secure password hashing
+  1829→  1829→HttpOnly cookies
+  1830→  1830→Session expiration
+  1831→  1831→CSRF protection or safe server actions
+  1832→  1832→Rate limit login placeholder
+  1833→  1833→Password reset placeholder
+  1834→  1834→Force password change for temp passwords
+  1835→  1835→Logout
+  1836→  1836→
+  1837→  1837→Authorization:
+  1838→  1838→Server-side role/permission checks
+  1839→  1839→Tenant scoping
+  1840→  1840→Plan feature gating
+  1841→  1841→Subscription gating
+  1842→  1842→Branch scoping
+  1843→  1843→Admin scoping
+  1844→  1844→
+  1845→  1845→Security headers:
+  1846→  1846→Use Next.js headers if simple
+  1847→  1847→No secrets in client code
+  1848→  1848→Never log passwords
+  1849→  1849→Never expose full database errors to users
+  1850→  1850→
+  1851→  1851→Input validation:
+  1852→  1852→Zod for all writes
+  1853→  1853→Validate IDs
+  1854→  1854→Validate dates
+  1855→  1855→Validate coordinates
+  1856→  1856→Validate money values
+  1857→  1857→Validate plan limits
+  1858→  1858→
+  1859→  1859→==================================================
+  1860→  1860→28. FEATURE GATES
+  1861→  1861→=================
+  1862→  1862→
+  1863→  1863→Build central feature gate helper:
+  1864→  1864→canUseFeature(companyId, featureKey)
+  1865→  1865→
+  1866→  1866→Features:
+  1867→  1867→mobile_clock
+  1868→  1868→kiosk
+  1869→  1869→bulk_schedules
+  1870→  1870→advanced_reports
+  1871→  1871→csv_export
+  1872→  1872→leave_requests
+  1873→  1873→permission_requests
+  1874→  1874→audit_log
+  1875→  1875→multi_branch
+  1876→  1876→advanced_geofence
+  1877→  1877→api_access
+  1878→  1878→notifications
+  1879→  1879→support_tickets
+  1880→  1880→
+  1881→  1881→If feature not allowed:
+  1882→  1882→Show upgrade prompt.
+  1883→  1883→Do not crash.
+  1884→  1884→Do not hide data already created, unless plan requires read-only mode.
+  1885→  1885→
+  1886→  1886→==================================================
+  1887→  1887→29. SUBSCRIPTION GATING
+  1888→  1888→=======================
+  1889→  1889→
+  1890→  1890→Create middleware or server helper:
+  1891→  1891→requireActiveSubscription(companyId)
+  1892→  1892→
+  1893→  1893→Rules:
+  1894→  1894→Public pages no subscription needed
+  1895→  1895→Signup no subscription needed
+  1896→  1896→Billing page accessible when suspended
+  1897→  1897→Support page accessible when suspended
+  1898→  1898→Operational pages require active/trial/grace subscription
+  1899→  1899→Employee clock requires active/trial/grace unless emergency override
+  1900→  1900→CSV export requires active and feature csv_export
+  1901→  1901→Reports require active and feature reports
+  1902→  1902→Settings require active except billing settings
+  1903→  1903→
+  1904→  1904→Show subscription banners:
+  1905→  1905→Trial ends in X days
+  1906→  1906→Payment pending
+  1907→  1907→Invoice overdue
+  1908→  1908→Grace period
+  1909→  1909→Suspended account
+  1910→  1910→Upgrade required
+  1911→  1911→
+  1912→  1912→==================================================
+  1913→  1913→30. EMAILS AND TEMPLATES
+  1914→  1914→========================
+  1915→  1915→
+  1916→  1916→Create email template placeholders:
+  1917→  1917→Welcome
+  1918→  1918→Activation approved
+  1919→  1919→Trial started
+  1920→  1920→Trial ending
+  1921→  1921→Invoice issued
+  1922→  1922→Payment received
+  1923→  1923→Subscription suspended
+  1924→  1924→Password reset
+  1925→  1925→Employee invitation
+  1926→  1926→Approval submitted
+  1927→  1927→Approval approved
+  1928→  1928→Approval rejected
+  1929→  1929→
+  1930→  1930→If SMTP env vars missing:
+  1931→  1931→Do not fail.
+  1932→  1932→Log email to console or EmailLog table.
+  1933→  1933→
+  1934→  1934→==================================================
+  1935→  1935→31. CSV IMPORT AND EXPORT
+  1936→  1936→=========================
+  1937→  1937→
+  1938→  1938→Exports:
+  1939→  1939→All reports
+  1940→  1940→Employees
+  1941→  1941→Schedules
+  1942→  1942→Payroll-ready report
+  1943→  1943→
+  1944→  1944→Imports:
+  1945→  1945→Employee CSV import placeholder or simple implementation:
+  1946→  1946→Employee code
+  1947→  1947→Name
+  1948→  1948→Phone
+  1949→  1949→Email
+  1950→  1950→Branch
+  1951→  1951→Department
+  1952→  1952→Job title
+  1953→  1953→Employment type
+  1954→  1954→Start date
+  1955→  1955→PIN
+  1956→  1956→
+  1957→  1957→Validate import rows.
+  1958→  1958→Show errors before saving.
+  1959→  1959→Do not silently ignore invalid rows.
+  1960→  1960→
+  1961→  1961→==================================================
+  1962→  1962→32. UI DESIGN
+  1963→  1963→=============
+  1964→  1964→
+  1965→  1965→Style:
+  1966→  1966→Premium
+  1967→  1967→Clean
+  1968→  1968→Business-grade
+  1969→  1969→Modern SaaS
+  1970→  1970→Egypt/MENA friendly
+  1971→  1971→Mobile-first
+  1972→  1972→Readable tables
+  1973→  1973→Clear badges
+  1974→  1974→Professional spacing
+  1975→  1975→No childish colors
+  1976→  1976→
+  1977→  1977→Brand colors:
+  1978→  1978→Primary: deep navy or dark teal
+  1979→  1979→Accent: modern blue or green
+  1980→  1980→Background: light neutral
+  1981→  1981→Success: green
+  1982→  1982→Warning: amber
+  1983→  1983→Danger: red
+  1984→  1984→Muted: gray
+  1985→  1985→
+  1986→  1986→Required UI components:
+  1987→  1987→App shell
+  1988→  1988→Sidebar
+  1989→  1989→Header
+  1990→  1990→Mobile bottom nav
+  1991→  1991→Cards
+  1992→  1992→Tables
+  1993→  1993→Filters
+  1994→  1994→Forms
+  1995→  1995→Status badges
+  1996→  1996→Plan badges
+  1997→  1997→Subscription banners
+  1998→  1998→Empty states
+  1999→  1999→Error states
+  2000→  2000→Loading skeletons
+
+[showing lines 1-2000 of 2002; use offset=2001 with limit to continue reading]

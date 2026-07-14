@@ -1,0 +1,887 @@
+// B-Attend SaaS — Prisma schema
+// Phase 1: platform/SaaS layer (full) + tenant layer (stubs to be expanded in later phases)
+// Database: SQLite (local fallback per spec line 91). Production should switch to PostgreSQL.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// ENUMS
+// ============================================================
+
+enum PlatformRole {
+  SUPER_ADMIN
+  SALES_ADMIN
+  SUPPORT_AGENT
+  BILLING_ADMIN
+}
+
+enum PlatformUserStatus {
+  ACTIVE
+  SUSPENDED
+  INVITED
+  LEFT
+}
+
+enum TenantStatus {
+  PENDING_ACTIVATION
+  TRIAL_ACTIVE
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+  REJECTED
+}
+
+enum BusinessType {
+  RESTAURANT
+  CAFE
+  CLOUD_KITCHEN
+  CENTRAL_KITCHEN
+  RETAIL_CHAIN
+  GYM
+  CLINIC
+  WAREHOUSE
+  SECURITY_COMPANY
+  CLEANING_COMPANY
+  MULTI_BRANCH_OPS
+  OTHER
+}
+
+enum BillingCycle {
+  MONTHLY
+  ANNUAL
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  PENDING_PAYMENT
+  ACTIVE
+  PAST_DUE
+  GRACE_PERIOD
+  SUSPENDED
+  CANCELLED
+  EXPIRED
+  MANUAL_REVIEW
+}
+
+enum ReportsLevel {
+  BASIC
+  ADVANCED
+}
+
+enum SupportLevel {
+  SELF_SERVICE
+  STANDARD
+  PRIORITY
+}
+
+enum PaymentProviderMode {
+  MANUAL
+  STRIPE
+  PAYMOB
+  FAWRY
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  WON
+  LOST
+}
+
+enum LeadSourcePage {
+  CONTACT
+  REQUEST_DEMO
+  SIGNUP
+  PRICING
+  FEATURES
+  OTHER
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PENDING_PAYMENT
+  PAID
+  OVERDUE
+  VOID
+  REFUNDED
+}
+
+enum PaymentStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  MANUAL
+  STRIPE_PLACEHOLDER
+  PAYMOB_PLACEHOLDER
+  FAWRY_PLACEHOLDER
+  BANK_TRANSFER
+  CASH
+}
+
+// Tenant-side enums (used by stub models)
+enum TenantUserRole {
+  COMPANY_OWNER
+  HR_ADMIN
+  BRANCH_MANAGER
+  EMPLOYEE
+}
+
+enum TenantUserStatus {
+  ACTIVE
+  INVITED
+  SUSPENDED
+  LEFT
+}
+
+enum BranchStatus {
+  ACTIVE
+  INACTIVE
+  ARCHIVED
+}
+
+enum EmployeeStatus {
+  ACTIVE
+  SUSPENDED
+  LEFT
+  ON_LEAVE
+}
+
+enum EmploymentType {
+  FULL_TIME
+  PART_TIME
+  DAILY_WORKER
+  TEMPORARY
+  CONTRACTOR
+}
+
+enum PunchType {
+  CLOCK_IN
+  CLOCK_OUT
+}
+
+enum PunchSource {
+  MOBILE_WEB
+  KIOSK
+  MANUAL_ADJUSTMENT
+  ADMIN
+}
+
+enum PunchStatus {
+  ACCEPTED
+  NEEDS_APPROVAL
+  REJECTED
+}
+
+enum AttendanceDayStatus {
+  ON_TIME
+  LATE
+  ABSENT
+  EARLY_LEAVE
+  LATE_AND_EARLY_LEAVE
+  OVERTIME
+  MISSING_CLOCK_OUT
+  OUTSIDE_GEOFENCE
+  NO_SCHEDULE
+  PENDING_APPROVAL
+  OFF
+  LEAVE
+}
+
+enum ScheduleStatus {
+  SCHEDULED
+  OFF
+  LEAVE
+  ABSENT
+  CANCELLED
+}
+
+enum ApprovalType {
+  MANUAL_CLOCK_IN
+  MANUAL_CLOCK_OUT
+  OUTSIDE_GEOFENCE
+  MISSING_CLOCK_OUT
+  OVERTIME
+  ATTENDANCE_ADJUSTMENT
+  LEAVE_REQUEST
+  PERMISSION_REQUEST
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL_PLACEHOLDER
+  WHATSAPP_PLACEHOLDER
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+// ============================================================
+// PLATFORM / SAAS LAYER (full models for Phase 1)
+// ============================================================
+
+model PlatformUser {
+  id                  String             @id @default(cuid())
+  email               String             @unique
+  passwordHash        String
+  name                String
+  role                PlatformRole       @default(SUPPORT_AGENT)
+  status              PlatformUserStatus @default(ACTIVE)
+  forcePasswordChange Boolean            @default(false)
+  lastLoginAt         DateTime?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+  deletedAt           DateTime?
+
+  assignedLeads     Lead[]      @relation("LeadAssignedTo")
+  auditActions      PlatformAuditLog[] @relation("AuditActor")
+  createdLeads      Lead[]      @relation("LeadCreatedBy")
+  createdInvoices   Invoice[]   @relation("InvoiceCreatedBy")
+  recordedPayments  Payment[]   @relation("PaymentRecordedBy")
+
+  @@index([role])
+  @@index([status])
+}
+
+model Tenant {
+  id              String         @id @default(cuid())
+  name            String
+  nameAr          String?
+  slug            String         @unique
+  ownerEmail      String
+  ownerName       String
+  ownerPhone      String
+  businessType    BusinessType   @default(OTHER)
+  employeesCount  Int            @default(0)
+  branchesCount   Int            @default(0)
+  city            String?
+  status          TenantStatus   @default(PENDING_ACTIVATION)
+  preferredPlanId String?
+  preferredPlan   Plan?          @relation("TenantPreferredPlan", fields: [preferredPlanId], references: [id])
+  billingCycle    BillingCycle   @default(MONTHLY)
+  message         String?
+  activatedAt     DateTime?
+  suspendedAt     DateTime?
+  cancelledAt     DateTime?
+  rejectedAt      DateTime?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  subscription   Subscription?
+  invoices       Invoice[]
+  payments       Payment[]
+  leads          Lead[]
+
+  // Tenant-side relations (stubs — populated in later phases)
+  users          User[]
+  settings       CompanySettings?
+  branches       Branch[]
+  departments    Department[]
+  employees      Employee[]
+  shiftPolicies  ShiftPolicy[]
+  schedules      Schedule[]
+  punches        Punch[]
+  attendanceDays AttendanceDay[]
+  approvals      ApprovalRequest[]
+  notifications  Notification[]
+  auditLogs      AuditLog[]
+  reportExports  ReportExportLog[]
+  supportTickets SupportTicket[]
+
+  @@index([status])
+  @@index([businessType])
+  @@index([createdAt])
+}
+
+model Plan {
+  id                String        @id @default(cuid())
+  slug              String        @unique
+  name              String
+  nameAr            String?
+  description       String?
+  priceMonthly      Int           @default(0)
+  priceAnnual       Int           @default(0)
+  currency          String        @default("EGP")
+  maxBranches       Int           @default(1)
+  maxEmployees      Int           @default(10)
+  maxManagers       Int           @default(1)
+  maxKiosks         Int           @default(1)
+  reportsLevel      ReportsLevel  @default(BASIC)
+  auditRetentionDays Int          @default(30)
+  supportLevel      SupportLevel  @default(SELF_SERVICE)
+  isCustom          Boolean       @default(false)
+  isTrial           Boolean       @default(false)
+  sortOrder         Int           @default(0)
+  isActive          Boolean       @default(true)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  features        PlanFeature[]
+  subscriptions   Subscription[]
+  tenantsPreferred Tenant[]      @relation("TenantPreferredPlan")
+  invoices        Invoice[]
+  systemSettingsDefaultPlan SystemSetting[] @relation("SystemSettingDefaultPlan")
+
+  @@index([isActive])
+  @@index([sortOrder])
+}
+
+model PlanFeature {
+  id        String  @id @default(cuid())
+  planId    String
+  plan      Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  key       String
+  label     String
+  enabled   Boolean @default(false)
+  createdAt DateTime @default(now())
+
+  @@unique([planId, key])
+  @@index([planId])
+}
+
+model Subscription {
+  id                  String              @id @default(cuid())
+  tenantId            String              @unique
+  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId              String
+  plan                Plan                @relation(fields: [planId], references: [id])
+  status              SubscriptionStatus  @default(PENDING_PAYMENT)
+  billingCycle        BillingCycle        @default(MONTHLY)
+  currentPeriodStart  DateTime?
+  currentPeriodEnd    DateTime?
+  trialEndsAt         DateTime?
+  graceEndsAt         DateTime?
+  monthlyAmount       Int                 @default(0)
+  annualAmount        Int                 @default(0)
+  currency            String              @default("EGP")
+  notes               String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  invoices Invoice[]
+
+  @@index([status])
+  @@index([planId])
+}
+
+model Lead {
+  id             String         @id @default(cuid())
+  name           String
+  company        String?
+  phone          String?
+  email          String?
+  businessType   BusinessType?
+  employeesCount Int?
+  branchesCount  Int?
+  message        String?
+  sourcePage     LeadSourcePage @default(OTHER)
+  status         LeadStatus     @default(NEW)
+  assignedToId   String?
+  assignedTo     PlatformUser?  @relation("LeadAssignedTo", fields: [assignedToId], references: [id])
+  createdById    String?
+  createdBy      PlatformUser?  @relation("LeadCreatedBy", fields: [createdById], references: [id])
+  tenantId       String?
+  tenant         Tenant?        @relation(fields: [tenantId], references: [id])
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([status])
+  @@index([sourcePage])
+  @@index([assignedToId])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id                      String                @id @default(cuid())
+  isMain                  Boolean               @default(true) @unique
+  defaultTrialDays        Int                   @default(14)
+  defaultGracePeriodDays  Int                   @default(7)
+  defaultCurrency         String                @default("EGP")
+  manualActivationMode    Boolean               @default(true)
+  supportEmail            String                @default("support@b-attend.app")
+  billingEmail            String                @default("billing@b-attend.app")
+  maintenanceMode         Boolean               @default(false)
+  defaultPlanId           String?
+  defaultPlan             Plan?                 @relation("SystemSettingDefaultPlan", fields: [defaultPlanId], references: [id])
+  paymentProviderMode     PaymentProviderMode   @default(MANUAL)
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+}
+
+model PlatformAuditLog {
+  id          String   @id @default(cuid())
+  actorId     String?
+  actor       PlatformUser? @relation("AuditActor", fields: [actorId], references: [id])
+  actorEmail  String
+  action      String
+  entityType  String?
+  entityId    String?
+  reason      String?
+  ipAddress   String?
+  userAgent   String?
+  beforeData  String?
+  afterData   String?
+  createdAt   DateTime @default(now())
+
+  @@index([actorId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model Coupon {
+  id          String   @id @default(cuid())
+  code        String   @unique
+  description String?
+  discountType String  @default("PERCENT")
+  discountValue Int    @default(0)
+  currency    String   @default("EGP")
+  maxRedemptions Int?
+  redeemedCount Int    @default(0)
+  validFrom   DateTime?
+  validTo     DateTime?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Invoice {
+  id                  String        @id @default(cuid())
+  tenantId            String
+  tenant              Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscriptionId      String?
+  subscription        Subscription? @relation(fields: [subscriptionId], references: [id])
+  planId              String?
+  plan                Plan?         @relation(fields: [planId], references: [id])
+  number              String        @unique
+  billingPeriodStart  DateTime?
+  billingPeriodEnd    DateTime?
+  subtotal            Int           @default(0)
+  discount            Int           @default(0)
+  tax                 Int           @default(0)
+  total               Int           @default(0)
+  currency            String        @default("EGP")
+  status              InvoiceStatus @default(DRAFT)
+  dueDate             DateTime?
+  paidAt              DateTime?
+  paymentMethod       String?
+  notes               String?
+  pdfUrl              String?
+  createdById         String?
+  createdBy           PlatformUser? @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+
+  payments Payment[]
+
+  @@index([tenantId])
+  @@index([status])
+  @@index([dueDate])
+}
+
+model Payment {
+  id           String          @id @default(cuid())
+  tenantId     String
+  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoiceId    String?
+  invoice      Invoice?        @relation(fields: [invoiceId], references: [id])
+  amount       Int             @default(0)
+  currency     String          @default("EGP")
+  provider     PaymentProvider @default(MANUAL)
+  reference    String?
+  status       PaymentStatus   @default(PENDING)
+  paidAt       DateTime?
+  proofUrl     String?
+  createdById  String?
+  createdBy    PlatformUser?   @relation("PaymentRecordedBy", fields: [createdById], references: [id])
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  @@index([tenantId])
+  @@index([invoiceId])
+  @@index([status])
+}
+
+model BillingEvent {
+  id          String   @id @default(cuid())
+  tenantId    String
+  eventType   String
+  payload     String?
+  createdAt   DateTime @default(now())
+
+  @@index([tenantId])
+  @@index([eventType])
+}
+
+// ============================================================
+// TENANT LAYER (stubs — expanded in Phases 3-7)
+// All tenant models include companyId for strict isolation.
+// ============================================================
+
+model User {
+  id              String           @id @default(cuid())
+  companyId       String
+  tenant          Tenant           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email           String
+  passwordHash    String
+  name            String
+  role            TenantUserRole   @default(EMPLOYEE)
+  status          TenantUserStatus @default(ACTIVE)
+  forcePasswordChange Boolean      @default(false)
+  lastLoginAt     DateTime?
+  employeeId      String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  deletedAt       DateTime?
+
+  @@unique([companyId, email])
+  @@index([companyId])
+  @@index([role])
+  @@index([status])
+}
+
+model CompanySettings {
+  id                          String   @id @default(cuid())
+  companyId                   String   @unique
+  tenant                      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  industry                    String?
+  timezone                    String   @default("Africa/Cairo")
+  currency                    String   @default("EGP")
+  defaultLanguage             String   @default("en")
+  defaultGeofenceRadius       Int      @default(150)
+  defaultGraceMinutes         Int      @default(10)
+  defaultOvertimeThresholdMinutes Int  @default(480)
+  enableMobileClock           Boolean  @default(true)
+  enableKioskClock            Boolean  @default(true)
+  requireApprovalOutsideGeofence Boolean @default(true)
+  requireApprovalOvertime     Boolean  @default(true)
+  allowNoScheduleClockIn      Boolean  @default(false)
+  allowManualRequests         Boolean  @default(true)
+  enableEmployeeSelfService   Boolean  @default(true)
+  enableBranchManagerApprovals Boolean @default(true)
+  payrollIntegration          String?
+  whatsappNotifications       Boolean  @default(false)
+  emailNotifications          Boolean  @default(true)
+  createdAt                   DateTime @default(now())
+  updatedAt                   DateTime @updatedAt
+}
+
+model Branch {
+  id              String       @id @default(cuid())
+  companyId       String
+  tenant          Tenant       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name            String
+  code            String?
+  address         String?
+  city            String?
+  area            String?
+  latitude        Float?
+  longitude       Float?
+  geofenceRadius  Int          @default(150)
+  managerId       String?
+  status          BranchStatus @default(ACTIVE)
+  openingHours    String?
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([status])
+}
+
+model Department {
+  id          String   @id @default(cuid())
+  companyId   String
+  tenant      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name        String
+  code        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([companyId, name])
+  @@index([companyId])
+}
+
+model Employee {
+  id                String         @id @default(cuid())
+  companyId         String
+  tenant            Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeCode      String
+  fullName          String
+  phone             String?
+  email             String?
+  nationalId        String?
+  jobTitle          String?
+  departmentId      String?
+  branchId          String?
+  managerId         String?
+  employmentType    EmploymentType @default(FULL_TIME)
+  status            EmployeeStatus @default(ACTIVE)
+  startDate         DateTime?
+  endDate           DateTime?
+  defaultShiftPolicyId String?
+  pinCode           String?
+  userId            String?
+  salary            Int?
+  notes             String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+  deletedAt         DateTime?
+
+  @@unique([companyId, employeeCode])
+  @@index([companyId])
+  @@index([branchId])
+  @@index([departmentId])
+  @@index([status])
+}
+
+model ShiftPolicy {
+  id                       String   @id @default(cuid())
+  companyId                String
+  tenant                   Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                     String
+  startTime                String
+  endTime                  String
+  breakMinutes             Int      @default(0)
+  lateGraceMinutes         Int      @default(10)
+  earlyLeaveGraceMinutes   Int      @default(0)
+  overtimeStartsAfterMinutes Int    @default(480)
+  weekendDays              String   @default("FRIDAY,SATURDAY")
+  requiresOvertimeApproval Boolean  @default(true)
+  allowsMobileClockIn      Boolean  @default(true)
+  allowsKioskClockIn       Boolean  @default(true)
+  allowNoScheduleClockIn   Boolean  @default(false)
+  status                   String   @default("ACTIVE")
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
+
+  @@index([companyId])
+}
+
+model Schedule {
+  id              String         @id @default(cuid())
+  companyId       String
+  tenant          Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  branchId        String?
+  date            DateTime
+  shiftPolicyId   String?
+  expectedStart   DateTime?
+  expectedEnd     DateTime?
+  status          ScheduleStatus @default(SCHEDULED)
+  notes           String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@unique([companyId, employeeId, date])
+  @@index([companyId, date])
+  @@index([employeeId])
+  @@index([branchId])
+  @@index([status])
+}
+
+model Punch {
+  id              String      @id @default(cuid())
+  companyId       String
+  tenant          Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  branchId        String?
+  scheduleId      String?
+  type            PunchType
+  timestamp       DateTime
+  latitude        Float?
+  longitude       Float?
+  distanceMeters  Int?
+  insideGeofence  Boolean     @default(true)
+  source          PunchSource @default(MOBILE_WEB)
+  status          PunchStatus @default(ACCEPTED)
+  deviceInfo      String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime    @default(now())
+
+  @@index([companyId, employeeId])
+  @@index([companyId, timestamp])
+  @@index([branchId])
+}
+
+model AttendanceDay {
+  id                  String              @id @default(cuid())
+  companyId           String
+  tenant              Tenant              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId          String
+  branchId            String?
+  scheduleId          String?
+  date                DateTime
+  scheduledStart      DateTime?
+  scheduledEnd        DateTime?
+  actualClockIn       DateTime?
+  actualClockOut      DateTime?
+  lateMinutes         Int                 @default(0)
+  earlyLeaveMinutes   Int                 @default(0)
+  breakMinutes        Int                 @default(0)
+  workedMinutes       Int                 @default(0)
+  overtimeMinutes     Int                 @default(0)
+  status              AttendanceDayStatus @default(ON_TIME)
+  exceptionFlags      String?
+  requiresApproval    Boolean             @default(false)
+  finalized           Boolean             @default(false)
+  payrollLocked       Boolean             @default(false)
+  notes               String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+
+  @@unique([companyId, employeeId, date])
+  @@index([companyId, date])
+  @@index([employeeId])
+  @@index([status])
+}
+
+model ApprovalRequest {
+  id              String        @id @default(cuid())
+  companyId       String
+  tenant          Tenant        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  branchId        String?
+  date            DateTime?
+  type            ApprovalType
+  originalData    String?
+  requestedData   String?
+  reason          String?
+  status          ApprovalStatus @default(PENDING)
+  requestedById   String?
+  approvedById    String?
+  approvedAt      DateTime?
+  rejectedById    String?
+  rejectedAt      DateTime?
+  managerNotes    String?
+  relatedPunchId  String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([companyId])
+  @@index([status])
+  @@index([type])
+  @@index([employeeId])
+}
+
+model Notification {
+  id          String              @id @default(cuid())
+  companyId   String
+  tenant      Tenant              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId      String?
+  channel     NotificationChannel @default(IN_APP)
+  title       String
+  body        String
+  eventType   String?
+  isRead      Boolean             @default(false)
+  createdAt   DateTime            @default(now())
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([isRead])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  tenant      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actorId     String?
+  actorEmail  String
+  action      String
+  entityType  String?
+  entityId    String?
+  reason      String?
+  ipAddress   String?
+  userAgent   String?
+  beforeData  String?
+  afterData   String?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+model ReportExportLog {
+  id          String   @id @default(cuid())
+  companyId   String
+  tenant      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reportType  String
+  filters     String?
+  rowCount    Int      @default(0)
+  fileName    String?
+  exportedById String?
+  exportedByEmail String?
+  createdAt   DateTime @default(now())
+
+  @@index([companyId])
+  @@index([reportType])
+  @@index([createdAt])
+}
+
+model SupportTicket {
+  id          String       @id @default(cuid())
+  companyId   String?
+  tenant      Tenant?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subject     String
+  category    String?
+  message     String
+  priority    String       @default("NORMAL")
+  status      TicketStatus @default(OPEN)
+  attachmentUrl String?
+  createdById String?
+  createdByEmail String?
+  assignedToId String?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  messages SupportMessage[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([assignedToId])
+}
+
+model SupportMessage {
+  id          String   @id @default(cuid())
+  ticketId    String
+  ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId    String?
+  authorEmail String
+  authorRole  String
+  body        String
+  isInternal  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([ticketId])
+}
