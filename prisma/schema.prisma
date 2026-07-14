@@ -612,6 +612,10 @@ model Branch {
   updatedAt       DateTime     @updatedAt
   deletedAt       DateTime?
 
+  punches         Punch[]
+  attendanceDays  AttendanceDay[]
+  approvalRequests ApprovalRequest[]
+
   @@unique([companyId, code])
   @@index([companyId])
   @@index([status])
@@ -655,6 +659,10 @@ model Employee {
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
   deletedAt         DateTime?
+
+  punches           Punch[]
+  attendanceDays    AttendanceDay[]
+  approvalRequests  ApprovalRequest[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -701,6 +709,9 @@ model Schedule {
   createdAt       DateTime       @default(now())
   updatedAt       DateTime       @updatedAt
 
+  punches         Punch[]
+  attendanceDays  AttendanceDay[]
+
   @@unique([companyId, employeeId, date])
   @@index([companyId, date])
   @@index([employeeId])
@@ -713,8 +724,11 @@ model Punch {
   companyId       String
   tenant          Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employeeId      String
+  employee        Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branchId        String?
+  branch          Branch?     @relation(fields: [branchId], references: [id])
   scheduleId      String?
+  schedule        Schedule?   @relation(fields: [scheduleId], references: [id])
   type            PunchType
   timestamp       DateTime
   latitude        Float?
@@ -738,8 +752,11 @@ model AttendanceDay {
   companyId           String
   tenant              Tenant              @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employeeId          String
+  employee            Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branchId            String?
+  branch              Branch?             @relation(fields: [branchId], references: [id])
   scheduleId          String?
+  schedule            Schedule?           @relation(fields: [scheduleId], references: [id])
   date                DateTime
   scheduledStart      DateTime?
   scheduledEnd        DateTime?
@@ -770,7 +787,9 @@ model ApprovalRequest {
   companyId       String
   tenant          Tenant        @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employeeId      String
+  employee        Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branchId        String?
+  branch          Branch?       @relation(fields: [branchId], references: [id])
   date            DateTime?
   type            ApprovalType
   originalData    String?

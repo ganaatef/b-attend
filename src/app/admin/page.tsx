@@ -1,174 +1,225 @@
 /**
- * /admin — Phase 2 placeholder. Protected by middleware (platform sessions only).
- *
- * Phase 1: shows the authenticated super-admin a clear "Phase 2" notice with quick stats
- * (counts of platform users, tenants, plans, leads) so we can prove the data layer works.
+ * /admin — Real Super Admin dashboard with DB-backed metrics.
  */
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth/session";
-import { AppShell } from "@/components/layout/AppShell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Building2, Users, FileBarChart, Layers, Hourglass, ShieldCheck } from "lucide-react";
+import { Building2, Users, Layers, FileBarChart, Hourglass, CreditCard, AlertCircle, CheckCircle2, TrendingUp, Activity } from "lucide-react";
+import { TenantStatusBadge, LeadBadge, InvoiceBadge } from "@/components/badges/StatusBadges";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminDashboard() {
-  const session = await getSession();
-  // Middleware already enforces platform-only access. We re-check here as defense in depth.
-  if (!session || session.kind !== "platform") {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background p-6">
-        <EmptyState
-          title="Access denied"
-          description="You need a platform (Super Admin) account to access this page."
-          icon={ShieldCheck}
-        />
-      </div>
-    );
-  }
+function money(amount: number, currency = "EGP") {
+  return `${amount.toLocaleString()} ${currency}`;
+}
 
-  const [tenantCount, planCount, leadCount, platformUserCount, pendingTenants, recentLeads] = await Promise.all([
+export default async function AdminDashboard() {
+  const [
+    totalTenants, activeTenants, trialTenants, pendingTenants, suspendedTenants,
+    totalEmployees, totalBranches, pendingInvoices, overdueInvoices, openTickets,
+    totalLeads, newLeads, plans, recentLeads, recentTenants, recentInvoices, recentTickets, punchesToday,
+  ] = await Promise.all([
     db.tenant.count(),
-    db.plan.count({ where: { isActive: true } }),
-    db.lead.count(),
-    db.platformUser.count({ where: { status: "ACTIVE" } }),
+    db.tenant.count({ where: { status: "ACTIVE" } }),
+    db.tenant.count({ where: { status: "TRIAL_ACTIVE" } }),
     db.tenant.count({ where: { status: "PENDING_ACTIVATION" } }),
+    db.tenant.count({ where: { status: "SUSPENDED" } }),
+    db.employee.count({ where: { status: "ACTIVE" } }),
+    db.branch.count({ where: { status: "ACTIVE" } }),
+    db.invoice.count({ where: { status: "PENDING_PAYMENT" } }),
+    db.invoice.count({ where: { status: "OVERDUE" } }),
+    db.supportTicket.count({ where: { status: { in: ["OPEN", "IN_PROGRESS", "WAITING_CUSTOMER"] } } }),
+    db.lead.count(),
+    db.lead.count({ where: { status: "NEW" } }),
+    db.plan.findMany({ where: { isActive: true }, orderBy: { sortOrder: "asc" } }),
     db.lead.findMany({ take: 5, orderBy: { createdAt: "desc" }, include: { assignedTo: true } }),
+    db.tenant.findMany({ take: 5, orderBy: { createdAt: "desc" } }),
+    db.invoice.findMany({ take: 5, orderBy: { createdAt: "desc" }, include: { tenant: true } }),
+    db.supportTicket.findMany({ take: 5, orderBy: { createdAt: "desc" }, include: { tenant: true } }),
+    db.punch.count({ where: { timestamp: { gte: new Date(new Date().setHours(0, 0, 0, 0)) } } }),
   ]);
 
+  // MRR / ARR
+  const activeSubs = await db.subscription.findMany({ where: { status: "ACTIVE" }, include: { plan: true } });
+  const mrr = activeSubs.reduce((sum, s) => sum + (s.billingCycle === "MONTHLY" ? s.monthlyAmount : Math.floor(s.annualAmount / 12)), 0);
+  const arr = mrr * 12;
+
   const stats = [
-    { label: "Total companies", value: tenantCount, icon: Building2 },
-    { label: "Pending activation", value: pendingTenants, icon: Hourglass },
-    { label: "Active plans", value: planCount, icon: Layers },
-    { label: "Platform users", value: platformUserCount, icon: Users },
-    { label: "Total leads", value: leadCount, icon: FileBarChart },
+    { label: "Total companies", value: totalTenants, icon: Building2, sub: `${activeTenants} active · ${trialTenants} trial` },
+    { label: "Pending activation", value: pendingTenants, icon: Hourglass, sub: "Awaiting review", highlight: pendingTenants > 0 },
+    { label: "Suspended", value: suspendedTenants, icon: AlertCircle, sub: "Action required", highlight: suspendedTenants > 0 },
+    { label: "MRR", value: money(mrr), icon: TrendingUp, sub: `ARR: ${money(arr)}` },
+    { label: "Pending invoices", value: pendingInvoices, icon: CreditCard, sub: `${overdueInvoices} overdue`, highlight: overdueInvoices > 0 },
+    { label: "Open tickets", value: openTickets, icon: FileBarChart, sub: "Support queue" },
+    { label: "Active employees", value: totalEmployees, icon: Users, sub: `${totalBranches} branches` },
+    { label: "Clock actions today", value: punchesToday, icon: Activity, sub: "Across all tenants" },
   ];
 
   return (
-    <AppShell
-      session={{
-        name: session.name,
-        email: session.email,
-        role: session.role,
-        kind: "platform",
-      }}
-    >
-      <div className="mx-auto max-w-7xl">
-        <div className="mb-6 rounded-lg border border-brand-accent/30 bg-brand-accent/5 p-4">
-          <div className="flex items-start gap-3">
-            <Hourglass className="mt-0.5 h-5 w-5 shrink-0 text-brand-accent" />
-            <div>
-              <p className="text-sm font-semibold text-foreground">Phase 2 — Super Admin control center is coming</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                This page is a Phase 1 placeholder. Phase 2 will add full tenant management, plan
-                editing, invoice creation, payment recording, lead follow-up, audit log, and
-                impersonation. The stats below prove the data layer is wired correctly.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <h1 className="text-lg font-bold text-foreground">Platform overview</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Signed in as <span className="font-medium text-foreground">{session.email}</span> ({session.role.replace(/_/g, " ")}).
-        </p>
-
-        <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          {stats.map((s) => {
-            const Icon = s.icon;
-            return (
-              <Card key={s.label} className="border-border">
-                <CardHeader className="pb-2">
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-xs font-medium text-muted-foreground">{s.label}</CardTitle>
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-2xl font-bold text-foreground">{s.value.toLocaleString()}</p>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-
-        <div className="mt-8">
-          <h2 className="text-sm font-semibold text-foreground">Recent leads</h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Phase 2 will add a full leads board with assignment, status workflow, and conversion to tenants.
-          </p>
-
-          <div className="mt-4 rounded-lg border border-border bg-card">
-            {recentLeads.length === 0 ? (
-              <EmptyState title="No leads yet" description="Leads from /contact and /request-demo will appear here." />
-            ) : (
-              <table className="w-full text-sm">
-                <thead className="border-b border-border text-xs text-muted-foreground">
-                  <tr>
-                    <th className="px-4 py-2.5 text-left font-medium">Name</th>
-                    <th className="px-4 py-2.5 text-left font-medium">Company</th>
-                    <th className="hidden px-4 py-2.5 text-left font-medium sm:table-cell">Source</th>
-                    <th className="px-4 py-2.5 text-left font-medium">Status</th>
-                    <th className="hidden px-4 py-2.5 text-left font-medium sm:table-cell">Created</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentLeads.map((l) => (
-                    <tr key={l.id} className="border-b border-border/60 last:border-0">
-                      <td className="px-4 py-2.5 font-medium text-foreground">{l.name}</td>
-                      <td className="px-4 py-2.5 text-muted-foreground">{l.company ?? "—"}</td>
-                      <td className="hidden px-4 py-2.5 text-muted-foreground sm:table-cell">{l.sourcePage.replace(/_/g, " ")}</td>
-                      <td className="px-4 py-2.5">
-                        <Badge variant="outline" className={
-                          l.status === "NEW" ? "border-amber-300 text-amber-800" :
-                          l.status === "CONTACTED" ? "border-orange-300 text-orange-800" :
-                          l.status === "QUALIFIED" ? "border-brand-navy text-brand-navy" :
-                          "border-border text-muted-foreground"
-                        }>
-                          {l.status}
-                        </Badge>
-                      </td>
-                      <td className="hidden px-4 py-2.5 text-xs text-muted-foreground sm:table-cell">
-                        {new Date(l.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold text-foreground">Phase 2 preview</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-1.5 text-xs text-muted-foreground">
-              <p>• Full tenant activation workflow</p>
-              <p>• Plan editing and feature flag UI</p>
-              <p>• Invoice creation + payment recording</p>
-              <p>• Subscription status management</p>
-              <p>• Lead board with assignment</p>
-              <p>• Platform audit log viewer</p>
-              <p>• Impersonation with reason + audit</p>
-              <p>• Support ticket queue</p>
-            </CardContent>
-          </Card>
-          <Card className="border-border">
-            <CardHeader>
-              <CardTitle className="text-sm font-semibold text-foreground">Quick links</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2 text-sm">
-              <Link href="/" className="block text-brand-accent hover:underline">← Back to marketing site</Link>
-              <Link href="/login" className="block text-brand-accent hover:underline">Switch account</Link>
-            </CardContent>
-          </Card>
-        </div>
+    <div className="mx-auto max-w-7xl space-y-6">
+      <div>
+        <h1 className="text-lg font-bold text-foreground">Super Admin Control Center</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Platform-wide metrics, tenant management, and billing operations.</p>
       </div>
-    </AppShell>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {stats.map((s) => {
+          const Icon = s.icon;
+          return (
+            <Card key={s.label} className={s.highlight ? "border-amber-300 bg-amber-50/40" : "border-border"}>
+              <CardHeader className="pb-2">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-xs font-medium text-muted-foreground">{s.label}</CardTitle>
+                  <Icon className="h-4 w-4 text-muted-foreground" />
+                </div>
+              </CardHeader>
+              <CardContent>
+                <p className="text-2xl font-bold text-foreground">{s.value}</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">{s.sub}</p>
+              </CardContent>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-foreground">Recent tenants</CardTitle>
+              <Link href="/admin/tenants" className="text-xs font-medium text-brand-accent hover:underline">View all →</Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentTenants.length === 0 ? (
+              <EmptyState title="No tenants yet" icon={Building2} />
+            ) : (
+              <div className="space-y-2">
+                {recentTenants.map((t) => (
+                  <Link key={t.id} href={`/admin/tenants/${t.id}`} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-muted/40">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{t.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">{t.ownerEmail}</p>
+                    </div>
+                    <TenantStatusBadge status={t.status} />
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-foreground">Recent leads ({newLeads} new)</CardTitle>
+              <Link href="/admin/leads" className="text-xs font-medium text-brand-accent hover:underline">View all →</Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentLeads.length === 0 ? (
+              <EmptyState title="No leads yet" icon={Users} />
+            ) : (
+              <div className="space-y-2">
+                {recentLeads.map((l) => (
+                  <div key={l.id} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{l.name}</p>
+                      <p className="truncate text-xs text-muted-foreground">{l.company ?? l.email}</p>
+                    </div>
+                    <LeadBadge status={l.status} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-foreground">Recent invoices</CardTitle>
+              <Link href="/admin/invoices" className="text-xs font-medium text-brand-accent hover:underline">View all →</Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentInvoices.length === 0 ? (
+              <EmptyState title="No invoices yet" icon={CreditCard} />
+            ) : (
+              <div className="space-y-2">
+                {recentInvoices.map((inv) => (
+                  <div key={inv.id} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-foreground">{inv.number}</p>
+                      <p className="truncate text-xs text-muted-foreground">{inv.tenant?.name}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-muted-foreground">{money(inv.total, inv.currency)}</span>
+                      <InvoiceBadge status={inv.status} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-sm font-semibold text-foreground">Support tickets</CardTitle>
+              <Link href="/admin/support" className="text-xs font-medium text-brand-accent hover:underline">View all →</Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {recentTickets.length === 0 ? (
+              <EmptyState title="No tickets yet" icon={FileBarChart} />
+            ) : (
+              <div className="space-y-2">
+                {recentTickets.map((t) => (
+                  <Link key={t.id} href={`/admin/support/${t.id}`} className="block rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-muted/40">
+                    <div className="flex items-center justify-between">
+                      <p className="truncate font-medium text-foreground">{t.subject}</p>
+                      <Badge variant="outline" className="text-xs">{t.status.replace(/_/g, " ")}</Badge>
+                    </div>
+                    <p className="truncate text-xs text-muted-foreground">{t.tenant?.name ?? t.createdByEmail}</p>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold text-foreground">Quick actions</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <Link href="/admin/tenants" className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40">
+            <Building2 className="h-5 w-5 text-brand-accent" />
+            <p className="mt-2 text-sm font-medium text-foreground">Manage tenants</p>
+            <p className="text-xs text-muted-foreground">Activate, suspend, cancel</p>
+          </Link>
+          <Link href="/admin/invoices" className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40">
+            <CreditCard className="h-5 w-5 text-brand-accent" />
+            <p className="mt-2 text-sm font-medium text-foreground">Billing & invoices</p>
+            <p className="text-xs text-muted-foreground">Create invoices, mark paid</p>
+          </Link>
+          <Link href="/admin/leads" className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40">
+            <Users className="h-5 w-5 text-brand-accent" />
+            <p className="mt-2 text-sm font-medium text-foreground">Leads</p>
+            <p className="text-xs text-muted-foreground">Demo requests & contacts</p>
+          </Link>
+          <Link href="/admin/plans" className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40">
+            <Layers className="h-5 w-5 text-brand-accent" />
+            <p className="mt-2 text-sm font-medium text-foreground">Plans & features</p>
+            <p className="text-xs text-muted-foreground">{plans.length} plans active</p>
+          </Link>
+        </CardContent>
+      </Card>
+    </div>
   );
 }

@@ -1,0 +1,145 @@
+"use client";
+
+/**
+ * /clock — Mobile web clock with browser geolocation.
+ */
+import { useState } from "react";
+import { useActionState } from "react";
+import { useFormStatus } from "react-dom";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { clockAction } from "./actions";
+import type { Employee, Schedule, ShiftPolicy, Punch, Branch } from "@prisma/client";
+import { Loader2, MapPin, LogIn, LogOut, AlertTriangle, CheckCircle2 } from "lucide-react";
+
+type EmployeeWithRelations = Employee & { branch: Branch | null; defaultShiftPolicy: ShiftPolicy | null };
+
+interface ClockPageProps {
+  employee: EmployeeWithRelations | null;
+  schedule: (Schedule & { shiftPolicy: ShiftPolicy | null }) | null;
+  lastPunch: Punch | null;
+}
+
+export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
+  const [state, formAction] = useActionState(clockAction, { ok: false });
+  const [pending, setPending] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+
+  if (!employee) {
+    return (
+      <Card><CardContent className="py-12">
+        <p className="text-center text-sm text-muted-foreground">Your user account is not linked to an employee record. Please contact your HR admin.</p>
+      </CardContent></Card>
+    );
+  }
+
+  const nextAction = !lastPunch || lastPunch.type === "CLOCK_OUT" ? "CLOCK_IN" : "CLOCK_OUT";
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    setGeoError(null);
+    setPending(true);
+    try {
+      if (!("geolocation" in navigator)) {
+        setGeoError("Geolocation is not supported by your browser.");
+        setPending(false);
+        return;
+      }
+      const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+      });
+      const formData = new FormData();
+      formData.set("employeeId", employee!.id);
+      formData.set("type", nextAction);
+      formData.set("latitude", String(pos.coords.latitude));
+      formData.set("longitude", String(pos.coords.longitude));
+      formData.set("source", "MOBILE_WEB");
+      const result = await clockAction({}, formData);
+      if (!result.ok) setGeoError(result.error ?? "Clock failed");
+      else window.location.reload();
+    } catch (err: any) {
+      if (err?.code === 1) setGeoError("Location permission denied. Enable location access and try again, or submit a manual request.");
+      else if (err?.code === 2) setGeoError("Location unavailable. Check your GPS / network.");
+      else if (err?.code === 3) setGeoError("Location request timed out. Try again.");
+      else setGeoError("Failed to capture location. " + (err?.message ?? ""));
+    } finally {
+      setPending(false);
+    }
+  }
+
+  const branch = employee.branch;
+
+  return (
+    <div className="mx-auto max-w-md space-y-4">
+      <div>
+        <h1 className="text-lg font-bold text-foreground">Clock in / out</h1>
+        <p className="text-sm text-muted-foreground">{new Date().toLocaleString()}</p>
+      </div>
+
+      <Card>
+        <CardContent className="pt-4">
+          <div className="text-center">
+            <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent/10 text-xl font-bold text-brand-accent">
+              {employee.fullName.charAt(0).toUpperCase()}
+            </div>
+            <h2 className="text-base font-semibold text-foreground">{employee.fullName}</h2>
+            <p className="text-xs text-muted-foreground">{employee.employeeCode} · {employee.jobTitle ?? "—"}</p>
+            <p className="text-xs text-muted-foreground">{branch?.name ?? "No branch assigned"}</p>
+          </div>
+
+          {schedule ? (
+            <div className="mt-4 rounded-md border border-border bg-card/50 p-3 text-xs">
+              <p className="font-medium text-foreground">Today&apos;s shift: {schedule.shiftPolicy?.name ?? "—"}</p>
+              <p className="text-muted-foreground">
+                {schedule.expectedStart ? new Date(schedule.expectedStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} → {schedule.expectedEnd ? new Date(schedule.expectedEnd).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+              </p>
+            </div>
+          ) : (
+            <div className="mt-4 rounded-md border border-amber-300 bg-amber-50/40 p-3 text-xs text-amber-800">
+              No schedule for today. Clock-in will be flagged for manager approval.
+            </div>
+          )}
+
+          {lastPunch && (
+            <div className="mt-3 text-xs text-muted-foreground">
+              Last action: <span className="font-medium text-foreground">{lastPunch.type.replace(/_/g, " ")}</span> at {new Date(lastPunch.timestamp).toLocaleTimeString()}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardContent className="pt-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <input type="hidden" name="employeeId" value={employee.id} />
+            <input type="hidden" name="type" value={nextAction} />
+            <Button type="submit" size="lg" className="w-full" disabled={pending}>
+              {pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Capturing location...</> :
+                nextAction === "CLOCK_IN" ? <><LogIn className="mr-2 h-4 w-4" /> Clock In</> : <><LogOut className="mr-2 h-4 w-4" /> Clock Out</>}
+            </Button>
+          </form>
+          {geoError && (
+            <div className="mt-3 flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{geoError}</span>
+            </div>
+          )}
+          {state.ok && (
+            <div className="mt-3 flex items-start gap-2 rounded-md border border-brand-success/30 bg-brand-success/5 p-2 text-xs text-brand-success">
+              <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>
+                {state.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} successfully.
+                {!state.insideGeofence && " You are OUTSIDE the geofence — punch flagged for manager approval."}
+                {state.distanceMeters !== undefined && ` Distance: ${state.distanceMeters}m from branch.`}
+              </span>
+            </div>
+          )}
+          <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <MapPin className="h-3 w-3" /> Location captured only at clock in/out.
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
