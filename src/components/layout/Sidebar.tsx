@@ -25,6 +25,10 @@ import {
   User as UserIcon,
   CalendarDays,
   ClipboardList,
+  Sparkles,
+  Brain,
+  BookOpen,
+  Sunrise,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -53,6 +57,8 @@ const platformNav: NavItem[] = [
   { href: "/admin/leads", label: "Leads", icon: Users, phase: 2 },
   { href: "/admin/support", label: "Support", icon: LifeBuoy, phase: 2 },
   { href: "/admin/audit", label: "Platform Audit", icon: ScrollText, phase: 2 },
+  { href: "/admin/ai", label: "AI Controls", icon: Brain, phase: 9 },
+  { href: "/admin/coach-library", label: "Coach Tips", icon: BookOpen, phase: 9 },
   { href: "/admin/settings", label: "Settings", icon: Settings, phase: 2 },
 ];
 
@@ -66,6 +72,9 @@ const tenantOwnerNav: NavItem[] = [
   { href: "/kiosk", label: "Kiosk", icon: TabletSmartphone, phase: 4 },
   { href: "/approvals", label: "Approvals", icon: CheckSquare, phase: 5 },
   { href: "/reports", label: "Reports", icon: FileBarChart, phase: 6 },
+  { href: "/team-coach", label: "Team Coach AI", icon: Brain, phase: 9 },
+  { href: "/daily-briefing", label: "Daily Briefing", icon: Sunrise, phase: 9 },
+  { href: "/coach-library", label: "Coach Library", icon: BookOpen, phase: 9 },
   { href: "/audit", label: "Audit Log", icon: ScrollText, phase: 5 },
   { href: "/billing", label: "Billing", icon: CreditCard, phase: 7 },
   { href: "/support", label: "Support", icon: LifeBuoy, phase: 7 },
@@ -75,6 +84,7 @@ const tenantOwnerNav: NavItem[] = [
 const tenantEmployeeNav: NavItem[] = [
   { href: "/today", label: "Today", icon: CalendarClock, phase: 4 },
   { href: "/clock", label: "Clock In/Out", icon: Clock, phase: 4 },
+  { href: "/coach", label: "My Coach AI", icon: Sparkles, phase: 9 },
   { href: "/attendance", label: "My Attendance", icon: ClipboardList, phase: 6 },
   { href: "/requests", label: "My Requests", icon: CheckSquare, phase: 5 },
   { href: "/profile", label: "Profile", icon: UserIcon, phase: 7 },

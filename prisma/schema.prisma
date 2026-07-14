@@ -313,6 +313,13 @@ model Tenant {
   auditLogs      AuditLog[]
   reportExports  ReportExportLog[]
   supportTickets SupportTicket[]
+  // B-Coach AI module relations
+  dailyCoachContents  DailyCoachContent[]
+  coachTips           CoachTip[]
+  employeeCoachSnapshots EmployeeCoachSnapshot[]
+  teamCoachSnapshots  TeamCoachSnapshot[]
+  aiUsageLogs         AiUsageLog[]
+  tenantAiSetting     TenantAiSetting?
 
   @@index([status])
   @@index([businessType])
@@ -430,6 +437,11 @@ model SystemSetting {
   defaultPlanId           String?
   defaultPlan             Plan?                 @relation("SystemSettingDefaultPlan", fields: [defaultPlanId], references: [id])
   paymentProviderMode     PaymentProviderMode   @default(MANUAL)
+  // B-Coach AI module settings
+  aiModuleEnabled         Boolean               @default(true)
+  aiProvider              AiProvider            @default(MOCK)
+  aiDailyCoachEnabled     Boolean               @default(true)
+  aiEmployeeInsightsEnabled Boolean             @default(true)
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 }
@@ -555,7 +567,8 @@ model User {
   status          TenantUserStatus @default(ACTIVE)
   forcePasswordChange Boolean      @default(false)
   lastLoginAt     DateTime?
-  employeeId      String?
+  employeeId      String?          @unique
+  employee        Employee?         @relation(fields: [employeeId], references: [id])
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
@@ -615,6 +628,9 @@ model Branch {
   punches         Punch[]
   attendanceDays  AttendanceDay[]
   approvalRequests ApprovalRequest[]
+  teamCoachSnapshots TeamCoachSnapshot[]
+  schedules       Schedule[]
+  employees       Employee[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -627,6 +643,7 @@ model Department {
   tenant      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name        String
   code        String?
+  employees   Employee[]
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -645,13 +662,16 @@ model Employee {
   nationalId        String?
   jobTitle          String?
   departmentId      String?
+  department        Department?    @relation(fields: [departmentId], references: [id])
   branchId          String?
+  branch            Branch?        @relation(fields: [branchId], references: [id])
   managerId         String?
   employmentType    EmploymentType @default(FULL_TIME)
   status            EmployeeStatus @default(ACTIVE)
   startDate         DateTime?
   endDate           DateTime?
   defaultShiftPolicyId String?
+  defaultShiftPolicy ShiftPolicy?  @relation(fields: [defaultShiftPolicyId], references: [id])
   pinCode           String?
   userId            String?
   salary            Int?
@@ -663,6 +683,9 @@ model Employee {
   punches           Punch[]
   attendanceDays    AttendanceDay[]
   approvalRequests  ApprovalRequest[]
+  coachSnapshots    EmployeeCoachSnapshot[]
+  schedules         Schedule[]
+  user              User?
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -688,6 +711,8 @@ model ShiftPolicy {
   allowsKioskClockIn       Boolean  @default(true)
   allowNoScheduleClockIn   Boolean  @default(false)
   status                   String   @default("ACTIVE")
+  employees                Employee[]
+  schedules                Schedule[]
   createdAt                DateTime @default(now())
   updatedAt                DateTime @updatedAt
 
@@ -699,9 +724,12 @@ model Schedule {
   companyId       String
   tenant          Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employeeId      String
+  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   branchId        String?
+  branch          Branch?         @relation(fields: [branchId], references: [id])
   date            DateTime
   shiftPolicyId   String?
+  shiftPolicy     ShiftPolicy?   @relation(fields: [shiftPolicyId], references: [id])
   expectedStart   DateTime?
   expectedEnd     DateTime?
   status          ScheduleStatus @default(SCHEDULED)
@@ -903,4 +931,192 @@ model SupportMessage {
   createdAt   DateTime @default(now())
 
   @@index([ticketId])
+}
+
+// ============================================================
+// B-COACH AI MODULE (Phase 9)
+// ============================================================
+
+enum CoachTheme {
+  PUNCTUALITY
+  TEAMWORK
+  CUSTOMER_SERVICE
+  CLEANLINESS
+  FOOD_SAFETY
+  COMMUNICATION
+  PRESSURE_HANDLING
+  PERSONAL_DISCIPLINE
+  SHIFT_READINESS
+  LEARNING
+  CONSISTENCY
+  RESPONSIBILITY
+  MOTIVATION
+  GENERAL
+}
+
+enum CoachAudience {
+  ALL_EMPLOYEES
+  KITCHEN
+  SERVICE
+  CASHIER
+  DELIVERY
+  MANAGERS
+}
+
+enum CoachLanguage {
+  EN
+  AR
+}
+
+enum RiskLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum ConsistencyLevel {
+  EXCELLENT
+  GOOD
+  NEEDS_ATTENTION
+  NEEDS_SUPPORT
+}
+
+enum AiProvider {
+  MOCK
+  OPENAI
+}
+
+enum AiFeature {
+  ai_coach
+  daily_motivation
+  manager_ai_insights
+  coach_library
+  daily_briefing
+}
+
+enum AiUsageStatus {
+  SUCCESS
+  FAILED
+  SKIPPED
+}
+
+model DailyCoachContent {
+  id            String         @id @default(cuid())
+  companyId     String?
+  tenant        Tenant?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date          DateTime
+  title         String
+  body          String
+  theme         CoachTheme     @default(GENERAL)
+  language      CoachLanguage  @default(EN)
+  audience      CoachAudience  @default(ALL_EMPLOYEES)
+  createdByAi   Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@unique([companyId, date, audience, language])
+  @@index([companyId, date])
+  @@index([theme])
+  @@index([audience])
+}
+
+model CoachTip {
+  id              String         @id @default(cuid())
+  companyId       String?
+  tenant          Tenant?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title           String
+  body            String
+  theme           CoachTheme     @default(GENERAL)
+  roleTarget      CoachAudience  @default(ALL_EMPLOYEES)
+  language        CoachLanguage  @default(EN)
+  isSystemDefault Boolean        @default(false)
+  active          Boolean        @default(true)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([companyId])
+  @@index([theme])
+  @@index([active])
+  @@index([isSystemDefault])
+}
+
+model EmployeeCoachSnapshot {
+  id                String            @id @default(cuid())
+  companyId         String
+  tenant            Tenant            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId        String
+  employee          Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  periodStart       DateTime
+  periodEnd         DateTime
+  score             Int               @default(100)
+  level             ConsistencyLevel  @default(GOOD)
+  positiveSummary   String
+  improvementAreas  String
+  practicalAdvice   String
+  tomorrowAction    String
+  riskLevel         RiskLevel         @default(LOW)
+  tags              String
+  generatedBy       String            @default("mock")
+  createdAt         DateTime          @default(now())
+
+  @@index([companyId, employeeId])
+  @@index([companyId, periodStart])
+  @@index([level])
+  @@index([riskLevel])
+}
+
+model TeamCoachSnapshot {
+  id                      String   @id @default(cuid())
+  companyId               String
+  tenant                  Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branchId                String?
+  branch                  Branch?  @relation(fields: [branchId], references: [id])
+  periodStart             DateTime
+  periodEnd               DateTime
+  summary                 String
+  employeesNeedingSupport String
+  employeesImproving      String
+  topConsistencyEmployees String
+  suggestedManagerActions String
+  dailyBriefingText       String
+  generatedBy             String   @default("mock")
+  createdAt               DateTime @default(now())
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([periodStart])
+}
+
+model AiUsageLog {
+  id           String         @id @default(cuid())
+  companyId    String?
+  tenant       Tenant?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId       String?
+  feature      AiFeature
+  provider     AiProvider     @default(MOCK)
+  tokensIn     Int?
+  tokensOut    Int?
+  costEstimate Float?
+  status       AiUsageStatus  @default(SUCCESS)
+  errorMessage String?
+  createdAt    DateTime       @default(now())
+
+  @@index([companyId])
+  @@index([feature])
+  @@index([provider])
+  @@index([createdAt])
+}
+
+model TenantAiSetting {
+  id              String   @id @default(cuid())
+  companyId       String   @unique
+  tenant          Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  aiEnabled       Boolean  @default(true)
+  dailyMotivation Boolean  @default(true)
+  employeeCoach   Boolean  @default(true)
+  managerInsights Boolean  @default(true)
+  coachLibrary    Boolean  @default(true)
+  dailyBriefing   Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

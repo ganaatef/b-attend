@@ -366,3 +366,130 @@ See `DEMO.md` for step-by-step demo flows covering Super Admin, Customer Owner, 
 ## Testing
 
 See `TESTING.md` for the full test checklist covering auth, tenant isolation, subscription gating, plan limits, and all operational flows.
+
+---
+
+# B-Coach AI Module (Phase 9)
+
+B-Coach is an optional AI-powered staff development module that helps employees understand their attendance behavior, improve punctuality, stay motivated, and receive daily short development content. It also helps managers identify staff who may need support, coaching, or follow-up.
+
+## Product philosophy
+
+B-Coach is **supportive, respectful, and development-oriented**. It is NOT a punishment tool.
+
+- It does not shame employees.
+- It does not diagnose psychological or medical conditions.
+- It does not make final HR decisions.
+- It does not recommend firing, salary deduction, or disciplinary action automatically.
+- It provides **coaching insights**, not punishment decisions.
+
+## What B-Coach does
+
+- **Employee AI Coach Dashboard** (`/coach`) — weekly + monthly summaries, strengths, improvement areas, daily advice, daily motivation, tomorrow action, progress streak, recent achievements, development tips.
+- **Daily AI Motivation** — short, practical, friendly, work-focused, Egyptian/MENA-friendly content (no religious, political, medical, or sensitive claims; no fake quotes from real people).
+- **Manager AI Insights** (`/team-coach`) — team coaching overview, employees needing attention, improving employees, top consistency, suggested manager actions, daily briefing.
+- **Daily Briefing** (`/daily-briefing`) — short briefing for managers to read to staff before shift (theme + 3 talking points + operational reminder + motivation).
+- **Coach Tips Library** (`/coach-library`) — owner/HR manage custom tips; super admin manages system defaults (`/admin/coach-library`).
+- **Consistency Score** — non-punitive 0-100 score for coaching only. Levels: EXCELLENT / GOOD / NEEDS_ATTENTION / NEEDS_SUPPORT.
+- **Super Admin AI Controls** (`/admin/ai`) — global enable/disable, default provider, per-tenant toggle, usage logs, system tips management.
+
+## AI provider abstraction
+
+All AI logic is isolated in `src/lib/ai/provider.ts`. The system supports:
+
+- **MOCK provider** (default) — deterministic template-based generation. No API key required. The app runs fully without any external AI service.
+- **OPENAI provider** (placeholder) — uses `OPENAI_API_KEY` if set. Currently falls back to MOCK if no key is present. Full OpenAI integration is a future enhancement.
+
+### Environment variables
+
+```bash
+AI_PROVIDER=mock              # or "openai" (will fall back to mock if no key)
+OPENAI_API_KEY=               # optional, only needed if AI_PROVIDER=openai
+AI_DAILY_COACH_ENABLED=true
+AI_EMPLOYEE_INSIGHTS_ENABLED=true
+```
+
+### AI functions
+
+- `generateDailyMotivation(input)` — returns title + body + theme for the day.
+- `generateEmployeeCoachSummary(input)` — returns positiveSummary, improvementAreas, practicalAdvice, tomorrowAction, riskLevel, tags.
+- `generateManagerTeamInsights(input)` — returns team summary, needs-support list, improving list, top consistency list, suggested manager actions, daily briefing text.
+- `generateDailyBriefing(input)` — returns theme, talking points, operational reminder, motivation, branch note.
+
+Every AI call is logged to `AiUsageLog` (best-effort).
+
+## Feature gates
+
+B-Coach features are gated by plan:
+
+| Feature | Trial | Starter | Growth | Pro | Enterprise |
+|---------|-------|---------|--------|-----|------------|
+| daily_motivation | ✓ | ✓ | ✓ | ✓ | ✓ |
+| ai_coach | — | ✓ | ✓ | ✓ | ✓ |
+| manager_ai_insights | — | — | ✓ | ✓ | ✓ |
+| coach_library | — | — | ✓ | ✓ | ✓ |
+| daily_briefing | — | — | — | ✓ | ✓ |
+
+If a feature is not in the plan, the page shows an upgrade prompt. **Attendance data is never hidden** — only AI-generated coaching is gated.
+
+Super Admin can also disable AI globally or per-tenant via `/admin/ai`.
+
+## Privacy and compliance
+
+- AI uses **attendance and scheduling data only**.
+- AI must not infer medical, psychological, political, religious, or sensitive personal attributes.
+- AI must not decide punishments.
+- AI must not recommend termination.
+- AI must not expose one employee's data to another employee.
+- Employee-facing coaching is **constructive and respectful** — never shaming.
+- Manager-facing insights are **factual and based on attendance records**.
+
+> AI coaching is for development support only and not a replacement for HR judgment or legal compliance.
+
+## Database models added
+
+- `DailyCoachContent` — daily motivation content per tenant/date/audience/language.
+- `CoachTip` — coaching tips (system default + tenant custom).
+- `EmployeeCoachSnapshot` — per-employee AI summary snapshot.
+- `TeamCoachSnapshot` — per-team AI insights snapshot.
+- `AiUsageLog` — every AI call logged with provider, tokens, status.
+- `TenantAiSetting` — per-tenant AI feature toggles.
+
+`SystemSetting` extended with: `aiModuleEnabled`, `aiProvider`, `aiDailyCoachEnabled`, `aiEmployeeInsightsEnabled`.
+
+## Routes added
+
+**Employee**: `/coach`
+**Manager/HR/Owner**: `/team-coach`, `/daily-briefing`, `/coach-library`
+**Super Admin**: `/admin/ai`, `/admin/coach-library`
+**API**: `/api/coach/employee-summary`, `/api/coach/team-summary`, `/api/coach/daily-content`, `/api/coach/tips`, `/api/admin/ai/settings`, `/api/admin/ai/usage`
+
+## How to test without an AI key
+
+B-Coach works out of the box with the MOCK provider. No setup needed:
+
+1. Login as `employee@b-attend.app` / `demo1234` → visit `/coach` to see your AI coach dashboard.
+2. Login as `owner@b-attend.app` / `demo1234` → visit `/team-coach` to see team insights.
+3. Visit `/daily-briefing` → see today's briefing.
+4. Visit `/coach-library` → see custom + system tips.
+5. Login as `super@b-attend.app` / `demo1234` → visit `/admin/ai` to see AI controls + usage logs.
+
+## Known limitations
+
+1. **MOCK provider only** — OpenAI integration is a placeholder. To enable real AI generation, set `AI_PROVIDER=openai` + `OPENAI_API_KEY` and implement the OpenAI calls in `src/lib/ai/provider.ts`.
+2. **No real-time push** — `/coach` and `/team-coach` regenerate on each visit. Daily motivation is cached per day per tenant.
+3. **No WhatsApp/email notifications** — in-app notifications only. Email/WhatsApp placeholders for later.
+4. **No Arabic RTL UI for coach** — motivation templates have AR stubs but UI is English-first.
+5. **No leave balance integration** — coach summaries use attendance records only, no leave balance data.
+6. **Daily briefing theme is deterministic** — picked by day-of-year, not personalized per branch performance.
+
+## Future OpenAI integration notes
+
+To wire real OpenAI generation:
+
+1. Set `AI_PROVIDER=openai` and `OPENAI_API_KEY` in `.env`.
+2. In `src/lib/ai/provider.ts`, replace the template fallback in each `generate*` function with a real `fetch("https://api.openai.com/v1/chat/completions", ...)` call.
+3. Use the system prompt to enforce the same supportive, non-shaming tone.
+4. Log tokens in/out + cost estimate to `AiUsageLog`.
+5. Add rate limiting per tenant to control costs.
+6. Add a fallback to MOCK if the OpenAI call fails (so the app never crashes).

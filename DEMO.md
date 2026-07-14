@@ -243,3 +243,88 @@ curl -s "http://localhost:3000/api/public/plans" | head -c 200
 ```
 
 Expected: all public pages 200, all protected 307, logout 200, plans API returns JSON.
+
+---
+
+## 7. B-Coach AI Module demo
+
+The B-Coach AI module is a supportive, development-oriented staff coach. It uses real attendance data and never recommends punishment.
+
+### Employee Coach AI demo
+
+**Login**: `employee@b-attend.app` / `demo1234` → visit `/coach`
+
+1. See your **daily motivation** at the top — a short, practical paragraph for the day.
+2. See your **consistency score** (0-100) with level (EXCELLENT / GOOD / NEEDS_ATTENTION / NEEDS_SUPPORT). The score is for coaching only — it does not affect salary or HR decisions.
+3. See **positive signals** (perfect attendance, on-time, extra effort, improving) and **development areas** (late, missing clock-out, etc.).
+4. See **this week** and **this month** summaries with real attendance stats.
+5. See **My strengths** card with a supportive, personalized summary.
+6. See **Development areas** card with practical advice — never shaming.
+7. See **Suggested action for tomorrow** — one concrete step.
+8. See **My progress streak** — consecutive on-time days.
+9. See **Recent achievements** — on-time arrivals, overtime effort.
+10. See **Development tips** — short practical tips from the coach library.
+
+### Manager Team Coach AI demo
+
+**Login**: `owner@b-attend.app` / `demo1234` → visit `/team-coach`
+
+1. See **team coaching overview** — summary with stats (need support / improving / top consistency counts).
+2. See **Employees needing attention** — list with reason (late arrivals, missing clock-out, etc.) and suggested coaching action.
+3. See **Employees improving** — list of those showing positive trend.
+4. See **Strong consistency** — top employees by score.
+5. See **Suggested manager actions** — numbered list of coaching actions.
+6. See **Daily team briefing preview** — short text to read at shift start.
+
+> Manager insights are factual and based on attendance records. They never recommend termination or disciplinary action.
+
+### Daily Briefing demo
+
+**Login**: `owner@b-attend.app` / `demo1234` → visit `/daily-briefing`
+
+> Note: Daily briefing requires the Pro plan. The demo tenant is on Growth, so you'll see an upgrade prompt. To test it, switch the demo tenant to Pro via `/admin/tenants/[id]` → Change plan.
+
+When available, the briefing includes:
+1. **Today's focus theme** (e.g. Punctuality, Teamwork, Cleanliness).
+2. **3 talking points** to read to the team.
+3. **Operational reminder** (e.g. "Clock in only when you are at the branch and ready to work").
+4. **Motivation paragraph** — short, practical, work-focused.
+5. Optional **branch note**.
+
+### Coach Library demo
+
+**Login**: `owner@b-attend.app` / `demo1234` → visit `/coach-library`
+
+1. See your **custom tips** (initially empty — add one with the form).
+2. See **system default tips** (30 pre-seeded tips across 10 themes).
+3. Add a custom tip — title, body, theme, target audience, language.
+4. Activate/deactivate custom tips.
+5. Delete custom tips.
+
+### Super Admin AI Controls demo
+
+**Login**: `super@b-attend.app` / `demo1234` → visit `/admin/ai`
+
+1. **Global AI settings** — toggle AI module on/off, switch provider (MOCK / OPENAI), toggle daily coach + employee insights.
+2. **Per-tenant AI status** — see all tenants, enable/disable AI per tenant.
+3. **AI usage logs** — latest 50 calls with tenant, feature, provider, status.
+4. **AI feature usage by type** — counts per feature.
+
+### Super Admin Coach Tips demo
+
+**Login**: `super@b-attend.app` / `demo1234` → visit `/admin/coach-library`
+
+1. See all 30 system default tips.
+2. Add a new system tip.
+3. Activate/deactivate system tips.
+4. Delete system tips.
+
+### Feature gate demo
+
+1. Login as `super@b-attend.app`.
+2. Go to `/admin/tenants/[demo-tenant-id]` → Change plan → "Trial".
+3. Logout, login as `owner@b-attend.app`.
+4. Visit `/coach` → you'll see daily motivation (Trial includes daily_motivation) but no AI coach summary (Trial does not include ai_coach).
+5. Visit `/team-coach` → upgrade prompt (Trial does not include manager_ai_insights).
+6. Visit `/daily-briefing` → upgrade prompt (Pro+ only).
+7. (Switch the demo tenant back to Growth after testing.)

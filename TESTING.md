@@ -278,3 +278,150 @@ Manual test checklist for B-Attend. Run through each section before releasing ch
 - [ ] `bunx tsc --noEmit` passes (run before deploy)
 - [ ] `bun run build` succeeds (production build)
 - [ ] No runtime crashes on main flows (smoke test all routes)
+
+---
+
+## 26. B-Coach AI module
+
+### Employee coach page (`/coach`)
+- [ ] Employee can access `/coach` and see only their own coaching data
+- [ ] Employee cannot access another employee's coach data (test via direct API call with another employeeId → 403)
+- [ ] Daily motivation card renders at top with title + body
+- [ ] Consistency score (0-100) displays with correct level
+- [ ] Positive signals list shows strengths (perfect attendance, on-time, etc.)
+- [ ] Development areas list shows improvement items (never shaming)
+- [ ] This week summary shows real attendance stats from AttendanceDay
+- [ ] This month summary shows real attendance stats
+- [ ] My strengths card shows supportive positive summary
+- [ ] Development areas card shows improvement + practical advice
+- [ ] Suggested action for tomorrow shows one concrete step
+- [ ] Progress streak counts consecutive on-time days
+- [ ] Recent achievements list shows on-time arrivals and overtime
+- [ ] Development tips show 6 tips from coach library
+
+### Manager team coach (`/team-coach`)
+- [ ] Owner/HR can access `/team-coach`
+- [ ] Branch Manager can access `/team-coach` but sees only their branch
+- [ ] Employee cannot access `/team-coach` (forbidden message)
+- [ ] Team coaching overview shows summary with stats
+- [ ] Employees needing attention list shows reason + suggested action
+- [ ] Employees improving list shows trend
+- [ ] Strong consistency list shows top employees by score
+- [ ] Suggested manager actions are numbered and actionable
+- [ ] Daily briefing preview shows short text
+- [ ] No private employee notes exposed to other employees
+
+### Daily briefing (`/daily-briefing`)
+- [ ] Manager/HR/Owner can access
+- [ ] Employee cannot access (forbidden)
+- [ ] Today's focus theme displays
+- [ ] 3 talking points render as numbered list
+- [ ] Operational reminder displays
+- [ ] Motivation paragraph displays
+- [ ] Branch note displays (if branch-scoped)
+- [ ] Shows upgrade prompt if plan does not include daily_briefing
+
+### Coach library (`/coach-library`)
+- [ ] Owner/HR can access
+- [ ] Employee cannot access (forbidden)
+- [ ] Custom tips list shows tenant-specific tips
+- [ ] System default tips list shows 30 system tips
+- [ ] Add custom tip form validates required fields
+- [ ] Newly created tip appears in custom list
+- [ ] Activate/deactivate toggle works
+- [ ] Delete custom tip works (only custom, not system)
+
+### Super Admin AI controls (`/admin/ai`)
+- [ ] Super Admin can access
+- [ ] Other platform roles (SALES_ADMIN, SUPPORT_AGENT, BILLING_ADMIN) cannot access
+- [ ] Global AI settings form saves correctly
+- [ ] Toggle AI module globally disables all AI features for all tenants
+- [ ] Per-tenant AI toggle works (enable/disable per tenant)
+- [ ] AI usage logs table shows latest 50 entries
+- [ ] Feature usage by type shows counts per feature
+
+### Super Admin coach library (`/admin/coach-library`)
+- [ ] Super Admin can access
+- [ ] System tips list shows all 30 seeded tips
+- [ ] Add new system tip works
+- [ ] Activate/deactivate system tip works
+- [ ] Delete system tip works
+
+### Daily motivation
+- [ ] Daily motivation appears on `/coach` for employees
+- [ ] Content is short, practical, friendly, work-focused
+- [ ] No religious, political, medical, or sensitive claims
+- [ ] No fake quotes from real people
+- [ ] Same date shows same content (deterministic)
+- [ ] Different dates may show different themes
+
+### Coach summary uses real data
+- [ ] Summary reflects actual AttendanceDay records
+- [ ] Late count matches `exceptionFlags` containing "LATE"
+- [ ] Absent count matches status="ABSENT"
+- [ ] Missing clock-out count matches status="MISSING_CLOCK_OUT"
+- [ ] Outside geofence count matches exceptionFlags containing "OUTSIDE_GEOFENCE"
+- [ ] Overtime minutes match `overtimeMinutes` sum
+- [ ] Improvement trend compares to previous period
+- [ ] No static fake operational data anywhere
+
+### Consistency score
+- [ ] Score starts at 100
+- [ ] Deductions: -8 per absent day, -3 per late day (cap 20), -2 per missing clock-out (cap 10), -3 per outside geofence (cap 15)
+- [ ] Bonuses: +5 perfect attendance, +5 no late arrivals
+- [ ] Score clamped 0-100
+- [ ] Level thresholds: 90+ EXCELLENT, 75+ GOOD, 55+ NEEDS_ATTENTION, <55 NEEDS_SUPPORT
+- [ ] Explanation lists positive signals + improvement signals
+- [ ] Never uses shaming wording
+
+### AI mock provider
+- [ ] App runs without `OPENAI_API_KEY` set
+- [ ] `AI_PROVIDER=mock` (or unset) uses templates
+- [ ] No crash if AI key missing
+- [ ] Every AI call logs to `AiUsageLog` with provider=MOCK
+- [ ] Daily motivation is deterministic for same date
+
+### Feature gates
+- [ ] Trial plan: only daily_motivation available
+- [ ] Starter plan: daily_motivation + ai_coach
+- [ ] Growth plan: ai_coach + daily_motivation + manager_ai_insights + coach_library
+- [ ] Pro plan: all features + daily_briefing
+- [ ] Enterprise plan: all features
+- [ ] Plans without AI feature show upgrade prompt (not crash)
+- [ ] Attendance data is never hidden — only AI coaching is gated
+- [ ] Super Admin global disable overrides plan
+- [ ] Per-tenant disable overrides plan
+
+### Privacy and compliance
+- [ ] AI uses attendance and scheduling data only
+- [ ] No medical/psychological/political/religious inferences
+- [ ] No punishment recommendations
+- [ ] No termination recommendations
+- [ ] Employee A cannot see employee B's coach data
+- [ ] Employee-facing tone is supportive and constructive
+- [ ] Manager-facing tone is factual and operational
+- [ ] No "bad employee", "lazy", "unreliable", or "problematic" wording
+
+### Audit and usage logs
+- [ ] Every AI call creates `AiUsageLog` entry
+- [ ] Logs include companyId, userId, feature, provider, status
+- [ ] Failed AI calls logged with errorMessage
+- [ ] Super Admin can view logs in `/admin/ai`
+- [ ] Logs filterable by feature
+
+### API endpoints
+- [ ] `GET /api/coach/employee-summary?employeeId=...` returns coach summary JSON
+- [ ] `GET /api/coach/team-summary?branchId=...` returns team insights JSON
+- [ ] `GET /api/coach/daily-content?date=...` returns daily motivation JSON
+- [ ] `GET /api/coach/tips?theme=...` returns tips JSON
+- [ ] `GET /api/admin/ai/settings` returns global AI settings (Super Admin only)
+- [ ] `POST /api/admin/ai/settings` updates global AI settings (Super Admin only)
+- [ ] `GET /api/admin/ai/usage` returns AI usage logs (platform users only)
+- [ ] All tenant endpoints enforce companyId scoping
+- [ ] Employee endpoints enforce self-only access
+
+### Notifications
+- [ ] Daily motivation available notification created
+- [ ] Weekly coach summary ready notification created
+- [ ] Manager team insights ready notification created
+- [ ] Notifications visible in header bell (placeholder UI)
