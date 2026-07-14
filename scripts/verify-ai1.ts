@@ -1,0 +1,15 @@
+import { PrismaClient } from "@prisma/client";
+const db = new PrismaClient();
+const tips = await db.coachTip.count({ where: { isSystemDefault: true } });
+const content = await db.dailyCoachContent.count();
+const logs = await db.aiUsageLog.count();
+const demo = await db.tenant.findUnique({ where: { slug: "b-attend-demo" }, include: { subscription: true, tenantAiSetting: true } });
+console.log("System tips:", tips);
+console.log("Daily content:", content);
+console.log("AI usage logs:", logs);
+console.log("Demo tenant B-Coach add-on:", demo?.subscription?.bcoachAddOnEnabled, demo?.subscription?.bcoachAddOnTier, demo?.subscription?.bcoachAddOnPrice);
+console.log("Demo tenant AI settings:", demo?.tenantAiSetting);
+console.log("System settings AI fields:");
+const s = await db.systemSetting.findFirst({ where: { isMain: true } });
+console.log({ aiManagerInsightsEnabled: s?.aiManagerInsightsEnabled, allowOpenaiProvider: s?.allowOpenaiProvider, mockProviderEnabled: s?.mockProviderEnabled, maxAiGenerationsPerTenantPerMonth: s?.maxAiGenerationsPerTenantPerMonth, aiDefaultLanguage: s?.aiDefaultLanguage, aiPrivacyModeEnabled: s?.aiPrivacyModeEnabled });
+await db.$disconnect();

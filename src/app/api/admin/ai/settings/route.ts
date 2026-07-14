@@ -26,6 +26,12 @@ export async function POST(req: NextRequest) {
   if (typeof body.aiProvider === "string") update.aiProvider = body.aiProvider;
   if (typeof body.aiDailyCoachEnabled === "boolean") update.aiDailyCoachEnabled = body.aiDailyCoachEnabled;
   if (typeof body.aiEmployeeInsightsEnabled === "boolean") update.aiEmployeeInsightsEnabled = body.aiEmployeeInsightsEnabled;
+  if (typeof body.aiManagerInsightsEnabled === "boolean") update.aiManagerInsightsEnabled = body.aiManagerInsightsEnabled;
+  if (typeof body.allowOpenaiProvider === "boolean") update.allowOpenaiProvider = body.allowOpenaiProvider;
+  if (typeof body.mockProviderEnabled === "boolean") update.mockProviderEnabled = body.mockProviderEnabled;
+  if (typeof body.maxAiGenerationsPerTenantPerMonth === "number") update.maxAiGenerationsPerTenantPerMonth = body.maxAiGenerationsPerTenantPerMonth;
+  if (typeof body.aiDefaultLanguage === "string") update.aiDefaultLanguage = body.aiDefaultLanguage;
+  if (typeof body.aiPrivacyModeEnabled === "boolean") update.aiPrivacyModeEnabled = body.aiPrivacyModeEnabled;
   await db.systemSetting.update({ where: { isMain: true }, data: update });
   await logPlatformEvent({ actorId: session.sub, actorEmail: session.email, action: "AI_SETTINGS_UPDATED", entityType: "SystemSetting", entityId: "main", afterData: update });
   return NextResponse.json({ ok: true });

@@ -3,7 +3,7 @@
  *
  * Design:
  * - MOCK provider: deterministic template-based generation. No API key required.
- * - OPENAI provider: placeholder; uses OPENAI_API_KEY if set, otherwise falls back to MOCK.
+ * - OPENAI_PLACEHOLDER provider: placeholder; uses OPENAI_API_KEY if set, otherwise falls back to MOCK.
  * - All AI calls are isolated here. Pages/engines never call OpenAI directly.
  *
  * Privacy rules enforced at this layer:
@@ -12,17 +12,19 @@
  * - Constructive, supportive tone for employees
  * - Factual, operational tone for managers
  *
- * Every call logs to AiUsageLog (best-effort).
+ * Every call is passed through sanitizeCoachOutput() before returning.
+ * Every call logs to AiUsageLog (best-effort) with status SUCCESS / FAILED / FALLBACK_USED.
  */
 
 import { db } from "@/lib/db";
+import { sanitizeCoachOutput, safeFallbackEmployeeSummary, safeFallbackTeamSummary, safeFallbackDailyMotivation } from "./sanitize";
 
-export type AiProviderType = "MOCK" | "OPENAI";
+export type AiProviderType = "MOCK" | "OPENAI_PLACEHOLDER";
 
 export interface AiContext {
   companyId: string;
   userId?: string;
-  feature: "ai_coach" | "daily_motivation" | "manager_ai_insights" | "coach_library" | "daily_briefing";
+  feature: "ai_coach" | "daily_motivation" | "employee_coach_summary" | "manager_ai_insights" | "coach_library" | "daily_briefing" | "ai_usage_logs" | "custom_coach_templates";
 }
 
 export interface DailyMotivationInput {
@@ -119,11 +121,11 @@ export interface DailyBriefingOutput {
 
 function getProvider(): AiProviderType {
   const env = process.env.AI_PROVIDER ?? "mock";
-  if (env.toLowerCase() === "openai" && process.env.OPENAI_API_KEY) return "OPENAI";
+  if ((env.toLowerCase() === "openai" || env.toLowerCase() === "openai_placeholder") && process.env.OPENAI_API_KEY) return "OPENAI_PLACEHOLDER";
   return "MOCK";
 }
 
-async function logUsage(ctx: AiContext, provider: AiProviderType, status: "SUCCESS" | "FAILED" | "SKIPPED", opts: { tokensIn?: number; tokensOut?: number; costEstimate?: number; errorMessage?: string } = {}) {
+async function logUsage(ctx: AiContext, provider: AiProviderType, status: "SUCCESS" | "FAILED" | "FALLBACK_USED", opts: { tokensIn?: number; tokensOut?: number; costEstimate?: number; errorMessage?: string } = {}) {
   try {
     await db.aiUsageLog.create({
       data: {
@@ -200,6 +202,14 @@ const DAILY_MOTIVATION_TEMPLATES: Record<string, { title: string; body: string }
     title: "One shift at a time",
     body: "Big goals are built from small shifts. Today, focus on this shift — this order, this customer, this task. Do this one well, and the month takes care of itself.",
   },
+  PROFESSIONAL_APPEARANCE: {
+    title: "Look the part, feel the part",
+    body: "A clean uniform and tidy appearance signal professionalism before you say a word. When you look ready, you feel ready — and customers notice. Take one minute at shift start to check your appearance.",
+  },
+  TAKING_FEEDBACK: {
+    title: "Feedback is a gift",
+    body: "When a manager gives feedback, they are investing in your growth. Listen fully, ask clarifying questions, and thank them. You do not have to agree with everything — but you do have to consider it. Today, receive one piece of feedback with openness.",
+  },
   GENERAL: {
     title: "Today is a fresh shift",
     body: "Whatever happened yesterday is done. Today is a new shift, a new team, a new chance to do good work. Show up, be present, and let your effort speak for itself.",
@@ -230,21 +240,34 @@ export async function generateDailyMotivation(ctx: AiContext, input: DailyMotiva
   const theme = (input.theme ?? pickThemeForDate(input.date)).toUpperCase();
   const language = input.language ?? "EN";
 
-  // For now, both MOCK and OPENAI fall back to templates (OpenAI integration is a placeholder)
-  // When OPENAI is properly integrated, this branch would call the API.
-  const template = language === "AR"
-    ? (AR_MOTIVATION_TEMPLATES[theme] ?? AR_MOTIVATION_TEMPLATES.GENERAL)
-    : (DAILY_MOTIVATION_TEMPLATES[theme] ?? DAILY_MOTIVATION_TEMPLATES.GENERAL);
+  try {
+    // For now, both MOCK and OPENAI_PLACEHOLDER fall back to templates (OpenAI integration is a placeholder)
+    // When OPENAI_PLACEHOLDER is properly integrated, this branch would call the API.
+    const template = language === "AR"
+      ? (AR_MOTIVATION_TEMPLATES[theme] ?? AR_MOTIVATION_TEMPLATES.GENERAL)
+      : (DAILY_MOTIVATION_TEMPLATES[theme] ?? DAILY_MOTIVATION_TEMPLATES.GENERAL);
 
-  await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: template.body.length });
+    const raw = {
+      title: template.title,
+      body: template.body,
+      theme,
+      language,
+      createdByAi: provider === "OPENAI_PLACEHOLDER",
+    };
 
-  return {
-    title: template.title,
-    body: template.body,
-    theme,
-    language,
-    createdByAi: provider === "OPENAI",
-  };
+    // Sanitize before returning
+    const { output, safe } = sanitizeCoachOutput(raw);
+    if (!safe) {
+      await logUsage(ctx, provider, "FALLBACK_USED", { tokensIn: 0, tokensOut: template.body.length, errorMessage: "sanitize violations detected, replacements applied" });
+    } else {
+      await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: template.body.length });
+    }
+
+    return output as DailyMotivationOutput;
+  } catch (e: any) {
+    await logUsage(ctx, provider, "FALLBACK_USED", { errorMessage: e?.message ?? "generation failed" });
+    return safeFallbackDailyMotivation();
+  }
 }
 
 export async function generateEmployeeCoachSummary(ctx: AiContext, input: EmployeeCoachSummaryInput): Promise<EmployeeCoachSummaryOutput> {
@@ -337,9 +360,15 @@ export async function generateEmployeeCoachSummary(ctx: AiContext, input: Employ
   if (input.missingClockOutCount > 0) tags.push("clockout-routine");
   if (input.outsideGeofenceCount > 0) tags.push("geofence-awareness");
 
-  await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: positiveSummary.length + improvementAreas.length });
+  const raw = { positiveSummary, improvementAreas, practicalAdvice, tomorrowAction, riskLevel, tags };
+  const { output, safe } = sanitizeCoachOutput(raw);
+  if (!safe) {
+    await logUsage(ctx, provider, "FALLBACK_USED", { tokensIn: 0, tokensOut: positiveSummary.length + improvementAreas.length, errorMessage: "sanitize violations detected, replacements applied" });
+  } else {
+    await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: positiveSummary.length + improvementAreas.length });
+  }
 
-  return { positiveSummary, improvementAreas, practicalAdvice, tomorrowAction, riskLevel, tags };
+  return output as EmployeeCoachSummaryOutput;
 }
 
 export async function generateManagerTeamInsights(ctx: AiContext, input: ManagerTeamInsightsInput): Promise<ManagerTeamInsightsOutput> {
@@ -392,9 +421,7 @@ export async function generateManagerTeamInsights(ctx: AiContext, input: Manager
   const briefingTheme = needsSupport.length > 0 ? "shift readiness" : "consistency and teamwork";
   const dailyBriefingText = `Today's team focus: ${briefingTheme}. ${needsSupport.length > 0 ? "A few teammates need extra support this week — let us help each other start on time." : "The team is doing well — let us keep the momentum and look for ways to help each other."} Remember: clock in only when you are at the branch and ready to work, and communicate early if you expect any delay.`;
 
-  await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: summary.length });
-
-  return {
+  const raw = {
     summary,
     employeesNeedingSupport: needsSupport,
     employeesImproving: improving,
@@ -402,6 +429,14 @@ export async function generateManagerTeamInsights(ctx: AiContext, input: Manager
     suggestedManagerActions,
     dailyBriefingText,
   };
+  const { output, safe } = sanitizeCoachOutput(raw);
+  if (!safe) {
+    await logUsage(ctx, provider, "FALLBACK_USED", { tokensIn: 0, tokensOut: summary.length, errorMessage: "sanitize violations detected, replacements applied" });
+  } else {
+    await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: summary.length });
+  }
+
+  return output as ManagerTeamInsightsOutput;
 }
 
 export async function generateDailyBriefing(ctx: AiContext, input: DailyBriefingInput): Promise<DailyBriefingOutput> {
@@ -474,15 +509,21 @@ export async function generateDailyBriefing(ctx: AiContext, input: DailyBriefing
 
   const branchNote = input.branchName ? `Today at ${input.branchName}: focus on smooth handovers between shift changes.` : undefined;
 
-  await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: template.body.length });
-
-  return {
+  const raw = {
     theme,
     talkingPoints: talkingPointsMap[theme] ?? talkingPointsMap.GENERAL,
     operationalReminder: operationalReminders[theme] ?? operationalReminders.GENERAL,
     motivation: template.body,
     branchNote,
   };
+  const { output, safe } = sanitizeCoachOutput(raw);
+  if (!safe) {
+    await logUsage(ctx, provider, "FALLBACK_USED", { tokensIn: 0, tokensOut: template.body.length, errorMessage: "sanitize violations detected, replacements applied" });
+  } else {
+    await logUsage(ctx, provider, "SUCCESS", { tokensIn: 0, tokensOut: template.body.length });
+  }
+
+  return output as DailyBriefingOutput;
 }
 
 // ============================================================
@@ -490,13 +531,28 @@ export async function generateDailyBriefing(ctx: AiContext, input: DailyBriefing
 // ============================================================
 
 function pickThemeForDate(date: Date): string {
-  const themes = ["PUNCTUALITY", "TEAMWORK", "CLEANLINESS", "CUSTOMER_SERVICE", "RESPONSIBILITY", "CONSISTENCY", "PRESSURE_HANDLING", "COMMUNICATION", "FOOD_SAFETY", "SHIFT_READINESS", "LEARNING", "PERSONAL_DISCIPLINE", "MOTIVATION", "GENERAL"];
+  const themes = ["PUNCTUALITY", "TEAMWORK", "CLEANLINESS", "CUSTOMER_SERVICE", "RESPONSIBILITY", "CONSISTENCY", "PRESSURE_HANDLING", "COMMUNICATION", "FOOD_SAFETY", "SHIFT_READINESS", "LEARNING", "PERSONAL_DISCIPLINE", "MOTIVATION", "PROFESSIONAL_APPEARANCE", "TAKING_FEEDBACK", "GENERAL"];
   const dayOfYear = Math.floor((date.getTime() - new Date(date.getFullYear(), 0, 0).getTime()) / 86400000);
   return themes[dayOfYear % themes.length];
 }
 
 export function isAiEnabled(): boolean {
-  return (process.env.AI_DAILY_COACH_ENABLED ?? "true") !== "false" && (process.env.AI_EMPLOYEE_INSIGHTS_ENABLED ?? "true") !== "false";
+  const dailyCoach = (process.env.AI_DAILY_COACH_ENABLED ?? "true") !== "false";
+  const employeeInsights = (process.env.AI_EMPLOYEE_INSIGHTS_ENABLED ?? "true") !== "false";
+  const managerInsights = (process.env.AI_MANAGER_INSIGHTS_ENABLED ?? "true") !== "false";
+  return dailyCoach && employeeInsights && managerInsights;
+}
+
+export function isDailyCoachEnabled(): boolean {
+  return (process.env.AI_DAILY_COACH_ENABLED ?? "true") !== "false";
+}
+
+export function isEmployeeInsightsEnabled(): boolean {
+  return (process.env.AI_EMPLOYEE_INSIGHTS_ENABLED ?? "true") !== "false";
+}
+
+export function isManagerInsightsEnabled(): boolean {
+  return (process.env.AI_MANAGER_INSIGHTS_ENABLED ?? "true") !== "false";
 }
 
 export function getActiveProvider(): AiProviderType {

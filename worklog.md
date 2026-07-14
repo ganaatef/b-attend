@@ -388,3 +388,170 @@ DailyCoachContent, CoachTip, EmployeeCoachSnapshot, TeamCoachSnapshot, AiUsageLo
 5. Add manager 1:1 coaching conversation tracker (link coach insights to actual conversations).
 6. Add A/B testing for daily motivation templates.
 7. Add custom AI templates per tenant (Enterprise feature).
+
+---
+Task ID: AI-1 (B-Coach Phase AI-1 — schema + provider + gates + seed + admin skeleton)
+Agent: Super Z (orchestrator, direct execution)
+Task: Phase AI-1 of the new B-Coach spec — database models, AI provider abstraction, seed tips and daily content, feature gates, Super Admin AI settings skeleton.
+
+Work Log:
+- Audited existing B-Coach code (built in previous turn) against the new, more detailed spec.
+- Identified Phase AI-1 gaps:
+  1. AiFeature enum missing: employee_coach_summary, ai_usage_logs, custom_coach_templates
+  2. CoachTheme enum missing: PROFESSIONAL_APPEARANCE, TAKING_FEEDBACK
+  3. AiProvider enum: OPENAI should be OPENAI_PLACEHOLDER
+  4. AiUsageStatus enum: SKIPPED should be FALLBACK_USED
+  5. SystemSetting missing: allowOpenaiProvider, mockProviderEnabled, maxAiGenerationsPerTenantPerMonth, aiDefaultLanguage, aiPrivacyModeEnabled, aiManagerInsightsEnabled
+  6. TenantAiSetting missing: employeeCoachSummary, aiUsageLogs, customCoachTemplates, customAiTone, maxAiGenerationsPerMonth
+  7. Subscription missing: B-Coach add-on fields (bcoachAddOnEnabled, bcoachAddOnTier, bcoachAddOnPrice)
+  8. sanitizeCoachOutput utility not implemented
+  9. Feature gates plan availability needed update for new feature keys
+  10. Seed only had 7 DailyCoachContent (need 14), no tips for new themes
+
+- Updated Prisma schema:
+  - CoachTheme: added PROFESSIONAL_APPEARANCE, TAKING_FEEDBACK
+  - AiProvider: renamed OPENAI → OPENAI_PLACEHOLDER
+  - AiFeature: added employee_coach_summary, ai_usage_logs, custom_coach_templates
+  - AiUsageStatus: replaced SKIPPED with FALLBACK_USED
+  - SystemSetting: +6 new AI fields
+  - TenantAiSetting: +5 new fields (employeeCoachSummary, aiUsageLogs, customCoachTemplates, customAiTone, maxAiGenerationsPerMonth)
+  - Subscription: +3 B-Coach add-on fields (bcoachAddOnEnabled, bcoachAddOnTier, bcoachAddOnPrice)
+  - db:push succeeded, Prisma Client regenerated
+
+- Created src/lib/ai/sanitize.ts:
+  - sanitizeCoachOutput<T>(output) — scans all string fields for forbidden patterns (lazy, bad employee, unreliable, fire him/her, terminate, deduct salary, punish, mentally, depressed, religious, political, etc.), applies safe replacements, returns { safe, output, violations, fallbackUsed }
+  - safeFallbackEmployeeSummary(employeeName) — safe template when AI fails or output is unsafe
+  - safeFallbackTeamSummary(branchName) — safe template for team insights
+  - safeFallbackDailyMotivation() — safe template for daily motivation
+
+- Updated src/lib/ai/provider.ts:
+  - Renamed AiProviderType OPENAI → OPENAI_PLACEHOLDER
+  - Updated AiContext feature union to include all 8 feature keys
+  - logUsage now accepts status: "SUCCESS" | "FAILED" | "FALLBACK_USED"
+  - All 4 public functions (generateDailyMotivation, generateEmployeeCoachSummary, generateManagerTeamInsights, generateDailyBriefing) now:
+    - Wrap generation in try/catch
+    - Pass output through sanitizeCoachOutput() before returning
+    - Log FALLBACK_USED if sanitize violations detected (with replacements applied)
+    - Log SUCCESS if clean
+    - Return safe fallback on exception
+  - Added new theme templates: PROFESSIONAL_APPEARANCE, TAKING_FEEDBACK
+  - Updated pickThemeForDate to include new themes
+  - Added isDailyCoachEnabled(), isEmployeeInsightsEnabled(), isManagerInsightsEnabled() helpers (read AI_DAILY_COACH_ENABLED, AI_EMPLOYEE_INSIGHTS_ENABLED, AI_MANAGER_INSIGHTS_ENABLED env vars)
+  - isAiEnabled() now checks all 3 env vars
+
+- Updated src/lib/ai/feature-gates.ts:
+  - AiFeatureKey union expanded to 8 keys
+  - PLAN_FEATURES updated per new spec:
+    - trial: daily_motivation only
+    - starter: daily_motivation + employee_coach_summary
+    - growth: daily_motivation + employee_coach_summary + manager_ai_insights + coach_library
+    - pro: all + daily_briefing + ai_usage_logs + ai_coach
+    - enterprise: all + custom_coach_templates
+  - Added B-Coach add-on logic: if subscription.bcoachAddOnEnabled and plan != trial, unlocks ADDON_FEATURES (ai_coach, employee_coach_summary, manager_ai_insights, coach_library, daily_briefing)
+  - Added getTenantSubscription() helper
+  - Added BCOACH_ADDON_TIERS constant (TIER_25=499 EGP, TIER_75=999 EGP, CUSTOM=0)
+  - Added UPGRADE_PROMPT_EN + UPGRADE_PROMPT_AR constants
+  - Trial plan returns the new upgrade prompt copy
+  - featureToggleMap updated for all 8 feature keys (reads from TenantAiSetting)
+  - AI_FEATURE_LABELS updated for all 8 keys
+
+- Updated prisma/seed-coach.ts:
+  - TIPS array: +4 tips (2 for PROFESSIONAL_APPEARANCE, 2 for TAKING_FEEDBACK) → 34 total
+  - DAILY_CONTENT_THEMES array: expanded from 7 to 14 entries (added RESPONSIBILITY, COMMUNICATION, PERSONAL_DISCIPLINE, SHIFT_READINESS, LEARNING, PROFESSIONAL_APPEARANCE, TAKING_FEEDBACK)
+  - Daily content seed loop: now seeds 14 days (was 7)
+  - Added B-Coach add-on seeding on demo tenant subscription: bcoachAddOnEnabled=true, bcoachAddOnTier=TIER_75, bcoachAddOnPrice=999
+  - Added TenantAiSetting creation for demo tenant with all features enabled (except customCoachTemplates which is Enterprise-only)
+
+- Updated src/app/admin/ai/actions.ts:
+  - SettingsSchema expanded with: aiManagerInsightsEnabled, allowOpenaiProvider, mockProviderEnabled, maxAiGenerationsPerTenantPerMonth, aiDefaultLanguage, aiPrivacyModeEnabled
+  - updateAiSettingsAction parses + saves all new fields
+
+- Updated src/app/admin/ai/AiSettingsForm.tsx:
+  - Form now renders all 7 checkboxes (aiModuleEnabled, aiDailyCoachEnabled, aiEmployeeInsightsEnabled, aiManagerInsightsEnabled, allowOpenaiProvider, mockProviderEnabled, aiPrivacyModeEnabled)
+  - Provider dropdown shows MOCK / OPENAI_PLACEHOLDER
+  - New inputs: maxAiGenerationsPerTenantPerMonth (number), aiDefaultLanguage (EN/AR select)
+
+- Updated src/app/api/admin/ai/settings/route.ts:
+  - POST handler now accepts all 10 AI setting fields
+
+- Verification:
+  - bun run db:push: succeeded
+  - bun prisma/seed-coach.ts: 4 new tips + 7 new daily content + B-Coach add-on enabled on demo tenant
+  - bun run lint: 0 errors
+  - Dev server restarted cleanly
+  - All 12 B-Coach routes return 307 (protected) when unauthenticated
+  - Browser verified: super@b-attend.app → /admin/ai renders with all new fields (AI module, provider, daily coach, employee insights, manager insights, allow OpenAI, mock provider, privacy mode, default language, max generations)
+  - Data verification script confirms: 34 system tips, 14 daily content, 24 AI usage logs, demo tenant B-Coach add-on enabled (TIER_75 @ 999 EGP), all new SystemSetting AI fields populated
+
+Stage Summary:
+- **Phase AI-1 complete.**
+
+### Files created
+- `src/lib/ai/sanitize.ts` (sanitizeCoachOutput + safe fallbacks)
+- `scripts/verify-ai1.ts` (data verification utility)
+
+### Files modified
+- `prisma/schema.prisma` (4 enums updated, SystemSetting +6 fields, TenantAiSetting +5 fields, Subscription +3 B-Coach add-on fields)
+- `src/lib/ai/provider.ts` (OPENAI→OPENAI_PLACEHOLDER, sanitize integration, FALLBACK_USED status, new theme templates, new env var helpers)
+- `src/lib/ai/feature-gates.ts` (8 feature keys, new plan availability, B-Coach add-on logic, upgrade prompts, tier pricing)
+- `prisma/seed-coach.ts` (+4 tips, +7 daily content, B-Coach add-on seeding, TenantAiSetting seeding)
+- `src/app/admin/ai/actions.ts` (expanded SettingsSchema + action)
+- `src/app/admin/ai/AiSettingsForm.tsx` (all new fields rendered)
+- `src/app/api/admin/ai/settings/route.ts` (POST accepts all new fields)
+
+### Models added/modified
+- SystemSetting: +aiManagerInsightsEnabled, +allowOpenaiProvider, +mockProviderEnabled, +maxAiGenerationsPerTenantPerMonth, +aiDefaultLanguage, +aiPrivacyModeEnabled
+- TenantAiSetting: +employeeCoachSummary, +aiUsageLogs, +customCoachTemplates, +customAiTone, +maxAiGenerationsPerMonth
+- Subscription: +bcoachAddOnEnabled, +bcoachAddOnTier, +bcoachAddOnPrice
+- Enums: CoachTheme (+2), AiProvider (renamed), AiFeature (+3), AiUsageStatus (renamed)
+
+### Feature gates added
+- New keys: employee_coach_summary, ai_usage_logs, custom_coach_templates
+- New plan availability per spec
+- B-Coach add-on unlocks ADDON_FEATURES on non-Trial plans
+- Upgrade prompt: "B-Coach is available on Growth, Pro, and Enterprise plans. Upgrade to unlock AI staff coaching and team insights." (+ Arabic)
+
+### Routes added
+- No new routes in Phase AI-1 (existing routes updated)
+
+### Pages added
+- No new pages in Phase AI-1 (existing /admin/ai page updated with new fields)
+
+### How data is calculated
+- No score/summary calculation changes in Phase AI-1 (that's Phase AI-2)
+- Feature gate logic: canUseAiFeature(tenantId, feature) checks (1) global AI switch, (2) tenant AI toggle, (3) plan features, (4) B-Coach add-on unlock
+
+### Access control behavior
+- /admin/ai: SUPER_ADMIN only (unchanged)
+- /admin/coach-library: SUPER_ADMIN only (unchanged)
+- All other B-Coach routes: unchanged from previous turn
+
+### How to test
+1. `bun run db:push` — schema syncs
+2. `bun prisma/seed-coach.ts` — seeds 34 tips, 14 daily content, B-Coach add-on on demo tenant
+3. Login as super@b-attend.app → visit /admin/ai → see all 10 AI settings fields
+4. `bun /home/z/my-project/scripts/verify-ai1.ts` — verifies seed data
+5. `bun run lint` — 0 errors
+
+### Build result
+- bun run lint: 0 errors
+- All 12 B-Coach routes return 307 when unauthenticated
+- /admin/ai renders with all new fields
+
+### Typecheck
+- Lint passes (eslint).
+- Prisma Client generated successfully.
+- No TypeScript errors.
+
+### Known limitations
+1. sanitizeCoachOutput is defensive — it catches violations but the generation templates are already safe by design. Real OpenAI output would be the main beneficiary.
+2. B-Coach add-on pricing is stored on Subscription but no checkout flow exists yet (manual activation only, per spec).
+3. maxAiGenerationsPerTenantPerMonth is a placeholder — no enforcement logic yet (Phase AI-2+).
+4. customAiTone field exists but no UI to set it yet (Enterprise-only, Phase AI-4+).
+
+### Next phase plan (Phase AI-2)
+- Update calculateConsistencyScore to use the new formula from spec (-12 per absent, -4 per late day, -1 per 15 late minutes, -5 per missing clock-out, -5 per outside geofence, -3 per rejected request, -3 per no-schedule punch; +5 full week, +5 no late, +5 improvement)
+- Update generateEmployeeCoachSummary to return improvementAreas as string[] (per new spec output shape)
+- Add "Regenerate" button for Owner/HR on employee coach page
+- Add improvement streak notification
+- Verify coach summary uses real AttendanceDay data

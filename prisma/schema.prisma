@@ -388,6 +388,10 @@ model Subscription {
   annualAmount        Int                 @default(0)
   currency            String              @default("EGP")
   notes               String?
+  // B-Coach AI add-on
+  bcoachAddOnEnabled  Boolean             @default(false)
+  bcoachAddOnTier     String?             // "TIER_25" | "TIER_75" | "CUSTOM"
+  bcoachAddOnPrice    Int                 @default(0)
   createdAt           DateTime            @default(now())
   updatedAt           DateTime            @updatedAt
 
@@ -442,6 +446,12 @@ model SystemSetting {
   aiProvider              AiProvider            @default(MOCK)
   aiDailyCoachEnabled     Boolean               @default(true)
   aiEmployeeInsightsEnabled Boolean             @default(true)
+  aiManagerInsightsEnabled Boolean              @default(true)
+  allowOpenaiProvider     Boolean               @default(false)
+  mockProviderEnabled     Boolean               @default(true)
+  maxAiGenerationsPerTenantPerMonth Int         @default(1000)
+  aiDefaultLanguage       String                @default("EN")
+  aiPrivacyModeEnabled    Boolean               @default(true)
   createdAt               DateTime              @default(now())
   updatedAt               DateTime              @updatedAt
 }
@@ -951,6 +961,8 @@ enum CoachTheme {
   CONSISTENCY
   RESPONSIBILITY
   MOTIVATION
+  PROFESSIONAL_APPEARANCE
+  TAKING_FEEDBACK
   GENERAL
 }
 
@@ -983,21 +995,24 @@ enum ConsistencyLevel {
 
 enum AiProvider {
   MOCK
-  OPENAI
+  OPENAI_PLACEHOLDER
 }
 
 enum AiFeature {
   ai_coach
   daily_motivation
+  employee_coach_summary
   manager_ai_insights
   coach_library
   daily_briefing
+  ai_usage_logs
+  custom_coach_templates
 }
 
 enum AiUsageStatus {
   SUCCESS
   FAILED
-  SKIPPED
+  FALLBACK_USED
 }
 
 model DailyCoachContent {
@@ -1108,15 +1123,20 @@ model AiUsageLog {
 }
 
 model TenantAiSetting {
-  id              String   @id @default(cuid())
-  companyId       String   @unique
-  tenant          Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  aiEnabled       Boolean  @default(true)
-  dailyMotivation Boolean  @default(true)
-  employeeCoach   Boolean  @default(true)
-  managerInsights Boolean  @default(true)
-  coachLibrary    Boolean  @default(true)
-  dailyBriefing   Boolean  @default(true)
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  id                       String   @id @default(cuid())
+  companyId                String   @unique
+  tenant                   Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  aiEnabled                Boolean  @default(true)
+  dailyMotivation          Boolean  @default(true)
+  employeeCoach            Boolean  @default(true)
+  employeeCoachSummary     Boolean  @default(true)
+  managerInsights          Boolean  @default(true)
+  coachLibrary             Boolean  @default(true)
+  dailyBriefing            Boolean  @default(true)
+  aiUsageLogs              Boolean  @default(false)
+  customCoachTemplates     Boolean  @default(false)
+  customAiTone             String?
+  maxAiGenerationsPerMonth Int?
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
 }

@@ -57,6 +57,12 @@ const TIPS: Array<{ title: string; body: string; theme: string; roleTarget: stri
   { title: "Ask one question per shift", body: "Curiosity builds skill. Ask one question per shift — about a recipe, a technique, a customer preference.", theme: "LEARNING", roleTarget: "ALL_EMPLOYEES", language: "EN" },
   { title: "Learn from mistakes, do not hide them", body: "Everyone makes mistakes. The pros own them, learn, and move on. Hiding mistakes hurts the team.", theme: "LEARNING", roleTarget: "ALL_EMPLOYEES", language: "EN" },
   { title: "Watch the best, copy their habits", body: "Identify the strongest person on your team. Watch how they work, and adopt one of their habits.", theme: "LEARNING", roleTarget: "ALL_EMPLOYEES", language: "EN" },
+  // PROFESSIONAL_APPEARANCE (2)
+  { title: "Look the part, feel the part", body: "A clean uniform and tidy appearance signal professionalism before you say a word. Take one minute at shift start to check your appearance.", theme: "PROFESSIONAL_APPEARANCE", roleTarget: "ALL_EMPLOYEES", language: "EN" },
+  { title: "Grooming is respect", body: "Clean nails, tied-back hair, fresh uniform — these small grooming habits show respect for your customers and your team.", theme: "PROFESSIONAL_APPEARANCE", roleTarget: "KITCHEN", language: "EN" },
+  // TAKING_FEEDBACK (2)
+  { title: "Feedback is a gift", body: "When a manager gives feedback, they are investing in your growth. Listen fully, ask questions, and thank them — even if you disagree.", theme: "TAKING_FEEDBACK", roleTarget: "ALL_EMPLOYEES", language: "EN" },
+  { title: "Receive before you respond", body: "When you hear feedback, your first instinct may be to defend. Instead, listen fully, repeat back what you heard, then respond. It changes the conversation.", theme: "TAKING_FEEDBACK", roleTarget: "ALL_EMPLOYEES", language: "EN" },
 ];
 
 const DAILY_CONTENT_THEMES = [
@@ -67,6 +73,13 @@ const DAILY_CONTENT_THEMES = [
   { theme: "PRESSURE_HANDLING", title: "Stay calm in the rush", body: "Rush hour tests everyone. The teams that handle it best stay calm, communicate clearly, and focus on one order at a time. Calm spreads — so does panic." },
   { theme: "FOOD_SAFETY", title: "Safety first, always", body: "Food safety is not a checkbox — it is a mindset. Wash hands, check temperatures, rotate stock, label prep. These habits protect your customers and your team." },
   { theme: "CONSISTENCY", title: "Consistency beats intensity", body: "One great shift is good. Twenty steady shifts is professional. Consistency is what managers and teammates can rely on." },
+  { theme: "RESPONSIBILITY", title: "Own your shift", body: "When you own your shift, you do not wait to be told. You see what needs doing and you do it. Responsibility is not about pressure — it is about pride in your work." },
+  { theme: "COMMUNICATION", title: "Say it early, say it clearly", body: "Most shift problems start with silent assumptions. If you are running late, say it early. If you are confused about an order, ask. Clear communication prevents most shift drama." },
+  { theme: "PERSONAL_DISCIPLINE", title: "Discipline is self-respect", body: "Discipline is not about being strict — it is about respecting your own time and energy. Showing up on time, finishing what you start, keeping your word. These habits build a reputation." },
+  { theme: "SHIFT_READINESS", title: "Ready to work, not just arrived", body: "Clocking in is not the same as starting work. Real readiness means uniform on, station checked, mind focused. Give yourself five minutes between arrival and the first task." },
+  { theme: "LEARNING", title: "Learn from every shift", body: "Every shift teaches something — a faster way to plate, a better way to greet, a mistake to avoid. The best professionals are the ones who keep learning. Tonight, ask yourself: what did I learn today?" },
+  { theme: "PROFESSIONAL_APPEARANCE", title: "Look the part, feel the part", body: "A clean uniform and tidy appearance signal professionalism before you say a word. When you look ready, you feel ready — and customers notice. Take one minute at shift start to check your appearance." },
+  { theme: "TAKING_FEEDBACK", title: "Feedback is a gift", body: "When a manager gives feedback, they are investing in your growth. Listen fully, ask clarifying questions, and thank them. You do not have to agree with everything — but you do have to consider it." },
 ];
 
 async function main() {
@@ -93,12 +106,12 @@ async function main() {
   }
   console.log(`  ✓ System tips: ${tipCount} created (${TIPS.length} total)`);
 
-  // 2. DailyCoachContent for the demo tenant (past 7 days)
+  // 2. DailyCoachContent for the demo tenant (past 14 days)
   const demoTenant = await db.tenant.findUnique({ where: { slug: "b-attend-demo" } });
   if (demoTenant) {
     const today = new Date(); today.setHours(0, 0, 0, 0);
     let contentCount = 0;
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 14; i++) {
       const date = new Date(today); date.setDate(date.getDate() - i);
       const theme = DAILY_CONTENT_THEMES[i % DAILY_CONTENT_THEMES.length];
       const existing = await db.dailyCoachContent.findUnique({
@@ -121,6 +134,40 @@ async function main() {
       }
     }
     console.log(`  ✓ DailyCoachContent: ${contentCount} created`);
+
+    // 2b. Enable B-Coach add-on on the demo tenant subscription (TIER_75 — 999 EGP/month)
+    const demoSub = await db.subscription.findUnique({ where: { tenantId: demoTenant.id } });
+    if (demoSub && !demoSub.bcoachAddOnEnabled) {
+      await db.subscription.update({
+        where: { id: demoSub.id },
+        data: {
+          bcoachAddOnEnabled: true,
+          bcoachAddOnTier: "TIER_75",
+          bcoachAddOnPrice: 999,
+        },
+      });
+      console.log("  ✓ B-Coach add-on enabled on demo tenant (TIER_75, 999 EGP/mo)");
+    }
+
+    // 2c. Ensure TenantAiSetting exists with full feature access for demo
+    const existingAiSettings = await db.tenantAiSetting.findUnique({ where: { companyId: demoTenant.id } });
+    if (!existingAiSettings) {
+      await db.tenantAiSetting.create({
+        data: {
+          companyId: demoTenant.id,
+          aiEnabled: true,
+          dailyMotivation: true,
+          employeeCoach: true,
+          employeeCoachSummary: true,
+          managerInsights: true,
+          coachLibrary: true,
+          dailyBriefing: true,
+          aiUsageLogs: true,
+          customCoachTemplates: false,
+        },
+      });
+      console.log("  ✓ TenantAiSetting created for demo tenant");
+    }
 
     // 3. Sample EmployeeCoachSnapshot for EMP001
     const emp1 = await db.employee.findUnique({ where: { companyId_employeeCode: { companyId: demoTenant.id, employeeCode: "EMP001" } } });

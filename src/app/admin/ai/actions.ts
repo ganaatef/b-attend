@@ -17,9 +17,15 @@ async function requireSuperAdmin() {
 
 const SettingsSchema = z.object({
   aiModuleEnabled: z.enum(["true", "false"]).or(z.boolean()),
-  aiProvider: z.enum(["MOCK", "OPENAI"]),
+  aiProvider: z.enum(["MOCK", "OPENAI_PLACEHOLDER"]),
   aiDailyCoachEnabled: z.enum(["true", "false"]).or(z.boolean()),
   aiEmployeeInsightsEnabled: z.enum(["true", "false"]).or(z.boolean()),
+  aiManagerInsightsEnabled: z.enum(["true", "false"]).or(z.boolean()),
+  allowOpenaiProvider: z.enum(["true", "false"]).or(z.boolean()),
+  mockProviderEnabled: z.enum(["true", "false"]).or(z.boolean()),
+  maxAiGenerationsPerTenantPerMonth: z.coerce.number().int().min(0).max(100000),
+  aiDefaultLanguage: z.enum(["EN", "AR"]),
+  aiPrivacyModeEnabled: z.enum(["true", "false"]).or(z.boolean()),
 });
 
 export async function updateAiSettingsAction(prev: any, formData: FormData) {
@@ -29,12 +35,18 @@ export async function updateAiSettingsAction(prev: any, formData: FormData) {
     aiProvider: formData.get("aiProvider"),
     aiDailyCoachEnabled: formData.get("aiDailyCoachEnabled") ?? "true",
     aiEmployeeInsightsEnabled: formData.get("aiEmployeeInsightsEnabled") ?? "true",
+    aiManagerInsightsEnabled: formData.get("aiManagerInsightsEnabled") ?? "true",
+    allowOpenaiProvider: formData.get("allowOpenaiProvider") ?? "false",
+    mockProviderEnabled: formData.get("mockProviderEnabled") ?? "true",
+    maxAiGenerationsPerTenantPerMonth: formData.get("maxAiGenerationsPerTenantPerMonth"),
+    aiDefaultLanguage: formData.get("aiDefaultLanguage") ?? "EN",
+    aiPrivacyModeEnabled: formData.get("aiPrivacyModeEnabled") ?? "true",
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const d: any = parsed.data;
-  d.aiModuleEnabled = d.aiModuleEnabled === true || d.aiModuleEnabled === "true";
-  d.aiDailyCoachEnabled = d.aiDailyCoachEnabled === true || d.aiDailyCoachEnabled === "true";
-  d.aiEmployeeInsightsEnabled = d.aiEmployeeInsightsEnabled === true || d.aiEmployeeInsightsEnabled === "true";
+  for (const k of ["aiModuleEnabled", "aiDailyCoachEnabled", "aiEmployeeInsightsEnabled", "aiManagerInsightsEnabled", "allowOpenaiProvider", "mockProviderEnabled", "aiPrivacyModeEnabled"]) {
+    d[k] = d[k] === true || d[k] === "true";
+  }
   await db.systemSetting.update({ where: { isMain: true }, data: d });
   await logPlatformEvent({ actorId: s.sub, actorEmail: s.email, action: "AI_SETTINGS_UPDATED", entityType: "SystemSetting", entityId: "main", afterData: d });
   revalidatePath("/admin/ai");
