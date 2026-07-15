@@ -25,7 +25,7 @@ export default async function DepartmentsPage() {
       <div><h1 className="text-lg font-bold text-foreground">Departments</h1><p className="text-sm text-muted-foreground">{departments.length} departments.</p></div>
       <Card className="border-border p-4">
         <h2 className="mb-3 text-sm font-semibold text-foreground">Add department</h2>
-        <form action={createDepartmentAction} className="flex gap-2">
+        <form action={async (formData: FormData) => { "use server"; await createDepartmentAction({}, formData); }} className="flex gap-2">
           <div className="flex-1"><Label htmlFor="name" className="sr-only">Name</Label><Input id="name" name="name" required placeholder="Kitchen" /></div>
           <Button type="submit" size="sm">Add</Button>
         </form>

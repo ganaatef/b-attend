@@ -3,9 +3,9 @@
  *
  * Seeds:
  * - 5 Job Titles (Waiter, Chef, Cashier, Driver, Manager)
- * - 5 Leave Types (Annual, Sick, Unpaid, Emergency, Maternity)
+ * - 6 Leave Types (Annual, Sick, Unpaid, Emergency, Maternity, Other)
  * - 1 Leave Policy (default)
- * - Leave Balances for all 15 demo employees (Annual Leave)
+ * - Leave Balances for all 15 demo employees (Annual + Sick + Emergency)
  * - 3 Training Courses (Food Safety, Customer Service, Onboarding)
  * - Training Assignments for EMP001
  * - 5 Assets (2 uniforms, 1 device, 1 card, 1 key)
@@ -43,27 +43,26 @@ async function main() {
   }
   console.log("  ✓ Job Titles:", jobTitles.length);
 
-  // 2. Leave Types (companyId is the PK for LeaveType)
-  const leaveTypes = [
-    { code: "ANNUAL", name: "Annual Leave", paid: true, requiresApproval: true, annualAllowanceDays: 21, carryForwardAllowed: true },
-    { code: "SICK", name: "Sick Leave", paid: true, requiresApproval: true, annualAllowanceDays: 30, carryForwardAllowed: false },
+  // 2. Leave Types (each LeaveType has its own id, unique per company+code)
+  const leaveTypeDefs = [
+    { code: "ANNUAL", name: "Annual Leave", paid: true, requiresApproval: true, annualAllowanceDays: 21, carryForwardAllowed: false },
+    { code: "SICK", name: "Sick Leave", paid: true, requiresApproval: true, annualAllowanceDays: 7, carryForwardAllowed: false },
     { code: "UNPAID", name: "Unpaid Leave", paid: false, requiresApproval: true, annualAllowanceDays: 0, carryForwardAllowed: false },
-    { code: "EMERGENCY", name: "Emergency Leave", paid: true, requiresApproval: true, annualAllowanceDays: 5, carryForwardAllowed: false },
-    { code: "MATERNITY", name: "Maternity Leave", paid: true, requiresApproval: true, annualAllowanceDays: 90, carryForwardAllowed: false },
+    { code: "EMERGENCY", name: "Emergency Leave", paid: true, requiresApproval: true, annualAllowanceDays: 3, carryForwardAllowed: false },
+    { code: "MATERNITY", name: "Maternity Leave", paid: true, requiresApproval: true, annualAllowanceDays: 0, carryForwardAllowed: false },
+    { code: "OTHER", name: "Other", paid: false, requiresApproval: true, annualAllowanceDays: 0, carryForwardAllowed: false },
   ];
-  for (const lt of leaveTypes) {
-    const existing = await db.leaveType.findUnique({ where: { companyId: tid } });
-    if (!existing || existing.code !== lt.code) {
-      // LeaveType uses companyId as PK — we can only have one row per tenant in this design
-      // In a real system, LeaveType would have its own id. For MVP, we create a single record per tenant.
-      // For now, skip if any exists (to avoid PK conflict) and use the first one.
-      if (!existing) {
-        await db.leaveType.create({ data: { companyId: tid, name: lt.name, code: lt.code, paid: lt.paid, requiresApproval: lt.requiresApproval, annualAllowanceDays: lt.annualAllowanceDays, carryForwardAllowed: lt.carryForwardAllowed, active: true } });
-      }
-      break; // Only create one LeaveType per tenant (PK is companyId)
+  const createdLeaveTypes: Record<string, { id: string }> = {};
+  for (const lt of leaveTypeDefs) {
+    const existing = await db.leaveType.findUnique({ where: { companyId_code: { companyId: tid, code: lt.code } } });
+    if (!existing) {
+      const created = await db.leaveType.create({ data: { companyId: tid, name: lt.name, code: lt.code, paid: lt.paid, requiresApproval: lt.requiresApproval, annualAllowanceDays: lt.annualAllowanceDays, carryForwardAllowed: lt.carryForwardAllowed, active: true } });
+      createdLeaveTypes[lt.code] = { id: created.id };
+    } else {
+      createdLeaveTypes[lt.code] = { id: existing.id };
     }
   }
-  console.log("  ✓ Leave Types: 1 (Annual Leave — single PK per tenant in MVP)");
+  console.log(`  ✓ Leave Types: ${leaveTypeDefs.length}`);
 
   // 3. Leave Policy
   const existingPolicy = await db.leavePolicy.findFirst({ where: { companyId: tid } });
@@ -72,24 +71,51 @@ async function main() {
   }
   console.log("  ✓ Leave Policy: 1");
 
-  // 4. Leave Balances for all employees (Annual Leave, current year)
+  // 4. Leave Balances for all employees (Annual Leave + selective Sick/Emergency)
   const employees = await db.employee.findMany({ where: { companyId: tid, deletedAt: null } });
-  const annualLeaveType = await db.leaveType.findUnique({ where: { companyId: tid } });
   const year = new Date().getFullYear();
-  if (annualLeaveType) {
-    let balanceCount = 0;
+  let balanceCount = 0;
+
+  // Annual Leave balance for every active employee
+  const annualId = createdLeaveTypes["ANNUAL"]?.id;
+  if (annualId) {
     for (const emp of employees) {
-      const existing = await db.leaveBalance.findUnique({ where: { companyId_employeeId_leaveTypeId_year: { companyId: tid, employeeId: emp.id, leaveTypeId: tid, year } } });
+      const existing = await db.leaveBalance.findUnique({ where: { companyId_employeeId_leaveTypeId_year: { companyId: tid, employeeId: emp.id, leaveTypeId: annualId, year } } });
       if (!existing) {
-        await db.leaveBalance.create({ data: { companyId: tid, employeeId: emp.id, leaveTypeId: tid, year, openingBalance: 21, accrued: 21, used: 0, pending: 0, remaining: 21 } });
+        await db.leaveBalance.create({ data: { companyId: tid, employeeId: emp.id, leaveTypeId: annualId, year, openingBalance: 21, accrued: 21, used: 0, pending: 0, remaining: 21 } });
         balanceCount++;
       }
     }
-    console.log(`  ✓ Leave Balances: ${balanceCount} created`);
   }
 
+  // Sick Leave balance for EMP001-EMP005
+  const sickId = createdLeaveTypes["SICK"]?.id;
+  if (sickId) {
+    for (const emp of employees.slice(0, 5)) {
+      const existing = await db.leaveBalance.findUnique({ where: { companyId_employeeId_leaveTypeId_year: { companyId: tid, employeeId: emp.id, leaveTypeId: sickId, year } } });
+      if (!existing) {
+        await db.leaveBalance.create({ data: { companyId: tid, employeeId: emp.id, leaveTypeId: sickId, year, openingBalance: 7, accrued: 7, used: 0, pending: 0, remaining: 7 } });
+        balanceCount++;
+      }
+    }
+  }
+
+  // Emergency Leave balance for EMP001-EMP003
+  const emergencyId = createdLeaveTypes["EMERGENCY"]?.id;
+  if (emergencyId) {
+    for (const emp of employees.slice(0, 3)) {
+      const existing = await db.leaveBalance.findUnique({ where: { companyId_employeeId_leaveTypeId_year: { companyId: tid, employeeId: emp.id, leaveTypeId: emergencyId, year } } });
+      if (!existing) {
+        await db.leaveBalance.create({ data: { companyId: tid, employeeId: emp.id, leaveTypeId: emergencyId, year, openingBalance: 3, accrued: 3, used: 0, pending: 0, remaining: 3 } });
+        balanceCount++;
+      }
+    }
+  }
+
+  console.log(`  ✓ Leave Balances: ${balanceCount} created`);
+
   // 5. Training Courses
-  const courses = [
+  const courses: { title: string; description: string; category: "FOOD_SAFETY" | "CUSTOMER_SERVICE" | "ONBOARDING"; validityMonths: number }[] = [
     { title: "Food Safety Basics", description: "Basic food safety training for all kitchen and service staff.", category: "FOOD_SAFETY", validityMonths: 12 },
     { title: "Customer Service Excellence", description: "How to greet, serve, and handle customer complaints.", category: "CUSTOMER_SERVICE", validityMonths: 24 },
     { title: "New Hire Onboarding", description: "Introduction to company policies, clock-in process, and safety.", category: "ONBOARDING", validityMonths: 0 },
@@ -116,7 +142,7 @@ async function main() {
   }
 
   // 7. Assets
-  const assets = [
+  const assets: { name: string; type: "UNIFORM" | "DEVICE" | "CARD" | "KEY"; code: string; status: "ASSIGNED" | "AVAILABLE" }[] = [
     { name: "Staff Uniform - Large", type: "UNIFORM", code: "UNI-L-001", status: "ASSIGNED" },
     { name: "Staff Uniform - Medium", type: "UNIFORM", code: "UNI-M-002", status: "AVAILABLE" },
     { name: "Kiosk Tablet", type: "DEVICE", code: "DEV-001", status: "ASSIGNED" },
@@ -193,7 +219,7 @@ async function main() {
 
   // 13. Sample Documents for EMP001
   if (emp1) {
-    const docs = [
+    const docs: { documentType: "NATIONAL_ID" | "HEALTH_CERTIFICATE" | "FOOD_SAFETY_CERTIFICATE"; status: "VALID"; documentNumber: string; expiryDate?: Date }[] = [
       { documentType: "NATIONAL_ID", status: "VALID", documentNumber: "ID-001" },
       { documentType: "HEALTH_CERTIFICATE", status: "VALID", documentNumber: "HC-001", expiryDate: new Date(Date.now() + 180 * 86400000) },
       { documentType: "FOOD_SAFETY_CERTIFICATE", status: "VALID", documentNumber: "FSC-001", expiryDate: new Date(Date.now() + 300 * 86400000) },

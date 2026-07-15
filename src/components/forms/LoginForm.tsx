@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Form, TextField } from "@/components/forms/fields";
 import { loginSchema, type LoginInput } from "@/lib/validations";
-import { loginAction, type LoginState } from "@/app/(auth)/login/actions";
+import { loginAction, type LoginState } from "@/app/(auth)/actions";
 import { LogIn, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
@@ -24,11 +24,11 @@ export function LoginForm() {
 
   const [state, formAction, pending] = useActionState<LoginState, FormData>(
     loginAction,
-    undefined,
+    { ok: false },
   );
 
   const form = useForm<LoginInput>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(loginSchema) as any,
     defaultValues: {
       email: "",
       password: "",
@@ -37,11 +37,6 @@ export function LoginForm() {
 
   useEffect(() => {
     if (state && !state.ok) {
-      if (state.fieldErrors) {
-        for (const [k, v] of Object.entries(state.fieldErrors)) {
-          form.setError(k as keyof LoginInput, { message: v });
-        }
-      }
       if (state.error && state.error !== "Please fix the highlighted fields.") {
         toast.error(state.error);
       }

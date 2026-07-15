@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { SubscriptionBadge, PlanBadge, InvoiceBadge } from "@/components/badges/StatusBadges";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { CreditCard, FileBarChart } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-function money(amount: number, currency = "EGP") { return `${amount.toLocaleString()} ${currency}`; }
+function money(amount: number, currency = "EGP") { return `${formatNumber(amount)} ${currency}`; }
 
 export default async function BillingPage() {
   const session = await getSession();
@@ -23,7 +24,7 @@ export default async function BillingPage() {
       db.branch.count({ where: { companyId: session.tenantId, deletedAt: null } }),
       db.employee.count({ where: { companyId: session.tenantId, deletedAt: null } }),
       db.user.count({ where: { companyId: session.tenantId } }),
-      db.kiosk === undefined ? Promise.resolve(0) : Promise.resolve(0),
+      Promise.resolve(0),
     ]).then(([b, e, m, k]) => ({ branches: b, employees: e, managers: m, kiosks: k })),
   ]);
 

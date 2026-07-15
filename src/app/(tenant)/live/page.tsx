@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Activity } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -53,7 +54,7 @@ export default async function LivePage() {
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand-success"></span>
         </span>
         <h1 className="text-lg font-bold text-foreground">Live attendance</h1>
-        <span className="text-xs text-muted-foreground">{new Date().toLocaleString()}</span>
+        <span className="text-xs text-muted-foreground">{formatDateTime(new Date())}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">

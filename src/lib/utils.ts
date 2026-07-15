@@ -49,6 +49,38 @@ export function formatCurrency(
   }
 }
 
+/**
+ * Format a number using Western (Latin) digits (en-US) regardless of the
+ * viewer's browser locale. This prevents Eastern Arabic numerals (٠-٩) from
+ * appearing when a browser is set to Arabic.
+ */
+export function formatNumber(value: number, locale = "en-US"): string {
+  try {
+    return new Intl.NumberFormat(locale, { maximumFractionDigits: 20 }).format(value);
+  } catch {
+    return String(value);
+  }
+}
+
+/**
+ * Format a Date as a locale-independent string using Western digits (en-US).
+ * Prevents Arabic-numeral dates when the viewer's browser is set to Arabic.
+ */
+export function formatDateTime(value: Date | string | number, locale = "en-US"): string {
+  try {
+    const d = value instanceof Date ? value : new Date(value);
+    return d.toLocaleString(locale, {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch {
+    return String(value);
+  }
+}
+
 /** Returns the number of days between two dates (rounded down, absolute). */
 export function daysBetween(from: Date, to: Date): number {
   const ms = to.getTime() - from.getTime();

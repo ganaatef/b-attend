@@ -47,7 +47,7 @@ export default async function TenantLayout({ children }: { children: React.React
     role: session.role,
     kind: "tenant",
     subscriptionStatus: tenant.subscription?.status,
-    trialEndsAt: tenant.subscription?.trialEndsAt ?? null,
+    trialEndsAt: tenant.subscription?.trialEndsAt?.toISOString() ?? null,
   };
 
   return (

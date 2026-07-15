@@ -6,12 +6,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { bulkScheduleAction } from "../actions";
+import { bulkScheduleAction } from "../../actions";
 import type { Branch, Employee, ShiftPolicy } from "@prisma/client";
 import { Loader2 } from "lucide-react";
 
 export function BulkScheduleForm({ branches, employees, policies }: { branches: Branch[]; employees: Employee[]; policies: ShiftPolicy[] }) {
-  const [state, formAction] = useActionState(bulkScheduleAction, { ok: false });
+  const [state, formAction] = useActionState(bulkScheduleAction, { ok: false } as { ok: boolean; error?: string; created?: number; skipped?: number });
   const { pending } = useFormStatus();
 
   // Helper: collect checked employee IDs into the hidden field

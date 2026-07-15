@@ -34,6 +34,8 @@ export interface SessionTokenPayload extends SessionPayload {
   exp: number;
 }
 
+export type SessionData = SessionPayload;
+
 async function sign(payload: SessionPayload): Promise<string> {
   return new SignJWT({ ...payload })
     .setProtectedHeader({ alg: "HS256" })

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { clockAction } from "./actions";
 import type { Employee, Schedule, ShiftPolicy, Punch, Branch } from "@prisma/client";
 import { Loader2, MapPin, LogIn, LogOut, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 type EmployeeWithRelations = Employee & { branch: Branch | null; defaultShiftPolicy: ShiftPolicy | null };
 
@@ -22,7 +23,7 @@ interface ClockPageProps {
 }
 
 export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
-  const [state, formAction] = useActionState(clockAction, { ok: false });
+  const [state, formAction] = useActionState(clockAction, { ok: false } as { ok: boolean; error?: string; punchId?: string; insideGeofence?: boolean; distanceMeters?: number; status?: string; type?: string });
   const [pending, setPending] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
 
@@ -74,7 +75,7 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
     <div className="mx-auto max-w-md space-y-4">
       <div>
         <h1 className="text-lg font-bold text-foreground">Clock in / out</h1>
-        <p className="text-sm text-muted-foreground">{new Date().toLocaleString()}</p>
+        <p className="text-sm text-muted-foreground">{formatDateTime(new Date())}</p>
       </div>
 
       <Card>

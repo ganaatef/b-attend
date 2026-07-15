@@ -11,7 +11,7 @@ import type { Branch } from "@prisma/client";
 import { Loader2, Copy } from "lucide-react";
 
 export function UserForm({ branches }: { branches: Branch[] }) {
-  const [state, formAction] = useActionState(createUserAction, { ok: false });
+  const [state, formAction] = useActionState(createUserAction, { ok: false } as { ok: boolean; error?: string; tempPassword?: string });
   const { pending } = useFormStatus();
 
   return (

@@ -1,6 +1,7 @@
 /**
  * /admin — Real Super Admin dashboard with DB-backed metrics.
  */
+import { formatNumber } from "@/lib/utils";
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +13,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 export const dynamic = "force-dynamic";
 
 function money(amount: number, currency = "EGP") {
-  return `${amount.toLocaleString()} ${currency}`;
+  return `${formatNumber(amount)} ${currency}`;
 }
 
 export default async function AdminDashboard() {

@@ -20,12 +20,15 @@ export default async function TodayPage() {
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  const [schedule, punches, attendanceMonth, pendingRequests] = employee ? await Promise.all([
-    db.schedule.findUnique({ where: { companyId_employeeId_date: { companyId: session.tenantId, employeeId: employee.id, date: today } }, include: { shiftPolicy: true } }),
-    db.punch.findMany({ where: { employeeId: employee.id, timestamp: { gte: today, lt: tomorrow } }, orderBy: { timestamp: "desc" } }),
-    db.attendanceDay.findMany({ where: { employeeId: employee.id, date: { gte: monthStart } }, orderBy: { date: "desc" } }),
-    db.approvalRequest.findMany({ where: { employeeId: employee.id, status: "PENDING" } }),
-  ]) : { schedule: null, punches: [], attendanceMonth: [], pendingRequests: [] };
+  let schedule: any = null, punches: any[] = [], attendanceMonth: any[] = [], pendingRequests: any[] = [];
+  if (employee) {
+    [schedule, punches, attendanceMonth, pendingRequests] = await Promise.all([
+      db.schedule.findUnique({ where: { companyId_employeeId_date: { companyId: session.tenantId, employeeId: employee.id, date: today } }, include: { shiftPolicy: true } }),
+      db.punch.findMany({ where: { employeeId: employee.id, timestamp: { gte: today, lt: tomorrow } }, orderBy: { timestamp: "desc" } }),
+      db.attendanceDay.findMany({ where: { employeeId: employee.id, date: { gte: monthStart } }, orderBy: { date: "desc" } }),
+      db.approvalRequest.findMany({ where: { employeeId: employee.id, status: "PENDING" } }),
+    ]);
+  }
 
   if (!employee) {
     return <EmptyState title="No employee record" description="Your user account is not linked to an employee. Contact HR." icon={Clock} />;

@@ -11,10 +11,11 @@ import { ChangePlanForm } from "./ChangePlanForm";
 import { CreateInvoiceForm } from "./CreateInvoiceForm";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Building2, Users, Clock, FileBarChart, ScrollText } from "lucide-react";
+import { formatNumber, formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-function money(amount: number, currency = "EGP") { return `${amount.toLocaleString()} ${currency}`; }
+function money(amount: number, currency = "EGP") { return `${formatNumber(amount)} ${currency}`; }
 
 export default async function TenantDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -205,7 +206,7 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
                     <p className="text-muted-foreground">{l.actorEmail} · {l.entityType ?? "—"}</p>
                     {l.reason && <p className="text-muted-foreground">Reason: {l.reason}</p>}
                   </div>
-                  <span className="text-muted-foreground">{new Date(l.createdAt).toLocaleString()}</span>
+                  <span className="text-muted-foreground">{formatDateTime(l.createdAt)}</span>
                 </div>
               ))}
             </div>

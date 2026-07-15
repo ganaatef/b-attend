@@ -6,10 +6,11 @@ import { InvoiceBadge } from "@/components/badges/StatusBadges";
 import { InvoiceActions } from "./InvoiceActions";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { CreditCard } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-function money(amount: number, currency = "EGP") { return `${amount.toLocaleString()} ${currency}`; }
+function money(amount: number, currency = "EGP") { return `${formatNumber(amount)} ${currency}`; }
 
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const params = await searchParams;

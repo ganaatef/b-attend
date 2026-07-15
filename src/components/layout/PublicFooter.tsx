@@ -15,7 +15,7 @@ export function PublicFooter() {
             <span className="text-base font-semibold text-foreground">B-Attend</span>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Smart attendance and shift control for operational teams in Egypt &amp; MENA.
+            Smart attendance and shift control for operational teams everywhere.
           </p>
           <p className="mt-2 text-xs text-muted-foreground">Be present. Be verified.</p>
         </div>
@@ -48,7 +48,7 @@ export function PublicFooter() {
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-muted-foreground sm:px-6 lg:px-8">
-          © {year} B-Attend. Built for operational teams in Egypt &amp; MENA.
+           © {year} B-Attend. Built for operational teams everywhere.
         </div>
       </div>
     </footer>

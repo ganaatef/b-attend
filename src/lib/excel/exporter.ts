@@ -57,7 +57,6 @@ export function addReportHeaderSheet(wb: ExcelJS.Workbook, info: ReportHeaderInf
   ws.getCell("B4").value = info.generatedBy;
   ws.getCell("A5").value = "Generated at:";
   ws.getCell("B5").value = info.generatedAt.toLocaleString();
-  ws.getCell("A5").numFmt = undefined;
   ws.getCell("B5").numFmt = "yyyy-mm-dd hh:mm:ss";
 
   // Filters

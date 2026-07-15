@@ -22,7 +22,7 @@ import {
   BillingCycleSelect,
 } from "@/components/forms/fields";
 import { signupSchema, type SignupInput } from "@/lib/validations";
-import { signupAction, type SignupState } from "@/app/(auth)/signup/actions";
+import { signupAction, type SignupState } from "@/app/(auth)/actions";
 import { UserPlus } from "lucide-react";
 
 export type SignupPlanOption = {
@@ -42,11 +42,11 @@ export function SignupForm({
 }) {
   const [state, formAction, pending] = useActionState<SignupState, FormData>(
     signupAction,
-    undefined,
+    { ok: false },
   );
 
   const form = useForm<SignupInput>({
-    resolver: zodResolver(signupSchema),
+    resolver: zodResolver(signupSchema) as any,
     defaultValues: {
       fullName: "",
       email: "",
@@ -67,10 +67,10 @@ export function SignupForm({
     if (state && !state.ok) {
       if (state.fieldErrors) {
         for (const [k, v] of Object.entries(state.fieldErrors)) {
-          form.setError(k as keyof SignupInput, { message: v });
+          form.setError(k as keyof SignupInput, { message: v as string });
         }
       }
-      if (state.error !== "Please fix the highlighted fields.") {
+      if (state.error && state.error !== "Please fix the highlighted fields.") {
         toast.error(state.error);
       }
     }
@@ -212,7 +212,7 @@ export function SignupForm({
             Privacy Policy
           </a>
           . New tenants are activated manually by our team (usually within one
-          business day) to fit B2B sales in Egypt/MENA.
+          business day) to fit B2B sales.
         </div>
 
         <div className="flex items-center justify-end">

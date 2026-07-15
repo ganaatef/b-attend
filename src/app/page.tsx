@@ -22,6 +22,9 @@ import {
   ArrowRight,
   Check,
 } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
 
 async function getActivePlans() {
   return db.plan.findMany({
@@ -47,7 +50,7 @@ export default async function HomePage() {
           <div className="mx-auto max-w-3xl text-center">
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
               <span className="inline-block h-1.5 w-1.5 rounded-full bg-brand-success" />
-              Built for operational teams in Egypt &amp; MENA
+              Built for operational teams everywhere
             </div>
             <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
               B-Attend
@@ -304,7 +307,7 @@ export default async function HomePage() {
                     <p className="text-2xl font-bold text-foreground">Free</p>
                   ) : (
                     <p className="text-2xl font-bold text-foreground">
-                      {p.priceMonthly.toLocaleString()}{" "}
+                      {formatNumber(p.priceMonthly)}{" "}
                       <span className="text-sm font-normal text-muted-foreground">EGP/mo</span>
                     </p>
                   )}
@@ -347,7 +350,7 @@ export default async function HomePage() {
           <div className="mt-8 space-y-4">
             {[
               { q: "Is there a free trial?", a: "Yes — 14 days, one branch, up to 10 employees. No credit card required." },
-              { q: "Do you support manual activation?", a: "Yes. Manual activation is the default for B2B in Egypt & MENA. A Super Admin reviews each signup and activates the subscription." },
+              { q: "Do you support manual activation?", a: "Yes. Manual activation is the default for B2B. A Super Admin reviews each signup and activates the subscription." },
               { q: "Does the clock work without installing an app?", a: "Yes. Employees clock in via a mobile-friendly web page using browser geolocation. Kiosk mode is also available for shared tablets." },
               { q: "Can I export payroll data in Arabic?", a: "CSV exports use UTF-8 with BOM so Arabic characters render correctly in Excel." },
               { q: "What happens if my subscription is suspended?", a: "Owners can still access billing and support. Operational pages and clock-in are blocked until payment is resolved." },

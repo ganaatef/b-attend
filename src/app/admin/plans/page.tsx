@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { PlanBadge } from "@/components/badges/StatusBadges";
 import { Check, X } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export default async function PlansPage() {
               <span className="text-xs text-muted-foreground">{p._count.subscriptions} subs</span>
             </div>
             <p className="mt-2 text-2xl font-bold text-foreground">
-              {p.isTrial ? "Free" : p.isCustom ? "Custom" : `${p.priceMonthly.toLocaleString()} EGP/mo`}
+              {p.isTrial ? "Free" : p.isCustom ? "Custom" : `${formatNumber(p.priceMonthly)} EGP/mo`}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">{p.description}</p>
             <div className="mt-3 space-y-0.5 text-xs text-muted-foreground">

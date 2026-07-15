@@ -1,6 +1,6 @@
 # B-Attend
 
-> Smart attendance and shift control for operational teams in Egypt & MENA.
+> Smart attendance and shift control for operational teams everywhere.
 >
 > **Be present. Be verified.**
 
@@ -39,7 +39,7 @@ Every tenant-scoped table carries a `companyId` column and is indexed on it. Str
 - Plans are database-driven, not hard-coded.
 - Each tenant has one active `Subscription` linked to a `Plan`.
 - Subscription statuses: `TRIALING`, `PENDING_PAYMENT`, `ACTIVE`, `PAST_DUE`, `GRACE_PERIOD`, `SUSPENDED`, `CANCELLED`, `EXPIRED`, `MANUAL_REVIEW`.
-- Manual activation is the default for B2B in Egypt & MENA.
+- Manual activation is the default for B2B.
 - Plan limits enforced on branch/employee creation (maxBranches, maxEmployees, maxManagers, maxKiosks).
 - Feature flags per plan via `PlanFeature` table.
 
@@ -227,6 +227,97 @@ The demo tenant has 3 branches (New Cairo, Nasr City, Maadi), 6 departments, 5 s
 - 6 report types respect filters (date range, branch)
 - Every export logged to `ReportExportLog` + `AuditLog`
 
+### HR-4: Warnings management
+- Create, acknowledge, resolve employee warnings
+- Warning categories and severity levels
+- Employee self-service acknowledgment
+- Manager/HR create and resolve warnings
+- Branch-scoped warning visibility
+- Warning status tracking (PENDING, ACKNOWLEDGED, RESOLVED, ESCALATED)
+- Warning history per employee
+- Audit log entries for all warning actions
+
+### HR-4: Training courses & assignments
+- Create training courses with title, description, due date, and passing criteria
+- Assign courses to employees or branches
+- Track completion status per employee
+- Employee self-service training dashboard
+- Course completion certificates (status-based)
+- Training status reports (in-progress, completed, overdue)
+- Branch Manager can view assigned branch training
+- HR/Admin can manage all courses and assignments
+
+### HR-4: Assets & uniforms
+- Create and manage company assets (laptops, phones, uniforms, equipment)
+- Assign assets to employees with expected return dates
+- Track asset status (AVAILABLE, ASSIGNED, RETURNED, LOST)
+- Employee self-service asset view
+- Return flow with condition notes
+- Asset history per employee
+- Branch-scoped asset visibility
+- HR/Admin full asset management
+
+### HR-4: Onboarding checklists
+- Create onboarding checklists with required tasks
+- Assign checklists to new employees
+- Track task completion (documents, training, equipment, orientation)
+- Employee self-service onboarding view
+- Checklist status tracking (IN_PROGRESS, COMPLETED)
+- Manager/HR can view and update task status
+- Branch-scoped onboarding visibility
+- Onboarding completion reports
+
+### HR-4: Offboarding workflows
+- Initiate offboarding process for departing employees
+- Define offboarding tasks (exit interview, equipment return, access revocation, knowledge transfer)
+- Track task completion status
+- Employee self-service offboarding view
+- Offboarding status tracking (IN_PROGRESS, COMPLETED, CANCELLED)
+- Manager/HR can manage offboarding tasks
+- Branch-scoped offboarding visibility
+- Offboarding completion reports
+
+### HR-4: Employee self-service
+- Employees can view assigned training courses and mark completion
+- Employees can view assigned assets and report issues
+- Employees can view onboarding checklist progress
+- Employees can view offboarding tasks
+- Employees can acknowledge warnings
+- Dedicated self-service pages for training, assets, onboarding, offboarding
+- Branch scoping enforced on all self-service data
+
+### HR-4: HR Excel exports
+- Export warnings list to Excel (filtered by branch, status, date range)
+- Export training courses and completion status to Excel
+- Export assets and assignment status to Excel
+- Export onboarding checklists and completion to Excel
+- Export offboarding workflows and task status to Excel
+- UTF-8 BOM for Arabic compatibility
+- Every export logged to AuditLog
+
+### HR-5: Payroll module
+- **Payroll Profiles**: One profile per employee defining salary type (FIXED, HOURLY, DAILY), base salary, payment method, allowances, deductions, and custom fields
+- **Payroll Runs**: Monthly payroll generation with auto-generated lines from AttendanceDay data (base pay, overtime, late deductions, absent deductions, net amount)
+- **Payroll Adjustments**: Add bonuses, deductions, allowances, or penalties per employee with approval workflow (PENDING → APPROVED / REJECTED)
+- **Routes**: `/hr/payroll-profiles`, `/hr/payroll-runs`
+- **Excel exports**: Multi-sheet Excel for payroll runs (summary, lines, adjustments, missing profiles) and payroll profiles
+- **Key feature**: Transparent payroll calculation derived from AttendanceDay records — total base salary, overtime pay, late/absent deductions, adjustments, and net amount visible per line
+- **Workflow**: Payroll runs follow DRAFT → REVIEW → APPROVED → LOCKED status flow; locked runs are read-only
+- **Known limitations**: No Egyptian tax calculation, no social insurance calculation, no bank transfer integration, no payslip PDF generation — payroll outputs require accountant review before real salary payments
+
+### HR-5.2: Payroll Lock Protection
+- **Lock Readiness Check**: Before locking a payroll run, 6 blocking conditions are checked in parallel: pending adjustments, pending approval requests, attendance requiresApproval, pending attendance statuses, pending leave requests, missing payroll profiles
+- **Lock Readiness Card**: Payroll run detail page shows a readiness card (green when ready, amber with blocker counts when not)
+- **Server-side protection**: Lock button is visually disabled when blockers exist, but server protection is mandatory — the action always rechecks before locking
+
+### HR-6: Reports, Final QA, Documentation
+- **HR Reports Hub**: `/hr/reports` — 14 report types with real DB counts, grouped by category (People, Documents & Leave, Compliance, Operations, Payroll)
+- **Unified Reports Excel Export**: Single route `/api/tenant/hr/reports/excel?type=...` supporting all 14 report types as separate or combined multi-sheet workbook
+- **Branch Manager view**: Restricted to branch-scoped data, no payroll or offboarding reports
+- **Final Excel Polish**: All 11 HR Excel routes have consistent header sheets, audit actions, subscription checks, and empty row fallbacks
+- **Access Control QA**: Comprehensive matrix of all HR pages, API routes, and server actions across 4 roles (COMPANY_OWNER, HR_ADMIN, BRANCH_MANAGER, EMPLOYEE) documented in TESTING.md
+- **Feature gates enforced**: hr_core (Starter+), hr_training (Growth+), hr_payroll (Growth+) all enforced on page render and server actions
+
 ### Security
 - bcrypt password hashing
 - HttpOnly + SameSite cookies, 7-day expiry
@@ -314,6 +405,7 @@ The demo tenant has 3 branches (New Cairo, Nasr City, Maadi), 6 departments, 5 s
 10. **No leave balance tracking** — Leave requests just mark schedule as LEAVE; no annual/sick leave balance accrual (per spec, kept simple).
 11. **No mobile app** — Mobile web is responsive and PWA-ready but no native app.
 12. **No Arabic RTL UI** — i18n dictionary has Arabic stubs but UI is English-first. RTL flip is a Phase 8 polish item.
+13. **Approved leave reversal not implemented** — Employees can cancel pending leave only. HR can cancel pending leave only. Reversing approved leave requires a future dedicated workflow to safely restore schedules, attendance, leave balance, and payroll impact.
 
 ---
 
@@ -347,7 +439,7 @@ B-Attend processes company information, employee personal data, and location dat
 - **Biometrics**: Face verification remains a placeholder. No biometric templates are stored.
 - **Consent**: Employers must inform employees and obtain required consents under applicable labor and data protection law before enabling location capture.
 - **Data retention**: Audit log retention follows plan (30-730 days).
-- **Legal review**: This README is not legal advice. Production use requires legal review for Egypt & MENA data protection compliance.
+- **Legal review**: This README is not legal advice. Production use requires legal review for applicable data protection compliance.
 
 ---
 

@@ -13,18 +13,18 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Form, TextField, TextareaField } from "@/components/forms/fields";
 import { leadSchema, type LeadInput } from "@/lib/validations";
-import { leadAction, type LeadState } from "@/app/(public)/actions";
+import { contactAction, type ContactState } from "@/app/(auth)/actions";
 import { Send } from "lucide-react";
 
 export function ContactForm() {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<
-    LeadState,
+    ContactState,
     FormData
-  >(leadAction.bind(null, "contact"), undefined);
+  >(contactAction, { ok: false });
 
   const form = useForm<LeadInput>({
-    resolver: zodResolver(leadSchema),
+    resolver: zodResolver(leadSchema) as any,
     defaultValues: {
       name: "",
       company: "",
@@ -44,7 +44,7 @@ export function ContactForm() {
       // Apply server-side field errors if present
       if (state.fieldErrors) {
         for (const [k, v] of Object.entries(state.fieldErrors)) {
-          form.setError(k as keyof LeadInput, { message: v });
+          form.setError(k as keyof LeadInput, { message: v as string });
         }
       }
       if (state.error !== "Please fix the highlighted fields.") {

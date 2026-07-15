@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { ReplyForm } from "./ReplyForm";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { MessageSquare } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
                 <div key={m.id} className={`rounded-md border px-3 py-2 text-sm ${m.isInternal ? "border-amber-300 bg-amber-50/40" : "border-border bg-card"}`}>
                   <div className="flex items-center justify-between text-xs">
                     <span className="font-medium text-foreground">{m.authorEmail} <span className="text-muted-foreground">· {m.authorRole.replace(/_/g, " ")}</span></span>
-                    <span className="text-muted-foreground">{new Date(m.createdAt).toLocaleString()}</span>
+                    <span className="text-muted-foreground">{formatDateTime(m.createdAt)}</span>
                   </div>
                   <p className="mt-1 text-foreground/90 whitespace-pre-wrap">{m.body}</p>
                   {m.isInternal && <p className="mt-1 text-xs text-amber-700">Internal note</p>}

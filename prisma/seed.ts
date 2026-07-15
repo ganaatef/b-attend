@@ -24,6 +24,18 @@ const db = new PrismaClient();
 const DEMO_PASSWORD = "demo1234";
 
 async function main() {
+  // ── Safety guard ─────────────────────────────────────────────
+  // Never auto-seed production. Only seed when explicitly allowed:
+  //   - Not production, OR
+  //   - DEMO_SEED_CONFIRM=true (intentional client-demo seeding)
+  if (process.env.NODE_ENV === "production" && process.env.DEMO_SEED_CONFIRM !== "true") {
+    console.warn(
+      "⛔ Seed skipped: NODE_ENV=production and DEMO_SEED_CONFIRM is not 'true'.\n" +
+      "   This protects production data. To seed the live demo, set DEMO_SEED_CONFIRM=true\n" +
+      "   and re-run `npm run db:seed:demo`."
+    );
+    return;
+  }
   console.log("→ Seeding B-Attend full data...");
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 

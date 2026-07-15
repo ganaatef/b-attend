@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { UserForm } from "./UserForm";
 import { Users } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,7 @@ export default async function UsersPage() {
                     <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
                     <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{u.role.replace(/_/g, " ")}</Badge></td>
                     <td className="px-4 py-3"><Badge variant={u.status === "ACTIVE" ? "default" : "secondary"} className={u.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{u.status}</Badge></td>
-                    <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{u.lastLoginAt ? new Date(u.lastLoginAt).toLocaleString() : "—"}</td>
+                    <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
                   </tr>
                 ))}
               </tbody>

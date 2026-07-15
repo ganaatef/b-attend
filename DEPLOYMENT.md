@@ -1,402 +1,234 @@
-# B-Attend — Deployment Guide
+# B-Attend — Deployment Guide (Client Demo → Vercel + PostgreSQL)
 
-This document covers deploying B-Attend to production.
-
----
-
-## Prerequisites
-
-- Node.js 20+ or Bun 1.3+
-- PostgreSQL 14+ (production database — SQLite is local-dev only)
-- SMTP credentials for transactional email (optional in Phase 1)
-- Domain + SSL certificate
-- (Optional) Docker + Docker Compose
+> **Scope:** This guide prepares B-Attend for a **live hosted client demo** on Vercel with a
+> PostgreSQL database. It is **not** a full production launch — no new product features are
+> added here. For production hardening, see the "Security hardening" and "Not ready for
+> production" sections at the bottom.
 
 ---
 
-## Option 1: Docker Compose (recommended for self-hosting)
+## 0. Critical rules for this deployment
 
-### 1. Create `docker-compose.yml`
-
-```yaml
-version: "3.9"
-services:
-  db:
-    image: postgres:16-alpine
-    restart: always
-    environment:
-      POSTGRES_DB: battend
-      POSTGRES_USER: battend
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
-    volumes:
-      - pgdata:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-
-  app:
-    build: .
-    restart: always
-    depends_on:
-      - db
-    environment:
-      DATABASE_URL: postgresql://battend:${DB_PASSWORD:-change-me}@db:5432/battend?schema=public
-      APP_URL: https://your-domain.com
-      SESSION_SECRET: ${SESSION_SECRET:-change-me-to-32-chars}
-      EMAIL_FROM: no-reply@your-domain.com
-      SMTP_HOST: ${SMTP_HOST}
-      SMTP_PORT: ${SMTP_PORT:-587}
-      SMTP_USER: ${SMTP_USER}
-      SMTP_PASS: ${SMTP_PASS}
-      PAYMENT_PROVIDER: MANUAL
-      MANUAL_ACTIVATION_MODE: "true"
-      SUPER_ADMIN_EMAIL: super@b-attend.app
-      SUPER_ADMIN_PASSWORD: ${SUPER_ADMIN_PASSWORD:-change-me}
-      NODE_ENV: production
-    ports:
-      - "3000:3000"
-
-  caddy:
-    image: caddy:2-alpine
-    restart: always
-    depends_on:
-      - app
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
-
-volumes:
-  pgdata:
-  caddy_data:
-  caddy_config:
-```
-
-### 2. Create `Dockerfile`
-
-```dockerfile
-FROM oven/bun:1 AS deps
-WORKDIR /app
-COPY package.json bun.lock ./
-RUN bun install --frozen-lockfile
-
-FROM oven/bun:1 AS builder
-WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY . .
-RUN bun run db:generate
-RUN bun run build
-
-FROM oven/bun:1 AS runner
-WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-EXPOSE 3000
-CMD ["bun", ".next/standalone/server.js"]
-```
-
-### 3. Create `Caddyfile`
-
-```caddyfile
-your-domain.com {
-    reverse_proxy app:3000
-    encode gzip zstd
-    header {
-        Strict-Transport-Security "max-age=31536000; includeSubDomains"
-        X-Content-Type-Options nosniff
-        X-Frame-Options DENY
-        Referrer-Policy strict-origin-when-cross-origin
-    }
-}
-```
-
-### 4. Deploy
-
-```bash
-# Set environment variables
-export DB_PASSWORD=$(openssl rand -hex 24)
-export SESSION_SECRET=$(openssl rand -hex 32)
-export SUPER_ADMIN_PASSWORD=$(openssl rand -hex 12)
-export SMTP_HOST=smtp.your-provider.com
-export SMTP_USER=your-smtp-user
-export SMTP_PASS=your-smtp-pass
-
-# Start
-docker compose up -d
-
-# Run migrations + seed
-docker compose exec app bun prisma/migrate deploy
-docker compose exec app bun prisma/seed.ts
-
-# Verify
-curl https://your-domain.com/
-```
-
-### 5. Configure `next.config.ts` for standalone output
-
-Add to `next.config.ts`:
-
-```typescript
-const nextConfig = {
-  output: "standalone",
-};
-```
+- **Database MUST be PostgreSQL.** SQLite is no longer supported — the Prisma schema
+  `datasource` provider is `postgresql` and cannot switch to SQLite at runtime.
+- **Never run `prisma db push` in production.** Use migrations:
+  `npx prisma migrate deploy`.
+- **Never auto-seed production.** `prisma/seed.ts` refuses to run when
+  `NODE_ENV=production` unless `DEMO_SEED_CONFIRM=true`.
+- **No real secrets in the repo.** `.env`, `*.db`, `*.sqlite` are git-ignored. Use Vercel's
+  encrypted Environment Variables for all secrets.
 
 ---
 
-## Option 2: Vercel
+## 1. Create a PostgreSQL database
 
-### 1. Push to GitHub
+Choose one provider and create an empty Postgres database:
 
-```bash
-git init
-git add .
-git commit -m "B-Attend production release"
-git push origin main
-```
+- **Neon** (recommended, free tier): https://neon.tech → New project → copy the
+  `postgresql://...` connection string (use the **pooled** URL for `DATABASE_URL`).
+- **Supabase**: https://supabase.com → Project → Settings → Database → Connection string.
+  Use the **Transaction** (port 5432) string for `DIRECT_URL` and the pooler for `DATABASE_URL`.
+- **Vercel Postgres / Prisma Postgres**: create a store in the Vercel dashboard and copy the
+  connection string.
 
-### 2. Create new project on Vercel
-
-- Import from GitHub
-- Framework preset: Next.js
-- Build command: `bun run build`
-- Output directory: `.next`
-- Install command: `bun install`
-
-### 3. Add environment variables in Vercel dashboard
-
-- `DATABASE_URL` — your PostgreSQL connection string (use Vercel Postgres or external)
-- `APP_URL` — `https://your-app.vercel.app`
-- `SESSION_SECRET` — 32+ char random string
-- `EMAIL_FROM`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
-- `PAYMENT_PROVIDER` — `MANUAL`
-- `MANUAL_ACTIVATION_MODE` — `true`
-- `SUPER_ADMIN_EMAIL`, `SUPER_ADMIN_PASSWORD`
-
-### 4. Add PostgreSQL
-
-Use Vercel Postgres (free tier) or external (Supabase, Neon, Railway).
-
-### 5. Run migrations + seed
-
-```bash
-# In Vercel dashboard → Storage → your-db → Connect
-# Or via CLI:
-npx vercel env pull .env.production.local
-bun run db:generate
-bun run db:migrate
-bun prisma/seed.ts
-```
-
-### 6. Deploy
-
-Push to main → Vercel auto-deploys.
-
-### 7. Configure custom domain
-
-Vercel dashboard → Domains → add `your-domain.com` → configure DNS.
+You will need **two** values:
+- `DATABASE_URL` — used by the app at runtime (use the pooled/connection-pooler URL).
+- `DIRECT_URL` — used by `prisma migrate deploy` / `prisma generate` (direct, non-pooled).
+  For Neon/Supabase set both to the same base URL if unsure; Supabase requires the direct one
+  for migrations.
 
 ---
 
-## Option 3: Railway / Render / Fly.io
+## 2. Local prerequisites
 
-Similar to Vercel but with persistent filesystem (better for SQLite if you really need it).
-
-1. Push to GitHub
-2. Create new web service on Railway/Render/Fly
-3. Set environment variables (same as Vercel)
-4. Set build command: `bun install && bun run build`
-5. Set start command: `bun .next/standalone/server.js`
-6. Add PostgreSQL add-on
-7. Run migrations + seed via SSH/console
-
----
-
-## Post-deployment checklist
-
-### 1. Verify the app is up
-
-```bash
-curl https://your-domain.com/                    # Should return 200 + landing page HTML
-curl https://your-domain.com/api/public/plans    # Should return JSON with 5 plans
-```
-
-### 2. Login as Super Admin
-
-- Visit `https://your-domain.com/login`
-- Login with `super@b-attend.app` / your `SUPER_ADMIN_PASSWORD`
-- Should redirect to `/admin`
-- Verify dashboard shows metrics (1 tenant, 5 plans, 4 platform users)
-
-### 3. Change Super Admin passwords
-
-After verifying the seed worked, immediately change all platform user passwords via the database or a one-off script:
-
-```sql
--- Generate new bcrypt hash, then update
-UPDATE PlatformUser SET passwordHash = '$2b$10$NEW_HASH_HERE' WHERE email = 'super@b-attend.app';
-```
-
-### 4. Set up backups
-
-- **PostgreSQL**: Configure daily `pg_dump` backups to S3 / cloud storage
-- **Audit log**: Export monthly to cold storage (S3 Glacier)
-- **Test restore**: Verify backups work by restoring to a staging DB
-
-### 5. Set up monitoring
-
-- **Uptime**: UptimeRobot or Better Stack monitoring `/` every 5 minutes
-- **Errors**: Sentry or equivalent for runtime errors
-- **Performance**: Vercel Analytics or PostHog for web vitals
-- **Logs**: Centralized log aggregation (Logtail, Datadog)
-
-### 6. Set up cron jobs
-
-- **Daily at 02:00 (server time)**: Run `markAbsentForPastScheduledDays` for all tenants
+- Node.js 20+ (Vercel uses 20/22).
+- `npm` (the project moved off `bun`; `package-lock.json` is committed).
+- A local PostgreSQL for dev (optional but recommended):
   ```bash
-  curl -X POST https://your-domain.com/api/system/mark-absent \
-    -H "Content-Type: application/json" \
-    -H "Cookie: $SUPER_ADMIN_SESSION_COOKIE" \
-    -d '{"daysBack": 1}'
+  docker run -e POSTGRES_PASSWORD=postgres -p 5432:5432 postgres:16-alpine
   ```
-  Or use a server-side cron / Vercel Cron / Railway Cron.
-- **Weekly**: Export audit log to cold storage
-- **Monthly**: Generate invoice reminders for overdue invoices
-
-### 7. Configure email
-
-- Set up SPF, DKIM, DMARC records for your domain
-- Test email delivery with [mail-tester.com](https://www.mail-tester.com/)
-- Set up bounce handling (SuppressionList in your ESP)
-
-### 8. Configure payment provider (when ready)
-
-- **Stripe**: Set `STRIPE_SECRET_KEY` + `STRIPE_WEBHOOK_SECRET`, implement webhook handler
-- **Paymob**: Sign up at [paymob.com](https://paymob.com), get API key, implement iframe redirect
-- **Fawry**: Sign up at [fawry.com](https://fawry.com), get merchant code, implement Fawry reference codes
-
-Until then, manual activation via Super Admin dashboard is the default.
-
-### 9. Security hardening
-
-- Set `SESSION_SECRET` to a 32+ char random string (use `openssl rand -hex 32`)
-- Enable rate limiting on `/login` and `/signup` (use `@upstash/ratelimit` or Vercel Edge Config)
-- Configure CSP headers (Caddy config above includes HSTS)
-- Set up DDoS protection (Cloudflare free tier)
-- Enable 2FA for Super Admin accounts (Phase 8 polish)
-
-### 10. Legal & compliance
-
-- Have a lawyer review `Privacy Policy` and `Terms of Service`
-- Register with Egyptian Personal Data Protection Act (if applicable)
-- Add cookie consent banner if serving EU users (GDPR)
-- Document data retention policy per plan
-- Set up data export / deletion workflow for user requests
+- Copy env files:
+  ```bash
+  cp .env.example .env          # local dev
+  # edit .env and set DATABASE_URL / DIRECT_URL to your Postgres instance
+  ```
 
 ---
 
-## Rollback procedure
+## 3. Run migrations (the safe way)
 
-If a deployment breaks something:
+The repo ships a **clean initial migration** at
+`prisma/migrations/20250715000000_init_production_postgres/migration.sql`
+generated with `prisma migrate diff --from-empty --to-schema-datamodel`.
+This is the baseline; `prisma migrate deploy` will apply it to a fresh database.
 
-### Vercel
-1. Vercel dashboard → Deployments → previous deployment → "Instant Rollback"
-
-### Docker Compose
-```bash
-# Revert to previous image
-docker compose down
-docker compose pull app:previous
-docker compose up -d
-```
-
-### Database rollback
-```bash
-# Prisma migrate can rollback
-bun run db:migrate reset  # WARNING: this drops all data
-# Or restore from backup
-pg_restore -d battend -c backup.sql
-```
-
----
-
-## Scaling considerations
-
-- **Vertical**: Increase CPU/RAM on the app server (4GB+ RAM recommended for Prisma + Next.js)
-- **Horizontal**: Add multiple app instances behind a load balancer (sticky sessions not required — JWT in cookies)
-- **Database**: Use connection pooling (PgBouncer) when scaling horizontally
-- **CDN**: Put Cloudflare in front for static assets + DDoS protection
-- **Background jobs**: Move `markAbsent` to a worker process (BullMQ + Redis) when tenant count > 100
-- **Search**: For >10k employees, add full-text search (Postgres FTS or Meilisearch)
-
----
-
-## Troubleshooting
-
-### Database connection fails
-- Verify `DATABASE_URL` is correct
-- Check PostgreSQL is running: `docker compose ps db`
-- Check network: `psql $DATABASE_URL` from the app container
-- Verify Prisma Client is generated: `bun run db:generate`
-
-### Login redirects loop
-- Check `SESSION_SECRET` is set and consistent across instances
-- Check cookie domain matches `APP_URL`
-- Clear browser cookies and retry
-
-### Prisma Client out of sync
-- After schema changes: `bun run db:push` then `bun run db:generate`
-- Restart dev server: `bun run dev`
-- For production: rebuild Docker image
-
-### CSV export shows garbled Arabic
-- Verify `toCsv()` includes UTF-8 BOM (`\uFEFF`) — it does
-- Check `Content-Type: text/csv; charset=utf-8` header
-- If opening in Excel on Windows, ensure Excel is set to detect UTF-8
-
-### Geolocation not working on mobile
-- HTTPS is required for `navigator.geolocation` — ensure SSL is configured
-- iOS Safari requires user gesture (button click) — that's how `/clock` is built
-- Some browsers block insecure origins — use HTTPS in production
-
----
-
-## Production environment variables reference
+**Recommended first-deployment flow (run locally against the production DB):**
 
 ```bash
-# Database (REQUIRED)
-DATABASE_URL=postgresql://user:pass@host:5432/db?schema=public
+# 1. Point DATABASE_URL + DIRECT_URL at the PRODUCTION Postgres (temporarily)
+export DATABASE_URL="postgresql://USER:PASS@HOST:5432/battend?sslmode=require"
+export DIRECT_URL="postgresql://USER:PASS@HOST:5432/battend?sslmode=require"
 
-# App
-APP_URL=https://your-domain.com
-NODE_ENV=production
+# 2. Apply the schema
+npx prisma migrate deploy
 
-# Session (REQUIRED)
-SESSION_SECRET=<32+ char random string>
-
-# Email (optional in Phase 1, required for production)
-EMAIL_FROM=no-reply@your-domain.com
-SMTP_HOST=smtp.your-provider.com
-SMTP_PORT=587
-SMTP_USER=your-smtp-user
-SMTP_PASS=your-smtp-pass
-
-# Payments (placeholders for now)
-PAYMENT_PROVIDER=MANUAL
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-
-# Activation mode
-MANUAL_ACTIVATION_MODE=true
-
-# Super Admin bootstrap (used by seed)
-SUPER_ADMIN_EMAIL=super@b-attend.app
-SUPER_ADMIN_PASSWORD=<strong password>
+# 3. (Optional) Seed safe demo data — ONLY for the client demo database
+export DEMO_SEED_CONFIRM=true
+npm run db:seed:demo
+unset DEMO_SEED_CONFIRM
 ```
+
+> Do **not** run seeding automatically in CI/Vercel. Seed manually and only once.
+
+---
+
+## 4. Vercel deployment
+
+### A. Import & framework settings
+- Import the GitHub repo into Vercel.
+- Framework preset: **Next.js** (auto-detected).
+- **Install command:** `npm install`
+- **Build command:** `npx prisma generate && npx prisma migrate deploy && npm run build`
+  - This runs migrations during build. If your provider disallows migrations at build time
+    (e.g. pooled connections), use the safer flow above (migrate locally) and set the Vercel
+    build command to just `npm run build`.
+- **Output:** Next.js default (the `output: "standalone"` in `next.config.ts` is ignored by
+  Vercel and is harmless).
+
+### B. Environment Variables (Project Settings → Environment Variables)
+Add ALL of the following (mark them for Production / Preview as needed):
+
+| Key | Value | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | postgres connection string | pooled URL; **required** |
+| `DIRECT_URL` | postgres direct string | required for migrations |
+| `APP_URL` | `https://<your-app>.vercel.app` | set after first deploy, then redeploy |
+| `NODE_ENV` | `production` | |
+| `SESSION_SECRET` | 64-char hex | `node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"` |
+| `SUPER_ADMIN_EMAIL` | `super@b-attend.app` | |
+| `SUPER_ADMIN_PASSWORD` | strong password | change after demo |
+| `AI_PROVIDER` | `mock` | no OpenAI key needed for demo |
+| `OPENAI_API_KEY` | *(empty)* | only if using real AI |
+| `AI_DAILY_COACH_ENABLED` | `true` | |
+| `AI_EMPLOYEE_INSIGHTS_ENABLED` | `true` | |
+| `AI_MANAGER_INSIGHTS_ENABLED` | `true` | |
+| `MANUAL_ACTIVATION_MODE` | `true` | demo uses manual tenant activation |
+| `PAYMENT_PROVIDER` | `manual` | no real payments |
+| `EMAIL_FROM` | `no-reply@b-attend.app` | |
+| `SMTP_HOST` | *(empty)* | outbound email disabled if blank |
+| `SMTP_PORT` | `587` | |
+| `SMTP_USER` | *(empty)* | |
+| `SMTP_PASS` | *(empty)* | |
+| `DEMO_SEED_CONFIRM` | `false` | set `true` only when manually seeding |
+
+> Do **not** commit these. Vercel stores them encrypted.
+
+### C. Deploy
+Push to the connected branch → Vercel builds and deploys. After the first successful deploy,
+set `APP_URL` to the live URL and redeploy once.
+
+---
+
+## 5. Seed the live demo (manual, one-time)
+
+After the database is migrated and the app is deployed:
+
+```bash
+# Locally, with DATABASE_URL/DIRECT_URL pointing at the production Postgres:
+export DEMO_SEED_CONFIRM=true
+npm run db:seed:demo
+```
+
+The seed creates:
+- Platform users: `super@`, `sales@`, `support@`, `billing@b-attend.app` (password `demo1234`)
+- Plans (Trial/Starter/Growth/Pro/Enterprise) × features
+- System settings (manual activation, mock AI)
+- Demo tenant **"B-Attend Demo Restaurant Group"** (slug `b-attend-demo`, ACTIVE, Growth plan)
+- Owner, HR Admin, 2 Branch Managers, Employee users (password `demo1234`)
+- Branches, departments, shift policies, 15 employees, schedules, sample attendance,
+  approvals, invoices, a support ticket
+
+> The seed is **idempotent** (upsert / create-if-missing) and **never deletes data**. It
+> still refuses to run in `production` unless `DEMO_SEED_CONFIRM=true`.
+
+**Demo credentials (client demo only — change before real production):**
+```
+super@b-attend.app    / demo1234   (SUPER_ADMIN)
+owner@b-attend.app    / demo1234   (COMPANY_OWNER)
+hr@b-attend.app       / demo1234   (HR_ADMIN)
+manager@b-attend.app  / demo1234   (BRANCH_MANAGER — New Cairo)
+employee@b-attend.app / demo1234   (EMPLOYEE)
+```
+
+---
+
+## 6. Verify the live URL (smoke test)
+
+See **`LIVE_DEMO_CHECKLIST.md`** for the full step-by-step checklist (public pages, each role,
+Excel exports, and security/access-control checks).
+
+Quick sanity:
+```bash
+curl -s -o /dev/null -w "%{http_code}" https://<your-app>.vercel.app/        # 200
+curl -s -o /dev/null -w "%{http_code}" https://<your-app>.vercel.app/login   # 200
+curl -s https://<your-app>.vercel.app/api/public/plans | head -c 200         # JSON plans
+```
+
+---
+
+## 7. Rollback / failure handling
+
+If the deployment fails:
+1. **Do NOT run a destructive seed.** Check Vercel build logs and the database connection first.
+2. Vercel dashboard → **Deployments → previous → "Instant Rollback"** reverts the app instantly
+   (database is untouched).
+3. If a migration applied partially, inspect with `npx prisma migrate status` against the DB.
+4. Fix the env var / connection issue, then redeploy.
+
+---
+
+## 8. Package scripts (deployment-safe, cross-platform)
+
+```bash
+npm run build            # next build + postbuild copy (cross-platform, node only)
+npm run typecheck        # tsc --noEmit
+npm run lint             # eslint .
+npm run db:generate      # prisma generate (also runs as postinstall)
+npm run db:migrate:deploy# prisma migrate deploy  (production migrations)
+npm run db:seed:demo     # tsx prisma/seed.ts (guarded; demo only)
+npm run db:push          # prisma db push (LOCAL DEV ONLY — never in production)
+```
+
+`postinstall` runs `prisma generate` automatically on Vercel.
+
+---
+
+## 9. Security checks completed for this demo
+
+- [x] `SESSION_SECRET` required in production (strong 32+ byte hex; app warns if missing).
+- [x] Cookies are `secure` in production (`NODE_ENV === "production"`), `httpOnly`, `sameSite: lax`.
+- [x] No real secrets committed (`.env`, `*.db`, `*.sqlite` git-ignored; `.env.example` only).
+- [x] No hardcoded `DATABASE_URL` (read from env only).
+- [x] No hardcoded tenant name in Excel exports (tenant name pulled from DB at export time).
+- [x] No hardcoded demo company slug in app pages (only in seed scripts).
+- [x] Super Admin login exists (`super@b-attend.app`).
+- [x] Employee cannot access `/admin` (HR-6.1 access control).
+- [x] Branch Manager cannot access payroll (HR-6.1 branch scoping + payroll gates).
+- [x] Payroll routes protected (subscription + permission + feature-gate checks).
+- [x] Excel exports require auth (HR + payroll export routes are server-authed).
+- [x] SQLite file is not used in production (schema is Postgres-only).
+
+---
+
+## 10. Not ready for production until…
+
+- Replace demo passwords and force password change for all accounts.
+- Configure real SMTP / email delivery + SPF/DKIM/DMARC.
+- Add rate limiting on `/login` and `/signup`.
+- Replace `AI_PROVIDER=mock` with a real provider + key if AI features are demoed for real.
+- Set up PostgreSQL backups (`pg_dump`) and a restore test.
+- Add monitoring/error tracking (Sentry / Vercel Analytics).
+- Review Privacy Policy / Terms with legal; add cookie consent if serving EU users.
+- Set `DEMO_SEED_CONFIRM=false` (already default) and remove demo tenant data before real launch.
+
+See the historical Docker/self-host sections in git history if you need a non-Vercel deployment.

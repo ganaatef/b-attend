@@ -19,18 +19,18 @@ import {
   BusinessTypeSelect,
 } from "@/components/forms/fields";
 import { leadSchema, type LeadInput } from "@/lib/validations";
-import { leadAction, type LeadState } from "@/app/(public)/actions";
+import { demoRequestAction, type DemoState } from "@/app/(auth)/actions";
 import { CalendarCheck2 } from "lucide-react";
 
 export function DemoRequestForm() {
   const router = useRouter();
   const [state, formAction, pending] = useActionState<
-    LeadState,
+    DemoState,
     FormData
-  >(leadAction.bind(null, "request-demo"), undefined);
+  >(demoRequestAction, { ok: false });
 
   const form = useForm<LeadInput>({
-    resolver: zodResolver(leadSchema),
+    resolver: zodResolver(leadSchema) as any,
     defaultValues: {
       name: "",
       company: "",
@@ -52,7 +52,7 @@ export function DemoRequestForm() {
     } else if (state && !state.ok && state.error) {
       if (state.fieldErrors) {
         for (const [k, v] of Object.entries(state.fieldErrors)) {
-          form.setError(k as keyof LeadInput, { message: v });
+          form.setError(k as keyof LeadInput, { message: v as string });
         }
       }
       if (state.error !== "Please fix the highlighted fields.") {

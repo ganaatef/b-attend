@@ -328,3 +328,256 @@ When available, the briefing includes:
 5. Visit `/team-coach` → upgrade prompt (Trial does not include manager_ai_insights).
 6. Visit `/daily-briefing` → upgrade prompt (Pro+ only).
 7. (Switch the demo tenant back to Growth after testing.)
+
+---
+
+## 8. HR-4: Warnings, Training, Assets, Onboarding, Offboarding demo
+
+The HR-4 module covers employee warnings management, training courses and assignments, company assets and uniforms, onboarding checklists, and offboarding workflows.
+
+### Warnings demo flow
+
+**Login**: `hr@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/warnings`
+2. See list of existing warnings (if any) with status badges
+3. Click "Create Warning" → fill in employee, category, severity, description, notes
+4. Submit → warning created with status PENDING
+5. Switch to employee login (`employee@b-attend.app`) → visit `/self-service/warnings`
+6. See pending warning → click "Acknowledge" → status changes to ACKNOWLEDGED
+7. Switch back to HR login → see warning status updated
+8. Click "Resolve" on the warning → add resolution notes → status changes to RESOLVED
+9. Verify warning appears in employee's resolved warnings list
+10. Verify audit log entry for each action (created, acknowledged, resolved)
+
+### Training demo flow
+
+**Login**: `hr@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/training`
+2. See list of training courses (initially empty)
+3. Click "Create Course" → fill in title, description, due date, passing score
+4. Submit → course created
+5. Go to `/training/assignments` → assign course to an employee or branch
+6. Switch to employee login (`employee@b-attend.app`) → visit `/self-service/training`
+7. See assigned course → click "Start Course" → status changes to IN_PROGRESS
+8. Complete the course → mark as completed
+9. Status changes to COMPLETED with completion date
+10. Switch back to HR login → see completion status in training reports
+11. Verify overdue status for past-due assignments
+12. Export training report to Excel → verify CSV downloads with correct data
+
+### Assets demo flow
+
+**Login**: `hr@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/assets`
+2. See list of company assets (initially empty)
+3. Click "Add Asset" → fill in name, category (LAPTOP, PHONE, UNIFORM, EQUIPMENT), serial number, condition
+4. Submit → asset created with status AVAILABLE
+5. Go to `/assets/assignments` → assign asset to an employee with expected return date
+6. Asset status changes to ASSIGNED
+7. Switch to employee login (`employee@b-attend.app`) → visit `/self-service/assets`
+8. See assigned asset with details and expected return date
+9. Switch back to HR login → process return
+10. Click "Return" on the assignment → add return condition notes → status changes to RETURNED
+11. Asset status changes back to AVAILABLE
+12. Export assets report to Excel → verify CSV downloads with correct data
+
+### Onboarding demo flow
+
+**Login**: `hr@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/onboarding-checklists`
+2. See list of onboarding checklists (initially empty)
+3. Click "Create Checklist" → fill in title, description, add tasks (document submission, equipment setup, orientation, training)
+4. Submit → checklist created with status IN_PROGRESS
+5. Assign checklist to a new employee
+6. Switch to employee login (`employee@b-attend.app`) → visit `/self-service/onboarding`
+7. See assigned checklist with task list
+8. Complete tasks one by one → each task marked as DONE
+9. All tasks complete → checklist status changes to COMPLETED
+10. Switch back to HR login → see completion status in onboarding reports
+11. Export onboarding report to Excel → verify CSV downloads with correct data
+
+### Offboarding demo flow
+
+**Login**: `hr@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/offboarding`
+2. See list of offboarding processes (initially empty)
+3. Click "Start Offboarding" → select employee, fill in reason, last working day
+4. Submit → offboarding created with status IN_PROGRESS, tasks auto-generated (exit interview, equipment return, access revocation, knowledge transfer)
+5. Manager/HR completes tasks one by one → each task marked as DONE
+6. All tasks complete → status changes to COMPLETED
+7. Employee status updated to reflect departure
+8. Export offboarding report to Excel → verify CSV downloads with correct data
+
+### Employee self-service demo
+
+**Login**: `employee@b-attend.app` / `demo1234` → redirects to `/today`
+
+1. Go to `/self-service/training` → see assigned courses, completion status, due dates
+2. Go to `/self-service/assets` → see assigned assets, return dates, condition
+3. Go to `/self-service/onboarding` → see onboarding checklist, complete tasks
+4. Go to `/self-service/offboarding` → see offboarding tasks (if applicable)
+5. Go to `/self-service/warnings` → see warnings, acknowledge pending ones
+6. Verify each page only shows data for the logged-in employee
+7. Verify branch-scoped data visibility
+
+### Excel export demo for each module
+
+1. Login as `hr@b-attend.app` → visit `/warnings` → click "Export Excel"
+2. Verify warnings CSV downloads with columns: employee, category, severity, status, date created, date resolved
+3. Visit `/training` → click "Export Excel"
+4. Verify training CSV downloads with columns: course title, assigned employee, status, completion date, due date
+5. Visit `/assets` → click "Export Excel"
+6. Verify assets CSV downloads with columns: asset name, category, serial, assigned employee, status, assignment date
+7. Visit `/onboarding-checklists` → click "Export Excel"
+8. Verify onboarding CSV downloads with columns: checklist title, employee, status, tasks completed, total tasks
+9. Visit `/offboarding` → click "Export Excel"
+10. Verify offboarding CSV downloads with columns: employee, reason, status, last working day, tasks completed
+11. Open each CSV in Excel → verify Arabic characters render correctly (UTF-8 BOM)
+12. Verify audit log entries for each export
+
+### Branch Manager scoping demo
+
+**Login**: `manager@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/warnings` → see only New Cairo branch warnings
+2. Go to `/training` → see only New Cairo branch training assignments
+3. Go to `/assets` → see only New Cairo branch assets
+4. Go to `/onboarding-checklists` → see only New Cairo branch onboarding
+5. Go to `/offboarding` → see only New Cairo branch offboarding
+6. Cannot access HR-4 pages for other branches
+
+### Feature gate demo for HR-4
+
+1. Login as `super@b-attend.app`.
+2. Go to `/admin/tenants/[demo-tenant-id]` → Change plan → "Trial".
+3. Logout, login as `owner@b-attend.app`.
+4. Visit `/warnings` → upgrade prompt (HR-4 features require Growth plan or higher).
+5. Visit `/training` → upgrade prompt.
+6. Visit `/assets` → upgrade prompt.
+7. Visit `/onboarding-checklists` → upgrade prompt.
+8. Visit `/offboarding` → upgrade prompt.
+9. (Switch the demo tenant back to Growth after testing.)
+
+---
+
+## 9. HR-5: Payroll demo
+
+The HR-5 payroll module provides payroll profiles, payroll runs, payroll adjustments, and Excel export. Payroll calculations are derived from AttendanceDay data.
+
+### Payroll Profiles demo flow
+
+**Login**: `hr@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/hr/payroll-profiles`
+2. See list of existing payroll profiles (if any) with employee name, salary type, base salary, payment method
+3. Click "Create Profile" → fill in employee, salary type (FIXED/HOURLY/DAILY), base salary, payment method, allowances, deductions
+4. Submit → profile created
+5. View profile detail page showing all fields (employee, salary type, base salary, payment method, allowances, deductions, custom fields)
+6. Edit profile → change base salary or payment method → save
+7. Deactivate a profile → verify it shows as inactive
+8. Verify only one active profile per employee is allowed (try creating a second active profile for the same employee → error)
+9. Export profiles to Excel → verify CSV downloads with correct columns
+
+### Payroll Run demo flow
+
+**Login**: `hr@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/hr/payroll-runs`
+2. See list of existing payroll runs (if any) with status badges
+3. Click "Create Payroll Run" → select month and year
+4. Submit → run created with status DRAFT
+5. Lines are auto-generated from AttendanceDay data for all active employees with payroll profiles
+6. View summary cards showing total base salary, total overtime, total deductions, net amount
+7. View individual lines with employee name, base pay, overtime pay, late deduction, absent deduction, net amount
+8. Move run through workflow:
+   - DRAFT → click "Submit for Review" → status changes to REVIEW
+   - REVIEW → click "Approve" → status changes to APPROVED
+   - APPROVED → click "Lock" → status changes to LOCKED (read-only)
+9. Verify locked run cannot be edited
+10. Export payroll run to Excel → verify multi-sheet Excel downloads with:
+    - Summary sheet (totals)
+    - Lines sheet (per-employee breakdown)
+    - Adjustments sheet (adjustments applied)
+    - Missing Profiles sheet (employees without profiles)
+
+### Payroll Adjustment demo flow
+
+**Login**: `hr@b-attend.app` / `demo1234` → redirects to `/dashboard`
+
+1. Go to `/hr/payroll-runs` → click into an existing run (or the one just created)
+2. Click "Add Adjustment" → fill in employee, type (BONUS/DEDUCTION/ALLOWANCE/PENALTY), amount, reason
+3. Submit → adjustment created with status PENDING
+4. Click "Approve" on the adjustment → status changes to APPROVED → adjustment is reflected in payroll run totals
+5. Add another adjustment → click "Reject" → status changes to REJECTED → adjustment is not reflected in totals
+6. Add another adjustment → click "Cancel" → status is CANCELLED
+7. Verify that approved adjustments appear in the payroll run summary and the adjustments Excel sheet
+8. Verify audit log entries for each adjustment action (created, approved, rejected, cancelled)
+
+### Access control demo
+
+1. Login as `manager@b-attend.app` (Branch Manager) → try to access `/hr/payroll-profiles` → blocked (Branch Manager cannot access payroll)
+2. Login as `employee@b-attend.app` (Employee) → try to access `/hr/payroll-profiles` → blocked (Employee cannot access payroll)
+3. Login as `owner@b-attend.app` (Company Owner) → access `/hr/payroll-profiles` → allowed
+4. Login as `hr@b-attend.app` (HR Admin) → access `/hr/payroll-runs` → allowed
+
+### Feature gate demo
+
+1. Login as `super@b-attend.app`.
+2. Go to `/admin/tenants/[demo-tenant-id]` → Change plan → "Trial".
+3. Logout, login as `owner@b-attend.app`.
+4. Visit `/hr/payroll-profiles` → upgrade prompt (HR-5 features require Growth plan or higher).
+5. Visit `/hr/payroll-runs` → upgrade prompt.
+6. (Switch the demo tenant back to Growth after testing.)
+
+---
+
+## 10. HR-6: Reports demo
+
+The HR-6 module provides a centralized HR Reports Hub and unified Excel export for all HR data.
+
+### HR Reports Hub demo flow
+
+1. Login as `owner@b-attend.app`.
+2. Navigate to `/hr/reports`.
+3. See 14 report cards grouped by category:
+   - **People**: Employee Master, Headcount, Contracts Expiry
+   - **Documents & Leave**: Documents Expiry, Missing Documents, Leave Balance, Leave Usage
+   - **Compliance**: Warnings, Training, Assets
+   - **Operations**: Onboarding, Offboarding
+   - **Payroll**: Payroll Profiles, Payroll Run Summary (OWNER/HR_ADMIN only)
+4. Each card shows a real DB record count.
+5. Click any "Export Excel" button → downloads multi-sheet XLSX file.
+
+### Branch Manager view
+
+1. Login as `manager@b-attend.app`.
+2. Navigate to `/hr/reports`.
+3. See restricted view: no payroll reports, no offboarding reports.
+4. Click "Export Excel" on Employee Master → only branch employees included.
+
+### Unified Reports Excel Export
+
+1. Login as `owner@b-attend.app`.
+2. Visit `/api/tenant/hr/reports/excel?type=employee-master` → downloads employee master Excel.
+3. Visit `/api/tenant/hr/reports/excel?type=all` → downloads all applicable reports as multi-sheet workbook.
+4. Visit `/api/tenant/hr/reports/excel?type=payroll-runs` → downloads payroll run summary (OWNER/HR_ADMIN only).
+5. Visit `/api/tenant/hr/reports/excel?type=invalid` → returns 400 error.
+
+### Access control demo
+
+1. Login as `employee@b-attend.app` → try to access `/hr/reports` → blocked (Employee cannot access HR Reports).
+2. Login as `manager@b-attend.app` → access `/hr/reports` → allowed (branch-scoped view).
+3. Login as `owner@b-attend.app` → access `/hr/reports` → full access including payroll reports.
+
+### Feature gate demo
+
+1. Login as `super@b-attend.app`.
+2. Go to `/admin/tenants/[demo-tenant-id]` → Change plan → "Trial".
+3. Logout, login as `owner@b-attend.app`.
+4. Visit `/hr/reports` → upgrade prompt (HR features require Starter plan or higher).
+5. (Switch the demo tenant back to Growth after testing.)

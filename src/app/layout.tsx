@@ -19,7 +19,7 @@ export const metadata: Metadata = {
     template: "%s · B-Attend",
   },
   description:
-    "B-Attend is a smart attendance, shift control, approvals, reporting, and payroll-ready workforce platform for operational teams in Egypt & MENA.",
+    "B-Attend is a smart attendance, shift control, approvals, reporting, and payroll-ready workforce platform for operational teams everywhere.",
   keywords: [
     "B-Attend",
     "attendance",

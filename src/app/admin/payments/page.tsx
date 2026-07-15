@@ -5,10 +5,11 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Wallet } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-function money(amount: number, currency = "EGP") { return `${amount.toLocaleString()} ${currency}`; }
+function money(amount: number, currency = "EGP") { return `${formatNumber(amount)} ${currency}`; }
 
 export default async function PaymentsPage() {
   const payments = await db.payment.findMany({ include: { tenant: true, invoice: true }, orderBy: { createdAt: "desc" } });

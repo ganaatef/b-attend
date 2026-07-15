@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { DecideForm } from "./DecideForm";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,7 @@ export default async function ApprovalDetailPage({ params }: { params: Promise<{
           <div><span className="text-muted-foreground">Reason:</span> <span className="text-foreground">{req.reason}</span></div>
           {req.requestedData && <div><span className="text-muted-foreground">Requested:</span> <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{req.requestedData}</code></div>}
           <div><span className="text-muted-foreground">Requested by:</span> <span className="text-foreground">{req.requestedById ?? "—"}</span></div>
-          <div><span className="text-muted-foreground">Created:</span> <span className="text-foreground">{new Date(req.createdAt).toLocaleString()}</span></div>
+          <div><span className="text-muted-foreground">Created:</span> <span className="text-foreground">{formatDateTime(req.createdAt)}</span></div>
           {req.managerNotes && <div><span className="text-muted-foreground">Manager notes:</span> <span className="text-foreground">{req.managerNotes}</span></div>}
         </CardContent>
       </Card>

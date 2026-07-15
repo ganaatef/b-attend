@@ -22,7 +22,7 @@ export default function TermsPage() {
             <h2 className="mt-8 text-base font-semibold text-foreground">2. Subscription &amp; billing</h2>
             <p className="mt-2 text-sm text-muted-foreground">
               Plans and pricing are listed on the <a href="/pricing" className="font-medium text-brand-accent hover:underline">pricing page</a>.
-              Subscriptions may be monthly or annual. Manual activation may apply for B2B customers in Egypt &amp; MENA.
+              Subscriptions may be monthly or annual. Manual activation may apply for B2B customers.
               Overdue invoices trigger a grace period followed by account suspension.
             </p>
 

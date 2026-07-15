@@ -66,7 +66,7 @@ export async function requireSession(): Promise<SessionData> {
  */
 export async function getPlatformSessionOrNull(): Promise<SessionData | null> {
   const s = await getSession();
-  if (!s || s.scope !== "platform") return null;
+  if (!s || s.kind !== "platform") return null;
   return s;
 }
 
@@ -79,7 +79,7 @@ export async function requirePlatformRole(
   ...roles: PlatformRole[]
 ): Promise<SessionData> {
   const s = await requireSession();
-  if (s.scope !== "platform") {
+  if (s.kind !== "platform") {
     // tenant user trying to access /admin → redirect to their dashboard
     redirect("/dashboard");
   }
@@ -100,7 +100,7 @@ export async function requirePlatformRole(
  */
 export async function getTenantId(): Promise<string> {
   const s = await requireSession();
-  if (s.scope !== "tenant" || !s.tenantId) {
+  if (s.kind !== "tenant" || !s.tenantId) {
     throw new Error("Tenant scope required for this operation.");
   }
   return s.tenantId;

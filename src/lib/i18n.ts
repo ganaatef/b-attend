@@ -28,7 +28,7 @@ const en: Dict = {
   "footer.legal": "Legal",
   "footer.privacy": "Privacy Policy",
   "footer.terms": "Terms of Service",
-  "footer.copyright": "© {year} B-Attend. Built for operational teams in Egypt & MENA.",
+  "footer.copyright": "© {year} B-Attend. Built for operational teams everywhere.",
 
   "cta.startTrial": "Start 14-day Trial",
   "cta.bookDemo": "Book a Demo",

@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { User as UserIcon } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function ProfilePage() {
           <div><span className="text-muted-foreground">Role:</span> <Badge variant="outline" className="text-xs">{user.role.replace(/_/g, " ")}</Badge></div>
           <div><span className="text-muted-foreground">Status:</span> <Badge variant={user.status === "ACTIVE" ? "default" : "destructive"} className={user.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{user.status}</Badge></div>
           <div><span className="text-muted-foreground">Company:</span> <span className="font-medium text-foreground">{tenant?.name}</span></div>
-          <div><span className="text-muted-foreground">Last login:</span> <span className="text-foreground">{user.lastLoginAt ? new Date(user.lastLoginAt).toLocaleString() : "—"}</span></div>
+          <div><span className="text-muted-foreground">Last login:</span> <span className="text-foreground">{user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "—"}</span></div>
         </CardContent>
       </Card>
       {user.employee && (

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Check, X, ArrowRight } from "lucide-react";
 import type { Plan, PlanFeature } from "@prisma/client";
+import { formatNumber } from "@/lib/utils";
 
 type PlanWithFeatures = Plan & { features: PlanFeature[] };
 
@@ -107,7 +108,7 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
                       <p className="text-2xl font-bold text-foreground">Free</p>
                     ) : (
                       <p className="text-2xl font-bold text-foreground">
-                        {price.toLocaleString()}{" "}
+                        {formatNumber(price)}{" "}
                         <span className="text-xs font-normal text-muted-foreground">
                           EGP/{annual ? "yr" : "mo"}
                         </span>

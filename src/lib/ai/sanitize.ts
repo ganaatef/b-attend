@@ -57,7 +57,7 @@ export interface SanitizeResult<T> {
  */
 export function sanitizeCoachOutput<T extends Record<string, any>>(output: T): SanitizeResult<T> {
   const violations: string[] = [];
-  let sanitized = { ...output };
+  const sanitized: Record<string, unknown> = { ...output };
 
   // Scan all string fields for forbidden patterns
   for (const [key, value] of Object.entries(sanitized)) {
@@ -98,7 +98,7 @@ export function sanitizeCoachOutput<T extends Record<string, any>>(output: T): S
 
   return {
     safe,
-    output: sanitized,
+    output: sanitized as T,
     violations,
     fallbackUsed: false,
   };

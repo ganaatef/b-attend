@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { TenantStatusBadge, PlanBadge } from "@/components/badges/StatusBadges";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { FileBarChart } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +51,7 @@ export default async function AdminReportsPage() {
                       <td className="px-4 py-3 text-muted-foreground">{t._count.employees} / {plan?.maxEmployees ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{t._count.branches} / {plan?.maxBranches ?? "—"}</td>
                       <td className="px-4 py-3 text-muted-foreground">{t._count.punches}</td>
-                      <td className="px-4 py-3 text-muted-foreground">{mrr.toLocaleString()} EGP</td>
+                      <td className="px-4 py-3 text-muted-foreground">{formatNumber(mrr)} EGP</td>
                     </tr>
                   );
                 })}
@@ -61,7 +62,7 @@ export default async function AdminReportsPage() {
                   <td className="px-4 py-3 text-foreground">{totalEmployees}</td>
                   <td className="px-4 py-3 text-foreground">{totalBranches}</td>
                   <td className="px-4 py-3 text-foreground">{totalPunches}</td>
-                  <td className="px-4 py-3 text-foreground">{tenants.reduce((s, t) => s + (t.subscription ? (t.subscription.billingCycle === "MONTHLY" ? t.subscription.monthlyAmount : Math.floor(t.subscription.annualAmount / 12)) : 0), 0).toLocaleString()} EGP</td>
+                  <td className="px-4 py-3 text-foreground">{formatNumber(tenants.reduce((s, t) => s + (t.subscription ? (t.subscription.billingCycle === "MONTHLY" ? t.subscription.monthlyAmount : Math.floor(t.subscription.annualAmount / 12)) : 0), 0))} EGP</td>
                 </tr>
               </tfoot>
             </table>

@@ -11,7 +11,7 @@ export default function PrivacyPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground">Privacy Policy</h1>
           <p className="mt-2 text-sm text-muted-foreground">
             <strong>Placeholder.</strong> This document is a draft. Production use requires legal review
-            for Egypt &amp; MENA data protection compliance.
+            for applicable data protection compliance.
           </p>
 
           <div className="prose mt-8 max-w-none text-sm text-foreground/90">

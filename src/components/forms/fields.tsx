@@ -24,6 +24,8 @@ import {
 } from "@/components/ui/select";
 import type { Control } from "react-hook-form";
 
+type FormControl = any;
+
 export function TextField({
   control,
   name,
@@ -34,7 +36,7 @@ export function TextField({
   autoComplete,
   required,
 }: {
-  control: Control<any>;
+  control: FormControl;
   name: string;
   label: string;
   placeholder?: string;
@@ -78,7 +80,7 @@ export function NumberField({
   required,
   min,
 }: {
-  control: Control<any>;
+  control: FormControl;
   name: string;
   label: string;
   placeholder?: string;
@@ -126,7 +128,7 @@ export function TextareaField({
   description,
   rows = 4,
 }: {
-  control: Control<any>;
+  control: FormControl;
   name: string;
   label: string;
   placeholder?: string;
@@ -173,7 +175,7 @@ export function BusinessTypeSelect({
   required,
   placeholder = "Select business type",
 }: {
-  control: Control<any>;
+  control: FormControl;
   name: string;
   label: string;
   required?: boolean;
@@ -217,7 +219,7 @@ export function PlanSelect({
   plans,
   required,
 }: {
-  control: Control<any>;
+  control: FormControl;
   name: string;
   label: string;
   plans: { id: string; name: string; slug: string; priceMonthly: number; isCustom: boolean }[];
@@ -265,7 +267,7 @@ export function BillingCycleSelect({
   label,
   required,
 }: {
-  control: Control<any>;
+  control: FormControl;
   name: string;
   label: string;
   required?: boolean;

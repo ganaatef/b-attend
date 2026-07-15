@@ -425,3 +425,514 @@ Manual test checklist for B-Attend. Run through each section before releasing ch
 - [ ] Weekly coach summary ready notification created
 - [ ] Manager team insights ready notification created
 - [ ] Notifications visible in header bell (placeholder UI)
+
+---
+
+## 27. HR-4: Warnings, Training, Assets, Onboarding, Offboarding
+
+### Warning CRUD
+- [ ] `/warnings` list shows all warnings for the tenant
+- [ ] Create warning form validates required fields (employee, category, severity, description)
+- [ ] Warning created with status PENDING
+- [ ] Warning categories display correctly
+- [ ] Severity levels (LOW, MEDIUM, HIGH, CRITICAL) work correctly
+- [ ] Warning detail page shows full information
+- [ ] Edit warning works (notes, description)
+- [ ] Warning list filters by status work
+- [ ] Warning list filters by employee work
+- [ ] Warning list filters by category work
+- [ ] Warning list filters by date range work
+
+### Warning acknowledgment
+- [ ] Employee can see their warnings at `/self-service/warnings`
+- [ ] Employee can acknowledge PENDING warnings
+- [ ] Acknowledgment changes status to ACKNOWLEDGED
+- [ ] Employee cannot acknowledge already acknowledged warnings
+- [ ] Acknowledgment timestamp recorded
+- [ ] Acknowledgment audit log entry created
+
+### Warning resolution
+- [ ] HR/Admin can resolve warnings
+- [ ] Resolution requires notes
+- [ ] Resolution changes status to RESOLVED
+- [ ] Resolution timestamp recorded
+- [ ] Resolved warnings appear in history
+- [ ] Resolution audit log entry created
+
+### Warning employee access restrictions
+- [ ] Employee can only see their own warnings
+- [ ] Employee cannot see other employees' warnings
+- [ ] Employee cannot create warnings
+- [ ] Employee cannot resolve warnings
+- [ ] Employee cannot edit warning details
+
+### Warning branch manager scoping
+- [ ] Branch Manager sees only their branch's warnings
+- [ ] Branch Manager can acknowledge warnings for their branch employees
+- [ ] Branch Manager cannot see warnings from other branches
+- [ ] Branch Manager cannot create warnings (HR/Admin only)
+
+### Training course CRUD
+- [ ] `/training` list shows all courses for the tenant
+- [ ] Create course form validates required fields (title, description, due date)
+- [ ] Course created successfully
+- [ ] Edit course works (title, description, due date, passing score)
+- [ ] Course detail page shows assignment stats
+- [ ] Delete course works (only if no active assignments)
+- [ ] Course list filters by status work
+- [ ] Course list filters by due date work
+
+### Training assignment lifecycle
+- [ ] Assign course to employee works
+- [ ] Assign course to branch works (assigns to all branch employees)
+- [ ] Assignment created with status NOT_STARTED
+- [ ] Employee can start course → status changes to IN_PROGRESS
+- [ ] Employee can complete course → status changes to COMPLETED
+- [ ] Completion date recorded
+- [ ] Passing score evaluation works
+- [ ] Overdue status triggers for past-due assignments
+- [ ] Assignment notification created for employee
+- [ ] Assignment audit log entry created
+
+### Training employee self-service
+- [ ] Employee can view assigned courses at `/self-service/training`
+- [ ] Employee can see course details (title, description, due date)
+- [ ] Employee can start course
+- [ ] Employee can mark course as completed
+- [ ] Employee cannot see other employees' assignments
+- [ ] Employee cannot create or edit courses
+- [ ] Employee cannot assign courses to others
+
+### Training branch manager scoping
+- [ ] Branch Manager sees only their branch's training assignments
+- [ ] Branch Manager can view course completion stats for their branch
+- [ ] Branch Manager cannot see other branches' training data
+- [ ] Branch Manager cannot create or edit courses (HR/Admin only)
+
+### Asset CRUD
+- [ ] `/assets` list shows all assets for the tenant
+- [ ] Create asset form validates required fields (name, category, serial number)
+- [ ] Asset categories (LAPTOP, PHONE, UNIFORM, EQUIPMENT, OTHER) work correctly
+- [ ] Asset created with status AVAILABLE
+- [ ] Edit asset works (name, category, condition notes)
+- [ ] Asset detail page shows assignment history
+- [ ] Asset list filters by category work
+- [ ] Asset list filters by status work
+- [ ] Asset list filters by branch work
+
+### Asset assignment lifecycle
+- [ ] Assign asset to employee works
+- [ ] Assignment requires expected return date
+- [ ] Asset status changes to ASSIGNED
+- [ ] Employee can see assigned asset at `/self-service/assets`
+- [ ] Return asset works → status changes to RETURNED
+- [ ] Return condition notes recorded
+- [ ] Asset status changes back to AVAILABLE after return
+- [ ] Assignment audit log entry created for assign and return
+
+### Asset employee self-service
+- [ ] Employee can view assigned assets at `/self-service/assets`
+- [ ] Employee can see asset details (name, category, serial, expected return date)
+- [ ] Employee cannot see other employees' assets
+- [ ] Employee cannot create or edit assets
+- [ ] Employee cannot assign assets to others
+
+### Asset branch manager scoping
+- [ ] Branch Manager sees only their branch's assets
+- [ ] Branch Manager can view asset assignments for their branch
+- [ ] Branch Manager cannot see other branches' assets
+- [ ] Branch Manager cannot create or edit assets (HR/Admin only)
+
+### Onboarding checklist creation
+- [ ] `/onboarding-checklists` list shows all checklists
+- [ ] Create checklist form validates required fields (title, description)
+- [ ] Checklist created with status IN_PROGRESS
+- [ ] Add tasks to checklist works
+- [ ] Task ordering works correctly
+- [ ] Edit checklist works (title, description)
+- [ ] Edit task works (title, description, required flag)
+- [ ] Delete task works
+- [ ] Delete checklist works (only if no active assignments)
+
+### Onboarding checklist completion
+- [ ] Assign checklist to employee works
+- [ ] Employee can see checklist at `/self-service/onboarding`
+- [ ] Employee can mark tasks as completed
+- [ ] Task completion timestamp recorded
+- [ ] All tasks complete → checklist status changes to COMPLETED
+- [ ] Completion date recorded
+- [ ] Partial completion tracked correctly
+- [ ] Checklist audit log entry created
+
+### Onboarding employee self-service
+- [ ] Employee can view assigned checklists at `/self-service/onboarding`
+- [ ] Employee can see task list with completion status
+- [ ] Employee can complete tasks
+- [ ] Employee cannot see other employees' checklists
+- [ ] Employee cannot create or edit checklists
+- [ ] Employee cannot assign checklists to others
+
+### Onboarding branch manager scoping
+- [ ] Branch Manager sees only their branch's onboarding checklists
+- [ ] Branch Manager can view completion progress for their branch
+- [ ] Branch Manager cannot see other branches' onboarding data
+- [ ] Branch Manager cannot create or edit checklists (HR/Admin only)
+
+### Offboarding lifecycle
+- [ ] `/offboarding` list shows all offboarding processes
+- [ ] Start offboarding form validates required fields (employee, reason, last working day)
+- [ ] Offboarding created with status IN_PROGRESS
+- [ ] Auto-generated tasks created (exit interview, equipment return, access revocation, knowledge transfer)
+- [ ] Task completion works (mark individual tasks as done)
+- [ ] All tasks complete → status changes to COMPLETED
+- [ ] Employee status updated to reflect departure
+- [ ] Cancellation works → status changes to CANCELLED
+- [ ] Offboarding audit log entry created
+
+### Offboarding employee self-service
+- [ ] Employee can view offboarding tasks at `/self-service/offboarding`
+- [ ] Employee can see task list with completion status
+- [ ] Employee cannot see other employees' offboarding data
+- [ ] Employee cannot create or edit offboarding processes
+- [ ] Employee cannot complete manager/HR tasks
+
+### Offboarding branch manager scoping
+- [ ] Branch Manager sees only their branch's offboarding processes
+- [ ] Branch Manager can view offboarding task status for their branch
+- [ ] Branch Manager cannot see other branches' offboarding data
+- [ ] Branch Manager cannot create or edit offboarding processes (HR/Admin only)
+
+### Employee access restrictions
+- [ ] Employee cannot access HR-4 admin pages (`/warnings`, `/training`, `/assets`, `/onboarding-checklists`, `/offboarding`)
+- [ ] Employee can only access self-service pages
+- [ ] Employee cannot create warnings
+- [ ] Employee cannot create training courses
+- [ ] Employee cannot create assets
+- [ ] Employee cannot create onboarding checklists
+- [ ] Employee cannot start offboarding processes
+- [ ] All HR-4 self-service pages enforce self-only data access
+
+### Feature gate enforcement
+- [ ] Trial plan shows upgrade prompt for all HR-4 features
+- [ ] Starter plan shows upgrade prompt for HR-4 features
+- [ ] Growth plan includes HR-4 features
+- [ ] Pro plan includes HR-4 features
+- [ ] Enterprise plan includes HR-4 features
+- [ ] Feature gate checks occur before page render
+- [ ] Feature gate checks occur on Server Action calls
+- [ ] Plans without HR-4 show upgrade prompt (not crash)
+
+### Audit log verification
+- [ ] Warning creation logged
+- [ ] Warning acknowledgment logged
+- [ ] Warning resolution logged
+- [ ] Training course creation logged
+- [ ] Training assignment created logged
+- [ ] Training completion logged
+- [ ] Asset creation logged
+- [ ] Asset assignment logged
+- [ ] Asset return logged
+- [ ] Onboarding checklist creation logged
+- [ ] Onboarding task completion logged
+- [ ] Offboarding process started logged
+- [ ] Offboarding task completion logged
+- [ ] All audit entries include actor email, action, entity, timestamp
+
+### Excel export verification
+- [ ] Warnings export downloads CSV with correct columns
+- [ ] Training export downloads CSV with correct columns
+- [ ] Assets export downloads CSV with correct columns
+- [ ] Onboarding export downloads CSV with correct columns
+- [ ] Offboarding export downloads CSV with correct columns
+- [ ] All exports have UTF-8 BOM for Arabic compatibility
+- [ ] All exports respect branch filter for Branch Manager
+- [ ] All exports respect date range filter
+- [ ] All exports logged in AuditLog
+- [ ] Open exported CSV in Excel → Arabic characters render correctly
+- [ ] No data leakage across tenants in exports
+
+### Role-based access tests
+- [ ] COMPANY_OWNER can access all HR-4 pages
+- [ ] HR_ADMIN can access all HR-4 pages
+- [ ] BRANCH_MANAGER can access HR-4 pages with branch scoping
+- [ ] EMPLOYEE can access only self-service HR-4 pages
+- [ ] Super Admin can access HR-4 pages across all tenants
+- [ ] SALES_ADMIN cannot access HR-4 pages
+- [ ] SUPPORT_AGENT cannot access HR-4 pages
+- [ ] BILLING_ADMIN cannot access HR-4 pages
+- [ ] Unauthenticated user redirected to login for HR-4 pages
+- [ ] All Server Actions enforce role checks for HR-4 operations
+
+---
+
+## 28. HR-5: Payroll
+
+### Payroll Profile CRUD
+- [ ] `/hr/payroll-profiles` list shows all profiles for the tenant
+- [ ] Create profile form validates required fields (employee, salary type, base salary, payment method)
+- [ ] Salary types (FIXED, HOURLY, DAILY) work correctly
+- [ ] Payment method field saves correctly
+- [ ] Profile created successfully with all fields
+- [ ] View profile detail page shows all fields (employee, salary type, base salary, payment method, allowances, deductions)
+- [ ] Edit profile works (change salary type, base salary, payment method, allowances, deductions)
+- [ ] Deactivate profile works → profile shows as inactive
+- [ ] Profile list filters by employee work
+- [ ] Profile list filters by salary type work
+
+### One active profile per employee
+- [ ] Creating a second active profile for the same employee returns error
+- [ ] Deactivating the existing profile allows creating a new active one
+- [ ] Inactive profiles do not appear in active profile list
+
+### Payroll Run creation and line generation
+- [ ] `/hr/payroll-runs` list shows all runs for the tenant
+- [ ] Create payroll run form validates month and year
+- [ ] Run created with status DRAFT
+- [ ] Lines auto-generated from AttendanceDay data for all active employees with profiles
+- [ ] Lines include: employee name, base pay, overtime pay, late deduction, absent deduction, net amount
+- [ ] Employees without payroll profiles appear in "Missing Profiles" sheet
+- [ ] Summary cards show correct totals (total base salary, total overtime, total deductions, net amount)
+
+### Payroll Run status workflow
+- [ ] DRAFT → "Submit for Review" → status changes to REVIEW
+- [ ] REVIEW → "Approve" → status changes to APPROVED
+- [ ] APPROVED → "Lock" → status changes to LOCKED
+- [ ] Status badges display correctly for each status
+- [ ] Only valid status transitions are allowed (no skip from DRAFT to LOCKED)
+
+### Locked run read-only enforcement
+- [ ] LOCKED run cannot be edited
+- [ ] LOCKED run shows read-only indicator
+- [ ] LOCKED run has no edit/action buttons
+- [ ] Attempting to modify a locked run via API returns error
+
+### Payroll Adjustments
+- [ ] Add adjustment form validates required fields (employee, type, amount, reason)
+- [ ] Adjustment types (BONUS, DEDUCTION, ALLOWANCE, PENALTY) work correctly
+- [ ] Adjustment created with status PENDING
+- [ ] Approve adjustment → status changes to APPROVED → reflected in payroll run totals
+- [ ] Reject adjustment → status changes to REJECTED → not reflected in totals
+- [ ] Cancel adjustment → status changes to CANCELLED
+- [ ] Adjustments appear in payroll run summary and adjustments Excel sheet
+
+### Excel export
+- [ ] Payroll run export downloads multi-sheet Excel
+- [ ] Summary sheet shows correct totals
+- [ ] Lines sheet shows per-employee breakdown with all columns
+- [ ] Adjustments sheet shows approved adjustments
+- [ ] Missing Profiles sheet lists employees without payroll profiles
+- [ ] Payroll profiles export downloads CSV with correct columns
+- [ ] All exports have UTF-8 BOM for Arabic compatibility
+- [ ] All exports logged in AuditLog
+- [ ] Open exported CSV in Excel → Arabic characters render correctly
+- [ ] No data leakage across tenants in exports
+
+### Access control
+- [ ] COMPANY_OWNER can access all HR-5 pages
+- [ ] HR_ADMIN can access all HR-5 pages
+- [ ] BRANCH_MANAGER blocked from `/hr/payroll-profiles` and `/hr/payroll-runs`
+- [ ] EMPLOYEE blocked from `/hr/payroll-profiles` and `/hr/payroll-runs`
+- [ ] Super Admin can access HR-5 pages across all tenants
+- [ ] Unauthenticated user redirected to login for HR-5 pages
+- [ ] All Server Actions enforce role checks for HR-5 operations
+
+### Feature gate enforcement
+- [ ] Trial plan shows upgrade prompt for HR-5 features
+- [ ] Starter plan shows upgrade prompt for HR-5 features
+- [ ] Growth plan includes HR-5 features
+- [ ] Pro plan includes HR-5 features
+- [ ] Enterprise plan includes HR-5 features
+- [ ] Feature gate checks occur before page render
+- [ ] Feature gate checks occur on Server Action calls
+- [ ] Plans without HR-5 show upgrade prompt (not crash)
+
+### Audit log and ReportExportLog
+- [ ] Payroll profile creation logged
+- [ ] Payroll profile edit logged
+- [ ] Payroll profile deactivation logged
+- [ ] Payroll run creation logged
+- [ ] Payroll run status change logged (DRAFT → REVIEW → APPROVED → LOCKED)
+- [ ] Payroll adjustment create/approve/reject/cancel logged
+- [ ] Payroll Excel export logged in ReportExportLog + AuditLog
+- [ ] All audit entries include actor email, action, entity, timestamp
+
+### Tax and social insurance disclaimer
+- [ ] Payroll module includes disclaimer that no tax calculation is performed
+- [ ] Payroll module includes disclaimer that no social insurance calculation is performed
+- [ ] Payroll outputs clearly state they require accountant review before real salary payment
+
+### Known limitations
+- [ ] No Egyptian tax calculation (manual accountant review required)
+- [ ] No social insurance calculation (manual accountant review required)
+- [ ] No bank transfer integration
+- [ ] No payslip PDF generation
+- [ ] Payroll outputs require accountant review before real salary payment
+- [ ] Approved leave reversal is not implemented yet. Employees can cancel pending leave only. HR can cancel pending leave only. Reversing approved leave requires a future dedicated workflow to safely restore schedules, attendance, leave balance, and payroll impact.
+
+---
+
+## 13. HR-6: Reports, Final QA, Documentation
+
+### HR Reports Hub (`/hr/reports`)
+- [ ] `/hr/reports` renders with 14 report cards
+- [ ] Each card shows real DB record count (not static)
+- [ ] Cards are grouped by category (People, Documents & Leave, Compliance, Operations, Payroll)
+- [ ] Excel export buttons on each card link to correct `/api/tenant/hr/reports/excel?type=...`
+- [ ] Branch Manager sees restricted view (no payroll/offboarding reports)
+- [ ] Employee is blocked entirely from `/hr/reports`
+- [ ] Feature gate enforced (hr_core requires Starter+)
+
+### Unified Reports Excel Export (`/api/tenant/hr/reports/excel`)
+- [ ] `?type=employee-master` exports employee master sheet
+- [ ] `?type=headcount` exports headcount breakdown
+- [ ] `?type=contracts-expiry` exports contracts with risk levels
+- [ ] `?type=documents-expiry` exports document expiry with days-until
+- [ ] `?type=missing-documents` exports missing documents
+- [ ] `?type=leave-balance` exports leave balances
+- [ ] `?type=leave-usage` exports leave request history
+- [ ] `?type=warnings` exports warnings with severity
+- [ ] `?type=training` exports training assignments
+- [ ] `?type=assets` exports asset catalog and assignments
+- [ ] `?type=onboarding` exports onboarding progress
+- [ ] `?type=offboarding` exports offboarding progress
+- [ ] `?type=payroll-profiles` exports payroll profiles (OWNER/HR_ADMIN only)
+- [ ] `?type=payroll-runs` exports payroll run summary (OWNER/HR_ADMIN only)
+- [ ] `?type=all` exports all applicable reports as multi-sheet workbook
+- [ ] Invalid type returns 400 error
+- [ ] Workbook has header sheet with company name, report type, generated-by
+- [ ] Empty datasets show "No records found." placeholder
+- [ ] Subscription check enforced (ACTIVE required)
+- [ ] AuditLog created with action HR_EXCEL_EXPORTED
+- [ ] ReportExportLog created with correct row count
+- [ ] BRANCH_MANAGER restricted from payroll report types
+
+### Final Excel Polish
+- [ ] All 11 HR Excel routes use `addReportHeaderSheet` with dynamic tenant name
+- [ ] All routes use consistent audit action `HR_EXCEL_EXPORTED` (or `PAYROLL_EXCEL_EXPORTED` for payroll-specific)
+- [ ] All routes have subscription check
+- [ ] All routes have empty row fallback ("No records found.")
+- [ ] Employees Excel route uses dynamic tenant name (not hardcoded)
+- [ ] All ReportExportLog entries use `exportedById`/`exportedByEmail` (not `userId`)
+
+### Final Access Control QA
+- [ ] `/hr/warnings` blocks EMPLOYEE, enforces hr_core feature gate
+- [ ] `/hr/warnings/[id]` blocks EMPLOYEE, enforces hr_core feature gate
+- [ ] `/hr/training` blocks EMPLOYEE, enforces hr_training feature gate
+- [ ] `/hr/onboarding` blocks EMPLOYEE, enforces hr_core feature gate
+- [ ] `/hr/offboarding` blocks EMPLOYEE, enforces hr_core feature gate
+- [ ] `createLeaveRequestAction` checks APPROVE_LEAVE or MANAGE_LEAVE_BALANCES permission
+- [ ] `cancelLeaveRequestAction` checks APPROVE_LEAVE or MANAGE_LEAVE_TYPES permission
+
+### Browser Smoke Test (command-based)
+- [ ] `GET /hr` → 200 for OWNER, HR_ADMIN, BRANCH_MANAGER; 403 for EMPLOYEE
+- [ ] `GET /hr/reports` → 200 for OWNER, HR_ADMIN, BRANCH_MANAGER; null for EMPLOYEE
+- [ ] `GET /hr/payroll-runs` → 200 for OWNER, HR_ADMIN; null for BRANCH_MANAGER, EMPLOYEE
+- [ ] `GET /hr/payroll-profiles` → 200 for OWNER, HR_ADMIN; null for BRANCH_MANAGER, EMPLOYEE
+- [ ] `GET /api/tenant/hr/reports/excel?type=all` → XLSX for OWNER; 403 for EMPLOYEE
+- [ ] `GET /api/tenant/hr/leaves/excel` → XLSX for OWNER, HR_ADMIN; 403 for EMPLOYEE
+- [ ] All HR server actions return "Permission denied" for EMPLOYEE
+- [ ] All HR Excel routes return 403 for inactive subscriptions
+
+### Test Accounts
+| Email | Role | Password | Notes |
+|-------|------|----------|-------|
+| super@b-attend.app | SUPER_ADMIN | (set in seed) | Platform admin |
+| owner@b-attend.app | COMPANY_OWNER | (set in seed) | Full HR access |
+| hr@b-attend.app | HR_ADMIN | (set in seed) | HR admin access |
+| manager@b-attend.app | BRANCH_MANAGER | (set in seed) | Branch-scoped |
+| employee@b-attend.app | EMPLOYEE | (set in seed) | Self-service only |
+
+---
+
+## 14. HR Access Control Matrix
+
+### Page Access
+
+| Route | COMPANY_OWNER | HR_ADMIN | BRANCH_MANAGER | EMPLOYEE | Feature Gate |
+|-------|:---:|:---:|:---:|:---:|---|
+| `/hr` (Dashboard) | ✅ | ✅ | ✅ (branch view) | ❌ | hr_core |
+| `/hr/departments` | ✅ | ✅ | ✅ (read) | ❌ | hr_core |
+| `/hr/job-titles` | ✅ | ✅ | ✅ (read) | ❌ | hr_core |
+| `/hr/contracts` | ✅ | ✅ | ✅ (branch) | ❌ | hr_core |
+| `/hr/documents` | ✅ | ✅ | ✅ (branch) | ❌ | hr_core |
+| `/hr/leaves` | ✅ | ✅ | ✅ (branch) | ❌ | hr_leave |
+| `/hr/warnings` | ✅ | ✅ | ✅ (branch) | ❌ | hr_core |
+| `/hr/warnings/[id]` | ✅ | ✅ | ✅ (branch) | ❌ | hr_core |
+| `/hr/training` | ✅ | ✅ | ✅ (branch) | ❌ | hr_training |
+| `/hr/assets` | ✅ | ✅ | ✅ (branch) | ❌ | hr_assets |
+| `/hr/onboarding` | ✅ | ✅ | ✅ (branch) | ❌ | hr_core |
+| `/hr/offboarding` | ✅ | ✅ | ✅ (branch) | ❌ | hr_core |
+| `/hr/payroll-profiles` | ✅ | ✅ | ❌ | ❌ | hr_payroll |
+| `/hr/payroll-profiles/[id]` | ✅ | ✅ | ❌ | ❌ | hr_payroll |
+| `/hr/payroll-profiles/[id]/edit` | ✅ | ✅ | ❌ | ❌ | hr_payroll |
+| `/hr/payroll-profiles/new` | ✅ | ✅ | ❌ | ❌ | hr_payroll |
+| `/hr/payroll-runs` | ✅ | ✅ | ❌ | ❌ | hr_payroll |
+| `/hr/payroll-runs/[id]` | ✅ | ✅ | ❌ | ❌ | hr_payroll |
+| `/hr/payroll-runs/new` | ✅ | ✅ | ❌ | ❌ | hr_payroll |
+| `/hr/reports` | ✅ | ✅ | ✅ (branch view) | ❌ | hr_core |
+| `/my-training` | ✅ (self) | ✅ (self) | ✅ (self) | ✅ (self) | — |
+| `/my-assets` | ✅ (self) | ✅ (self) | ✅ (self) | ✅ (self) | — |
+| `/my-warnings` | ✅ (self) | ✅ (self) | ✅ (self) | ✅ (self) | — |
+
+### Excel Export Access
+
+| Route | OWNER | HR_ADMIN | BRANCH_MGR | EMPLOYEE | Notes |
+|-------|:---:|:---:|:---:|:---:|---|
+| `/api/tenant/hr/employees/excel` | ✅ | ✅ | ✅ (branch, no salary) | ❌ | Salary col gated by permission |
+| `/api/tenant/hr/contracts/excel` | ✅ | ✅ | ✅ (branch) | ❌ | |
+| `/api/tenant/hr/documents/excel` | ✅ | ✅ | ✅ (no sensitive) | ❌ | NationalId gated by permission |
+| `/api/tenant/hr/leaves/excel` | ✅ | ✅ | ✅ (branch) | ❌ | |
+| `/api/tenant/hr/warnings/excel` | ✅ | ✅ | ✅ (branch, no notes) | ❌ | |
+| `/api/tenant/hr/training/excel` | ✅ | ✅ | ✅ (branch) | ❌ | |
+| `/api/tenant/hr/assets/excel` | ✅ | ✅ | ✅ (branch) | ❌ | |
+| `/api/tenant/hr/onboarding/excel` | ✅ | ✅ | ✅ (branch) | ❌ | |
+| `/api/tenant/hr/offboarding/excel` | ✅ | ✅ | ✅ (branch) | ❌ | |
+| `/api/tenant/hr/payroll-profiles/excel` | ✅ | ✅ | ❌ | ❌ | |
+| `/api/tenant/hr/payroll-runs/[id]/excel` | ✅ | ✅ | ❌ | ❌ | |
+| `/api/tenant/hr/reports/excel?type=*` | ✅ | ✅ | ✅ (no payroll types) | ❌ | |
+
+### Server Action Permissions
+
+| Action | OWNER | HR_ADMIN | BRANCH_MGR | EMPLOYEE | Permission Required |
+|--------|:---:|:---:|:---:|:---:|---|
+| createDepartmentAction | ✅ | ✅ | ❌ | ❌ | MANAGE_DEPARTMENTS |
+| updateDepartmentAction | ✅ | ✅ | ❌ | ❌ | MANAGE_DEPARTMENTS |
+| deleteDepartmentAction | ✅ | ✅ | ❌ | ❌ | MANAGE_DEPARTMENTS |
+| createJobTitleAction | ✅ | ✅ | ❌ | ❌ | MANAGE_JOB_TITLES |
+| updateJobTitleAction | ✅ | ✅ | ❌ | ❌ | MANAGE_JOB_TITLES |
+| deleteJobTitleAction | ✅ | ✅ | ❌ | ❌ | MANAGE_JOB_TITLES |
+| createContractAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_CONTRACTS |
+| updateContractAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_CONTRACTS |
+| uploadDocumentAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_DOCUMENTS |
+| deleteDocumentAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_DOCUMENTS |
+| createLeaveRequestAction | ✅ | ✅ | ✅ (branch) | ❌ | APPROVE_LEAVE or MANAGE_LEAVE_BALANCES |
+| approveLeaveRequestAction | ✅ | ✅ | ✅ (branch) | ❌ | APPROVE_LEAVE |
+| rejectLeaveRequestAction | ✅ | ✅ | ✅ (branch) | ❌ | APPROVE_LEAVE |
+| cancelLeaveRequestAction | ✅ | ✅ | ✅ (branch) | ❌ | APPROVE_LEAVE |
+| createEmployeeLeaveRequestAction | ✅ | ✅ | ✅ (self) | ✅ (self) | — (self-service, hr_leave gate) |
+| cancelEmployeeLeaveRequestAction | ✅ | ✅ | ✅ (self) | ✅ (self) | — (self-service, PENDING only, hr_leave gate) |
+| issueWarningAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_WARNINGS |
+| resolveWarningAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_WARNINGS |
+| cancelWarningAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_WARNINGS |
+| acknowledgeWarningAction | ✅ | ✅ | ✅ (self) | ✅ (self) | — (self-service) |
+| createTrainingCourseAction | ✅ | ✅ | ❌ | ❌ | MANAGE_TRAINING |
+| createTrainingAssignmentAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_TRAINING |
+| createAssetAction | ✅ | ✅ | ❌ | ❌ | MANAGE_ASSETS |
+| createAssetAssignmentAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_ASSETS |
+| returnAssetAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_ASSETS |
+| reportLostDamagedAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_ASSETS |
+| createPayrollProfileAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| updatePayrollProfileAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| deactivatePayrollProfileAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| createPayrollRunAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| recalculatePayrollRunAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| movePayrollRunToReviewAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| approvePayrollRunAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| lockPayrollRunAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| cancelPayrollRunAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| createPayrollAdjustmentAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| approvePayrollAdjustmentAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| rejectPayrollAdjustmentAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| cancelPayrollAdjustmentAction | ✅ | ✅ | ❌ | ❌ | MANAGE_PAYROLL |
+| createDefaultOnboardingChecklistAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_ONBOARDING |
+| startOffboardingAction | ✅ | ✅ | ✅ (branch) | ❌ | MANAGE_OFFBOARDING |

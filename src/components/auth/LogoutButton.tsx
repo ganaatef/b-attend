@@ -7,7 +7,7 @@
 import { useTransition } from "react";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { logoutAction } from "@/app/(auth)/logout/actions";
+import { logoutAction } from "@/app/(auth)/actions";
 
 export function LogoutButton({
   variant = "ghost",

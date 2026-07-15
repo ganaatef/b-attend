@@ -128,7 +128,7 @@ function Step2Branch({ branches }: { branches: Branch[] }) {
           ))}
         </div>
       )}
-      <form action={onboardingCreateBranchAction} className="grid gap-3 sm:grid-cols-2">
+      <form action={onboardingCreateBranchAction as any} className="grid gap-3 sm:grid-cols-2">
         <div><Label htmlFor="name">Branch name *</Label><Input id="name" name="name" required placeholder="New Cairo" /></div>
         <div><Label htmlFor="code">Code *</Label><Input id="code" name="code" required placeholder="NC" /></div>
         <div><Label htmlFor="address">Address</Label><Input id="address" name="address" placeholder="5th Settlement" /></div>
@@ -152,7 +152,7 @@ function Step3Departments({ departments }: { departments: Department[] }) {
           ))}
         </div>
       )}
-      <form action={onboardingCreateDepartmentsAction} className="space-y-3">
+      <form action={onboardingCreateDepartmentsAction as any} className="space-y-3">
         <div>
           <Label htmlFor="names">Departments (comma-separated)</Label>
           <Input id="names" name="names" placeholder="Kitchen, Service, Cashier, Delivery, Stewarding, Management" />
@@ -176,7 +176,7 @@ function Step4Policies({ policies }: { policies: ShiftPolicy[] }) {
           ))}
         </div>
       )}
-      <form action={onboardingCreatePolicyAction} className="grid gap-3 sm:grid-cols-2">
+      <form action={onboardingCreatePolicyAction as any} className="grid gap-3 sm:grid-cols-2">
         <div><Label htmlFor="name">Policy name *</Label><Input id="name" name="name" required placeholder="Morning" /></div>
         <div><Label htmlFor="startTime">Start time *</Label><Input id="startTime" name="startTime" type="time" required defaultValue="08:00" /></div>
         <div><Label htmlFor="endTime">End time *</Label><Input id="endTime" name="endTime" type="time" required defaultValue="16:00" /></div>
@@ -194,7 +194,7 @@ function Step5Employees({ branches, departments, policies, employees }: { branch
   return (
     <div className="space-y-3">
       {employees.length > 0 && <p className="text-sm text-muted-foreground">{employees.length} employees added.</p>}
-      <form action={createEmployeeAction} className="grid gap-3 sm:grid-cols-2">
+      <form action={createEmployeeAction as any} className="grid gap-3 sm:grid-cols-2">
         <div><Label htmlFor="employeeCode">Employee code *</Label><Input id="employeeCode" name="employeeCode" required placeholder="EMP001" /></div>
         <div><Label htmlFor="fullName">Full name *</Label><Input id="fullName" name="fullName" required placeholder="Ahmed Mansour" /></div>
         <div><Label htmlFor="phone">Phone</Label><Input id="phone" name="phone" placeholder="+20 100 123 4567" /></div>

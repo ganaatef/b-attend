@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Brain, Activity, ToggleRight, Building2 } from "lucide-react";
 import { AiSettingsForm } from "./AiSettingsForm";
 import { toggleTenantAiAction } from "./actions";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -111,7 +112,7 @@ export default async function AdminAiPage() {
                 <tbody>
                   {usageLogs.map((l) => (
                     <tr key={l.id} className="border-b border-border/60 last:border-0">
-                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{new Date(l.createdAt).toLocaleString()}</td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(l.createdAt)}</td>
                       <td className="px-3 py-2 text-xs text-foreground">{l.tenant?.name ?? "—"}</td>
                       <td className="px-3 py-2"><Badge variant="outline" className="text-[10px]">{l.feature.replace(/_/g, " ")}</Badge></td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">{l.provider}</td>

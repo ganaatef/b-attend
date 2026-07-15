@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Server, Database, Cpu, HardDrive } from "lucide-react";
+import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,7 @@ export default async function SystemPage() {
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {counts.map((c) => (
               <div key={c.label}>
-                <p className="text-2xl font-bold text-foreground">{c.value.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-foreground">{formatNumber(c.value)}</p>
                 <p className="text-xs text-muted-foreground">{c.label}</p>
               </div>
             ))}

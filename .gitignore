@@ -32,6 +32,14 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env.production.example
+
+# local SQLite databases (NEVER deploy; production uses PostgreSQL)
+db/*.db
+*.db
+*.sqlite
+*.sqlite3
 
 # vercel
 .vercel

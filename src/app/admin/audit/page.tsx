@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { ScrollText } from "lucide-react";
+import { formatDateTime } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,7 @@ export default async function AdminAuditPage({ searchParams }: { searchParams: P
               <tbody>
                 {logs.map((l) => (
                   <tr key={l.id} className="border-b border-border/60 last:border-0">
-                    <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(l.createdAt).toLocaleString()}</td>
+                    <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(l.createdAt)}</td>
                     <td className="px-4 py-2.5 text-xs text-foreground">{l.actorEmail}</td>
                     <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{l.action.replace(/_/g, " ")}</Badge></td>
                     <td className="px-4 py-2.5 text-xs text-muted-foreground">{l.entityType ?? "—"} {l.entityId ? `· ${l.entityId.slice(0, 8)}` : ""}</td>

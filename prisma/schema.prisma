@@ -1,13 +1,13 @@
 // B-Attend SaaS — Prisma schema
 // Phase 1: platform/SaaS layer (full) + tenant layer (stubs to be expanded in later phases)
-// Database: SQLite (local fallback per spec line 91). Production should switch to PostgreSQL.
+// Database: PostgreSQL for production (Vercel/Neon/Supabase). SQLite is local-dev only.
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -673,6 +673,7 @@ model Department {
   tenant      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name        String
   code        String?
+  active      Boolean  @default(true)
   employees   Employee[]
   jobTitles   JobTitle[]
   createdAt   DateTime @default(now())
@@ -1356,6 +1357,7 @@ enum PayrollAdjustmentStatus {
   PENDING
   APPROVED
   REJECTED
+  CANCELLED
 }
 
 enum HrFeature {
@@ -1440,7 +1442,8 @@ model EmployeeDocument {
 
 // ── Leave Type ──
 model LeaveType {
-  companyId             String  @id
+  id                    String  @id @default(cuid())
+  companyId             String
   tenant                Tenant  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name                  String
   code                  String
@@ -1455,6 +1458,7 @@ model LeaveType {
   balances              LeaveBalance[]
   requests              LeaveRequest[]
 
+  @@unique([companyId, code])
   @@index([companyId])
   @@index([active])
 }
@@ -1484,7 +1488,7 @@ model LeaveBalance {
   employeeId      String
   employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   leaveTypeId     String
-  leaveType       LeaveType @relation(fields: [leaveTypeId], references: [companyId], onDelete: Cascade)
+  leaveType       LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
   year            Int
   openingBalance  Int       @default(0)
   accrued         Int       @default(0)
@@ -1507,7 +1511,7 @@ model LeaveRequest {
   employeeId    String
   employee      Employee           @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   leaveTypeId   String
-  leaveType     LeaveType          @relation(fields: [leaveTypeId], references: [companyId], onDelete: Cascade)
+  leaveType     LeaveType          @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
   startDate     DateTime
   endDate       DateTime
   daysCount     Int
