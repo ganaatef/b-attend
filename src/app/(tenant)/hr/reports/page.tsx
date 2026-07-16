@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { getRolePermissions, type HrPermission } from "@/lib/hr/permissions";
 import { canUseHrFeature } from "@/lib/hr/feature-gates";
+import { getTranslations } from "next-intl/server";
 import {
   FileBarChart, Users, FileText, ClipboardList, CalendarDays,
   AlertTriangle, GraduationCap, Package, UserPlus, UserMinus,
@@ -276,14 +277,16 @@ export default async function HRReportsPage({
     return true;
   });
 
+  const t = await getTranslations("hrReports");
+
   return (
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">HR Reports</h1>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {visibleReports.length} reports available
-            {isBranchManager && " · Branch-scoped view"}
+            {t("reportsAvailable", { count: visibleReports.length })}
+            {isBranchManager && ` · ${t("branchScoped")}`}
           </p>
         </div>
         {canExcel && (
@@ -291,7 +294,7 @@ export default async function HRReportsPage({
             href="/api/tenant/hr/reports/excel?type=all"
             className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90"
           >
-            <Download className="h-3.5 w-3.5" /> Export All Reports
+            <Download className="h-3.5 w-3.5" /> {isBranchManager ? t("exportBranch") : t("exportAll")}
           </Link>
         )}
       </div>

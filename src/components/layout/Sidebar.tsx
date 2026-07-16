@@ -56,6 +56,7 @@ interface NavItem {
   badge?: string;
 }
 
+// ─── Platform (SUPER_ADMIN) ──────────────────────────────────────
 const platformNavKeys: NavItem[] = [
   { href: "/admin", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/admin/tenants", labelKey: "tenants", icon: Building2 },
@@ -70,33 +71,7 @@ const platformNavKeys: NavItem[] = [
   { href: "/admin/settings", labelKey: "adminSettings", icon: Settings },
 ];
 
-const tenantBranchManagerNavKeys: NavItem[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/live", labelKey: "liveAttendance", icon: TabletSmartphone },
-  { href: "/branches", labelKey: "branches", icon: Building2 },
-  { href: "/employees", labelKey: "employees", icon: Users },
-  { href: "/policies", labelKey: "shiftPolicies", icon: Clock },
-  { href: "/schedules", labelKey: "schedules", icon: CalendarDays },
-  { href: "/kiosk", labelKey: "kiosk", icon: TabletSmartphone },
-  { href: "/approvals", labelKey: "approvals", icon: CheckSquare },
-  { href: "/reports", labelKey: "reports", icon: FileBarChart },
-  { href: "/hr", labelKey: "hrDashboard", icon: Briefcase },
-  { href: "/hr/departments", labelKey: "departments", icon: FolderTree },
-  { href: "/hr/job-titles", labelKey: "jobTitles", icon: Award },
-  { href: "/hr/contracts", labelKey: "contracts", icon: FileText },
-  { href: "/hr/documents", labelKey: "documents", icon: ClipboardList },
-  { href: "/hr/leaves", labelKey: "leaveManagement", icon: CalendarDays },
-  { href: "/hr/warnings", labelKey: "warnings", icon: AlertTriangle },
-  { href: "/hr/training", labelKey: "training", icon: GraduationCap },
-  { href: "/hr/assets", labelKey: "assets", icon: Package },
-  { href: "/hr/onboarding", labelKey: "onboarding", icon: UserPlus },
-  { href: "/hr/offboarding", labelKey: "offboarding", icon: UserMinus },
-  { href: "/hr/reports", labelKey: "hrReports", icon: FileBarChart },
-  { href: "/team-coach", labelKey: "teamCoachAI", icon: Brain },
-  { href: "/daily-briefing", labelKey: "dailyBriefing", icon: Sunrise },
-  { href: "/support", labelKey: "support", icon: LifeBuoy },
-];
-
+// ─── COMPANY_OWNER — full tenant access ─────────────────────────
 const tenantOwnerNavKeys: NavItem[] = [
   { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/live", labelKey: "liveAttendance", icon: TabletSmartphone },
@@ -129,23 +104,62 @@ const tenantOwnerNavKeys: NavItem[] = [
   { href: "/settings", labelKey: "settings", icon: Settings },
 ];
 
+// ─── HR_ADMIN — same as owner minus billing ─────────────────────
+const tenantHrAdminNavKeys: NavItem[] = tenantOwnerNavKeys.filter(
+  (item) => item.href !== "/billing"
+);
+
+// ─── BRANCH_MANAGER — branch-scoped, demo-safe ─────────────────
+const tenantBranchManagerNavKeys: NavItem[] = [
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
+  { href: "/live", labelKey: "liveAttendance", icon: TabletSmartphone },
+  { href: "/branches", labelKey: "branches", icon: Building2 },
+  { href: "/employees", labelKey: "employees", icon: Users },
+  { href: "/policies", labelKey: "shiftPolicies", icon: Clock },
+  { href: "/schedules", labelKey: "schedules", icon: CalendarDays },
+  { href: "/kiosk", labelKey: "kiosk", icon: TabletSmartphone },
+  { href: "/approvals", labelKey: "approvals", icon: CheckSquare },
+  { href: "/reports", labelKey: "reports", icon: FileBarChart },
+  { href: "/hr", labelKey: "hrDashboard", icon: Briefcase },
+  { href: "/hr/departments", labelKey: "departments", icon: FolderTree },
+  { href: "/hr/job-titles", labelKey: "jobTitles", icon: Award },
+  { href: "/hr/leaves", labelKey: "leaveManagement", icon: CalendarDays },
+  { href: "/hr/training", labelKey: "training", icon: GraduationCap },
+  { href: "/hr/assets", labelKey: "assets", icon: Package },
+  { href: "/hr/reports", labelKey: "hrReports", icon: FileBarChart },
+  { href: "/team-coach", labelKey: "teamCoachAI", icon: Brain },
+  { href: "/daily-briefing", labelKey: "dailyBriefing", icon: Sunrise },
+  { href: "/support", labelKey: "support", icon: LifeBuoy },
+];
+
+// ─── EMPLOYEE — self-service only ───────────────────────────────
 const tenantEmployeeNavKeys: NavItem[] = [
   { href: "/today", labelKey: "today", icon: CalendarClock },
   { href: "/clock", labelKey: "clockInOut", icon: Clock },
-  { href: "/my-leave", labelKey: "myLeave", icon: CalendarDays },
-  { href: "/coach", labelKey: "myCoachAI", icon: Sparkles },
   { href: "/attendance", labelKey: "myAttendance", icon: ClipboardList },
+  { href: "/my-leave", labelKey: "myLeave", icon: CalendarDays },
   { href: "/requests", labelKey: "myRequests", icon: CheckSquare },
   { href: "/my-training", labelKey: "myTraining", icon: GraduationCap },
   { href: "/my-assets", labelKey: "myAssets", icon: Package },
   { href: "/my-warnings", labelKey: "myWarnings", icon: AlertTriangle },
+  { href: "/coach", labelKey: "myCoachAI", icon: Sparkles },
   { href: "/profile", labelKey: "myProfile", icon: UserIcon },
 ];
 
 export function Sidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
-  const items = user.kind === "platform" ? platformNavKeys : user.role === "EMPLOYEE" ? tenantEmployeeNavKeys : user.role === "BRANCH_MANAGER" ? tenantBranchManagerNavKeys : tenantOwnerNavKeys;
+
+  const items =
+    user.kind === "platform"
+      ? platformNavKeys
+      : user.role === "EMPLOYEE"
+        ? tenantEmployeeNavKeys
+        : user.role === "BRANCH_MANAGER"
+          ? tenantBranchManagerNavKeys
+          : user.role === "HR_ADMIN"
+            ? tenantHrAdminNavKeys
+            : tenantOwnerNavKeys;
 
   return (
     <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">

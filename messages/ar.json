@@ -99,7 +99,7 @@
     "employees": "الموظفون",
     "shiftPolicies": "سياسات الورديات",
     "schedules": "الجداول",
-    "kiosk": "الكشك",
+    "kiosk": "جهاز الحضور",
     "approvals": "الموافقات",
     "reports": "التقارير",
     "hrDashboard": "لوحة الموارد البشرية",
@@ -110,26 +110,26 @@
     "leaveManagement": "إدارة الإجازات",
     "warnings": "الإنذارات",
     "training": "التدريب",
-    "assets": "الأصول",
+    "assets": "الأصول والعُهد",
     "payrollProfiles": "ملفات الرواتب",
-    "payrollRuns": "تشغيل الرواتب",
-    "onboarding": "التكييف",
-    "offboarding": "المغادرة",
+    "payrollRuns": "مسيرات الرواتب",
+    "onboarding": "تهيئة الموظفين",
+    "offboarding": "إنهاء الخدمة",
     "hrReports": "تقارير الموارد البشرية",
     "teamCoachAI": "مدرب الفريق",
     "dailyBriefing": "النشرة اليومية",
-    "coachLibrary": "مكتبة التدريب",
+    "coachLibrary": "مكتبة النصائح",
     "auditLog": "سجل التدقيق",
     "billing": "الفواتير",
     "settings": "الإعدادات",
     "today": "اليوم",
-    "clockInOut": "تسجيل الحضور",
+    "clockInOut": "تسجيل الحضور والانصراف",
     "myLeave": "إجازتي",
-    "myCoachAI": "مدريبي",
+    "myCoachAI": "مدربي الذكي",
     "myAttendance": "حضوري",
     "myRequests": "طلباتي",
     "myTraining": "تدريباتي",
-    "myAssets": "أصولي",
+    "myAssets": "عُهدي",
     "myWarnings": "إنذاراتي",
     "myProfile": "ملفي الشخصي"
   },
@@ -143,7 +143,7 @@
   },
   "mobileNav": {
     "home": "الرئيسية",
-    "today": "اليوم",
+    "today": "يومي",
     "schedules": "الجداول",
     "requests": "الطلبات",
     "profile": "الملف"
@@ -745,7 +745,7 @@
     "noAudit": "لا توجد سجلات"
   },
   "onboarding": {
-    "title": "معاينة التكييف",
+    "title": "معاينة تهيئة الموظفين",
     "profile": "الملف الشخصي",
     "branch": "الفرع",
     "department": "القسم",
@@ -899,7 +899,7 @@
     "kiosk": "المطبخ",
     "cleanliness": "النظافة",
     "safety": "السلامة",
-    "onboarding": "التكييف",
+    "onboarding": "تهيئة الموظفين",
     "management": "الإدارة",
     "other": "أخرى"
   },
@@ -975,7 +975,7 @@
     "noRuns": "لا توجد عمليات رواتب بعد"
   },
   "hrOnboarding": {
-    "title": "التكييف",
+    "title": "تهيئة الموظفين",
     "employee": "الموظف",
     "title": "العنوان",
     "description": "الوصف",
@@ -988,10 +988,10 @@
     "inProgress": "قيد التنفيذ",
     "completed": "مكتمل",
     "cancelled": "ملغي",
-    "noTasks": "لا توجد مهام تكييف"
+    "noTasks": "لا توجد مهام تهيئة"
   },
   "hrOffboarding": {
-    "title": "المغادرة",
+    "title": "إنهاء الخدمة",
     "employee": "الموظف",
     "title": "العنوان",
     "description": "الوصف",
@@ -1013,6 +1013,10 @@
     "leaveReport": "تقرير الإجازات",
     "trainingReport": "تقرير التدريب",
     "exportExcel": "تصدير Excel",
+    "exportAll": "تصدير كل التقارير",
+    "exportBranch": "تصدير تقارير الفرع",
+    "reportsAvailable": "{count} تقارير متاحة",
+    "branchScoped": "عرض الفرع",
     "noData": "لا توجد بيانات للتقرير"
   },
   "admin": {

@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export default async function OnboardingPage() {
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
-  if (session.role === "EMPLOYEE") return null;
+  if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const tid = session.tenantId;
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");

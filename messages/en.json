@@ -1304,6 +1304,10 @@
     "leaveReport": "Leave Report",
     "trainingReport": "Training Report",
     "exportExcel": "Export Excel",
+    "exportAll": "Export All Reports",
+    "exportBranch": "Export Branch Reports",
+    "reportsAvailable": "{count} reports available",
+    "branchScoped": "Branch-scoped view",
     "noData": "No report data"
   },
   "admin": {

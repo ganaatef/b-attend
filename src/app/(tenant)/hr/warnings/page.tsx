@@ -17,8 +17,8 @@ function hasPerm(role: string, perm: HrPermission): boolean {
 export default async function WarningsListPage({ searchParams }: { searchParams: Promise<{ branch?: string; severity?: string; status?: string }> }) {
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const tid = session.tenantId;
-  if (session.role === "EMPLOYEE") return null;
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
