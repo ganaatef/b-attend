@@ -1,6 +1,7 @@
 /** /hr/job-titles — Job Title CRUD with safe delete */
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,8 @@ export default async function HrJobTitlesPage() {
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrJobTitles");
+  const th = await getTranslations("hrDashboard");
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
@@ -27,8 +30,8 @@ export default async function HrJobTitlesPage() {
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">HR Module requires Growth plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access HR features."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{th("requiresGrowthPlan")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{th("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -41,8 +44,8 @@ export default async function HrJobTitlesPage() {
       <div className="mx-auto max-w-5xl space-y-4">
         <Card className="border-dashed border-destructive/40">
           <div className="pt-6 pb-6 text-center">
-            <h3 className="text-sm font-semibold text-foreground">Access Denied</h3>
-            <p className="mt-1 text-xs text-muted-foreground">You do not have permission to manage job titles.</p>
+            <h3 className="text-sm font-semibold text-foreground">{th("accessDenied")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{th("noPermission")}</p>
           </div>
         </Card>
       </div>
@@ -61,37 +64,37 @@ export default async function HrJobTitlesPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-foreground">Job Titles</h1>
-        <p className="text-sm text-muted-foreground">{jobTitles.length} job titles</p>
+        <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("jobTitleCount", { count: jobTitles.length })}</p>
       </div>
 
       <Card className="border-border p-4">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Add job title</h2>
+        <h2 className="mb-3 text-sm font-semibold text-foreground">{t("addJobTitle")}</h2>
         <form action={async (formData: FormData) => { "use server"; await createJobTitleAction({}, formData); }} className="flex gap-2">
           <div className="flex-1">
-            <Label htmlFor="title" className="sr-only">Title</Label>
-            <Input id="title" name="title" required placeholder="e.g. Waiter" />
+            <Label htmlFor="title" className="sr-only">{t("title")}</Label>
+            <Input id="title" name="title" required placeholder={t("placeholderTitle")} />
           </div>
           <div className="w-48">
-            <Label htmlFor="departmentId" className="sr-only">Department</Label>
+            <Label htmlFor="departmentId" className="sr-only">{t("department")}</Label>
             <select id="departmentId" name="departmentId" className="w-full rounded-md border border-border bg-card px-3 py-1.5 text-sm">
-              <option value="">No department</option>
+              <option value="">{t("noDepartment")}</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
           </div>
           <div className="w-24">
-            <Label htmlFor="grade" className="sr-only">Grade</Label>
-            <Input id="grade" name="grade" placeholder="L3" />
+            <Label htmlFor="grade" className="sr-only">{t("grade")}</Label>
+            <Input id="grade" name="grade" placeholder={t("placeholderGrade")} />
           </div>
-          <Button type="submit" size="sm">Add</Button>
+          <Button type="submit" size="sm">{t("addJobTitle")}</Button>
         </form>
       </Card>
 
       <Card className="border-border">
         {jobTitles.length === 0 ? (
-          <EmptyState title="No job titles" icon={Award} />
+          <EmptyState title={t("noJobTitles")} icon={Award} />
         ) : (
           <div className="divide-y divide-border/60">
             {jobTitles.map((jt) => (
@@ -100,10 +103,10 @@ export default async function HrJobTitlesPage() {
                   <div>
                     <p className="font-medium text-foreground">{jt.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {jt.department?.name ?? "No department"} · {jt.grade ?? "—"} · {jt._count.employees} employees
+                      {jt.department?.name ?? t("noDepartment")} · {jt.grade ?? "—"} · {t("employeesCount", { count: jt._count.employees })}
                     </p>
                   </div>
-                  {!jt.active && <Badge variant="outline" className="text-[10px]">Inactive</Badge>}
+                  {!jt.active && <Badge variant="outline" className="text-[10px]">{t("inactive")}</Badge>}
                 </div>
                 <form action={async () => {
                   "use server";

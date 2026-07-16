@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { canUseHrFeature } from "@/lib/hr/feature-gates";
@@ -18,6 +19,8 @@ export default async function HrDashboardPage() {
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrDashboard");
+  const tc = await getTranslations("common");
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
@@ -26,9 +29,9 @@ export default async function HrDashboardPage() {
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <CardContent className="pt-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">HR Module requires Growth plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade your plan to access HR features."}</p>
-            <Link href="/billing" className="mt-3 inline-block text-xs text-brand-accent hover:underline">Go to Billing →</Link>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("requiresGrowthPlan")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{t("upgradeMessage")}</p>
+            <Link href="/billing" className="mt-3 inline-block text-xs text-brand-accent hover:underline">{t("goToBilling")}</Link>
           </CardContent>
         </Card>
       </div>
@@ -41,8 +44,8 @@ export default async function HrDashboardPage() {
       <div className="mx-auto max-w-7xl space-y-6">
         <Card className="border-dashed border-destructive/40">
           <CardContent className="pt-6 text-center">
-            <h3 className="text-sm font-semibold text-foreground">Access Denied</h3>
-            <p className="mt-1 text-xs text-muted-foreground">You do not have permission to view the HR dashboard.</p>
+            <h3 className="text-sm font-semibold text-foreground">{t("accessDenied")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{t("noPermission")}</p>
           </CardContent>
         </Card>
       </div>
@@ -50,13 +53,15 @@ export default async function HrDashboardPage() {
   }
 
   const isBranchManager = session.role === "BRANCH_MANAGER";
+  const isOwnerOrHrAdmin = session.role === "COMPANY_OWNER" || session.role === "HR_ADMIN";
   const managedBranchIds = isBranchManager ? await getManagedBranchIds(session.sub, tid) : [];
 
   const branchFilter = isBranchManager && managedBranchIds.length > 0
     ? { branchId: { in: managedBranchIds } }
     : {};
 
-  const canViewPayroll = (session.role === "COMPANY_OWNER" || session.role === "HR_ADMIN") && !isBranchManager;
+  const canViewPayroll = isOwnerOrHrAdmin;
+  const canViewSensitive = isOwnerOrHrAdmin;
 
   const thirtyDays = new Date();
   thirtyDays.setDate(thirtyDays.getDate() + 30);
@@ -98,54 +103,56 @@ export default async function HrDashboardPage() {
   ]);
 
   const cards = [
-    { label: "Total employees", value: totalEmployees, icon: Users, sub: `${activeEmployees} active` },
-    { label: "Departments", value: departments, icon: FolderTree, sub: `${jobTitles} job titles` },
-    { label: "On leave today", value: onLeaveToday, icon: CalendarDays, sub: "Employees on leave" },
-    { label: "Pending leave requests", value: pendingLeaveRequests, icon: FileText, sub: "Awaiting approval", highlight: pendingLeaveRequests > 0 },
-    { label: "Contracts expiring (30d)", value: contractsExpiring, icon: AlertTriangle, sub: "Need renewal", highlight: contractsExpiring > 0 },
-    { label: "Documents expiring (30d)", value: documentsExpiring, icon: FileText, sub: "Need renewal", highlight: documentsExpiring > 0 },
-    { label: "Training overdue", value: trainingOverdue, icon: GraduationCap, sub: "Assignments overdue", highlight: trainingOverdue > 0 },
-    { label: "Assets assigned", value: assetsAssigned, icon: Package, sub: "Active assignments" },
-    { label: "Onboarding pending", value: onboardingPending, icon: UserPlus, sub: "Tasks to complete" },
-    { label: "Open warnings", value: openWarnings, icon: AlertTriangle, sub: "Warnings to review", highlight: openWarnings > 0 },
-    { label: "Critical warnings", value: criticalWarnings, icon: AlertTriangle, sub: "Require attention", highlight: criticalWarnings > 0 },
-    { label: "Training due soon", value: trainingDueSoon, icon: GraduationCap, sub: "Due within 30 days", highlight: trainingDueSoon > 0 },
-    { label: "Lost/damaged assets", value: lostDamagedAssets, icon: Package, sub: "Need attention", highlight: lostDamagedAssets > 0 },
-    { label: "Offboarding", value: offboardingInProgress, icon: UserMinus, sub: "In progress" },
-    { label: "Latest payroll", value: latestPayrollRun ? latestPayrollRun.status : "—", icon: CreditCard, sub: latestPayrollRun ? `${latestPayrollRun.month}/${latestPayrollRun.year}` : "No runs yet" },
+    { key: "totalEmployees", value: totalEmployees, icon: Users, sub: t("totalEmployeesActive", { count: activeEmployees }), alwaysShow: true },
+    { key: "departments", value: departments, icon: FolderTree, sub: t("departmentsJobTitles", { count: jobTitles }), alwaysShow: true },
+    { key: "onLeaveToday", value: onLeaveToday, icon: CalendarDays, sub: t("onLeaveTodaySub"), alwaysShow: true },
+    { key: "pendingLeave", value: pendingLeaveRequests, icon: FileText, sub: t("pendingLeaveSub"), highlight: pendingLeaveRequests > 0, alwaysShow: true },
+    { key: "contractsExpiring", value: contractsExpiring, icon: AlertTriangle, sub: t("contractsExpiringSub"), highlight: contractsExpiring > 0, sensitive: true },
+    { key: "documentsExpiring", value: documentsExpiring, icon: FileText, sub: t("documentsExpiringSub"), highlight: documentsExpiring > 0, sensitive: true },
+    { key: "trainingOverdue", value: trainingOverdue, icon: GraduationCap, sub: t("trainingOverdueSub"), highlight: trainingOverdue > 0, alwaysShow: true },
+    { key: "assetsAssigned", value: assetsAssigned, icon: Package, sub: t("assetsAssignedSub"), alwaysShow: true },
+    { key: "onboardingPending", value: onboardingPending, icon: UserPlus, sub: t("onboardingPendingSub"), sensitive: true },
+    { key: "openWarnings", value: openWarnings, icon: AlertTriangle, sub: t("openWarningsSub"), highlight: openWarnings > 0, sensitive: true },
+    { key: "criticalWarnings", value: criticalWarnings, icon: AlertTriangle, sub: t("criticalWarningsSub"), highlight: criticalWarnings > 0, sensitive: true },
+    { key: "trainingDueSoon", value: trainingDueSoon, icon: GraduationCap, sub: t("trainingDueSoonSub"), highlight: trainingDueSoon > 0, alwaysShow: true },
+    { key: "lostDamagedAssets", value: lostDamagedAssets, icon: Package, sub: t("lostDamagedAssetsSub"), highlight: lostDamagedAssets > 0, sensitive: true },
+    { key: "offboarding", value: offboardingInProgress, icon: UserMinus, sub: t("offboardingSub"), sensitive: true },
+    { key: "latestPayroll", value: latestPayrollRun ? latestPayrollRun.status : "—", icon: CreditCard, sub: latestPayrollRun ? `${latestPayrollRun.month}/${latestPayrollRun.year}` : t("noRunsYet"), sensitive: true },
     ...(canViewPayroll ? [
-      { label: "Payroll ready for review", value: payrollRunsReadyForReview, icon: CreditCard, sub: "Runs awaiting approval", highlight: payrollRunsReadyForReview > 0 },
-      { label: "Pending payroll adjustments", value: pendingPayrollAdjustments, icon: CreditCard, sub: "Adjustments awaiting approval", highlight: pendingPayrollAdjustments > 0 },
-      { label: "Missing payroll profiles", value: missingPayrollProfiles, icon: CreditCard, sub: "Employees without profile", highlight: missingPayrollProfiles > 0 },
-      { label: "Locked payroll runs (YTD)", value: lockedPayrollRunsThisYear, icon: Lock, sub: "Read-only finalized runs" },
+      { key: "payrollReadyForReview", value: payrollRunsReadyForReview, icon: CreditCard, sub: t("payrollReadyForReviewSub"), highlight: payrollRunsReadyForReview > 0, sensitive: true },
+      { key: "pendingPayrollAdjustments", value: pendingPayrollAdjustments, icon: CreditCard, sub: t("pendingPayrollAdjustmentsSub"), highlight: pendingPayrollAdjustments > 0, sensitive: true },
+      { key: "missingPayrollProfiles", value: missingPayrollProfiles, icon: CreditCard, sub: t("missingPayrollProfilesSub"), highlight: missingPayrollProfiles > 0, sensitive: true },
+      { key: "lockedPayrollRuns", value: lockedPayrollRunsThisYear, icon: Lock, sub: t("lockedPayrollRunsSub"), sensitive: true },
     ] : []),
   ];
+
+  const visibleCards = cards.filter((c) => canViewSensitive || c.alwaysShow);
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">HR Dashboard</h1>
-          <p className="text-sm text-muted-foreground">{isBranchManager ? "Branch-scoped view" : "All branches"} · {activeEmployees} active employees</p>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{isBranchManager ? t("branchScopedView") : t("allBranches")} · {t("activeCount", { count: activeEmployees })}</p>
         </div>
         <div className="flex items-center gap-2">
           <Link href="/employees" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-            <Users className="h-3.5 w-3.5" /> Employees
+            <Users className="h-3.5 w-3.5" /> {t("employeesButton")}
           </Link>
           <Link href="/api/tenant/hr/employees/excel" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-            <Download className="h-3.5 w-3.5" /> Export Excel
+            <Download className="h-3.5 w-3.5" /> {t("exportExcel")}
           </Link>
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {cards.map((c) => {
+        {visibleCards.map((c) => {
           const Icon = c.icon;
           return (
-            <Card key={c.label} className={c.highlight ? "border-amber-300 bg-amber-50/40" : "border-border"}>
+            <Card key={c.key} className={c.highlight ? "border-amber-300 bg-amber-50/40" : "border-border"}>
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-xs font-medium text-muted-foreground">{c.label}</CardTitle>
+                  <CardTitle className="text-xs font-medium text-muted-foreground">{t(c.key as any)}</CardTitle>
                   <Icon className="h-4 w-4 text-muted-foreground" />
                 </div>
               </CardHeader>
@@ -160,123 +167,147 @@ export default async function HrDashboardPage() {
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Quick links</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("quickLinks")}</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
             <Link href="/hr/departments" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <FolderTree className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Departments</p>
-              <p className="text-[10px] text-muted-foreground">{departments} total</p>
+              <p className="mt-1 font-medium text-foreground">{t("qlDepartments")}</p>
+              <p className="text-[10px] text-muted-foreground">{t("qlDepartmentsSub", { count: departments })}</p>
             </Link>
             <Link href="/hr/job-titles" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <Award className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Job Titles</p>
-              <p className="text-[10px] text-muted-foreground">{jobTitles} active</p>
+              <p className="mt-1 font-medium text-foreground">{t("qlJobTitles")}</p>
+              <p className="text-[10px] text-muted-foreground">{t("qlJobTitlesSub", { count: jobTitles })}</p>
             </Link>
-            <Link href="/hr/contracts" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
-              <FileText className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Contracts</p>
-              <p className="text-[10px] text-muted-foreground">{contractsExpiring} expiring soon</p>
-            </Link>
-            <Link href="/hr/documents" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
-              <FileText className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Documents</p>
-              <p className="text-[10px] text-muted-foreground">{documentsExpiring} expiring soon</p>
-            </Link>
+            {canViewSensitive && (
+              <>
+                <Link href="/hr/contracts" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
+                  <FileText className="h-4 w-4 text-brand-accent" />
+                  <p className="mt-1 font-medium text-foreground">{t("qlContracts")}</p>
+                  <p className="text-[10px] text-muted-foreground">{t("qlContractsSub", { count: contractsExpiring })}</p>
+                </Link>
+                <Link href="/hr/documents" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
+                  <FileText className="h-4 w-4 text-brand-accent" />
+                  <p className="mt-1 font-medium text-foreground">{t("qlDocuments")}</p>
+                  <p className="text-[10px] text-muted-foreground">{t("qlDocumentsSub", { count: documentsExpiring })}</p>
+                </Link>
+              </>
+            )}
             <Link href="/hr/leaves" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <CalendarDays className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Leave Management</p>
-              <p className="text-[10px] text-muted-foreground">{pendingLeaveRequests} pending</p>
+              <p className="mt-1 font-medium text-foreground">{t("qlLeaveManagement")}</p>
+              <p className="text-[10px] text-muted-foreground">{t("qlLeaveManagementSub", { count: pendingLeaveRequests })}</p>
             </Link>
             <Link href="/employees" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <Users className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Employees</p>
-              <p className="text-[10px] text-muted-foreground">{activeEmployees} active</p>
+              <p className="mt-1 font-medium text-foreground">{t("qlEmployees")}</p>
+              <p className="text-[10px] text-muted-foreground">{t("qlEmployeesSub", { count: activeEmployees })}</p>
             </Link>
-            <Link href="/hr/warnings" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
-              <AlertTriangle className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Warnings</p>
-              <p className="text-[10px] text-muted-foreground">{openWarnings} open</p>
-            </Link>
+            {canViewSensitive && (
+              <Link href="/hr/warnings" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
+                <AlertTriangle className="h-4 w-4 text-brand-accent" />
+                <p className="mt-1 font-medium text-foreground">{t("qlWarnings")}</p>
+                <p className="text-[10px] text-muted-foreground">{t("qlWarningsSub", { count: openWarnings })}</p>
+              </Link>
+            )}
             <Link href="/hr/training" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <GraduationCap className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Training</p>
-              <p className="text-[10px] text-muted-foreground">{trainingOverdue} overdue</p>
+              <p className="mt-1 font-medium text-foreground">{t("qlTraining")}</p>
+              <p className="text-[10px] text-muted-foreground">{t("qlTrainingSub", { count: trainingOverdue })}</p>
             </Link>
             <Link href="/hr/assets" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <Package className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Assets</p>
-              <p className="text-[10px] text-muted-foreground">{assetsAssigned} assigned</p>
+              <p className="mt-1 font-medium text-foreground">{t("qlAssets")}</p>
+              <p className="text-[10px] text-muted-foreground">{t("qlAssetsSub", { count: assetsAssigned })}</p>
             </Link>
-            <Link href="/hr/onboarding" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
-              <UserPlus className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Onboarding</p>
-              <p className="text-[10px] text-muted-foreground">{onboardingPending} pending</p>
-            </Link>
-            <Link href="/hr/offboarding" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
-              <UserMinus className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Offboarding</p>
-              <p className="text-[10px] text-muted-foreground">{offboardingInProgress} in progress</p>
-            </Link>
+            {canViewSensitive && (
+              <>
+                <Link href="/hr/onboarding" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
+                  <UserPlus className="h-4 w-4 text-brand-accent" />
+                  <p className="mt-1 font-medium text-foreground">{t("qlOnboarding")}</p>
+                  <p className="text-[10px] text-muted-foreground">{t("qlOnboardingSub", { count: onboardingPending })}</p>
+                </Link>
+                <Link href="/hr/offboarding" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
+                  <UserMinus className="h-4 w-4 text-brand-accent" />
+                  <p className="mt-1 font-medium text-foreground">{t("qlOffboarding")}</p>
+                  <p className="text-[10px] text-muted-foreground">{t("qlOffboardingSub", { count: offboardingInProgress })}</p>
+                </Link>
+              </>
+            )}
             {canViewPayroll && (
               <>
                 <Link href="/hr/payroll-profiles" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                   <Wallet className="h-4 w-4 text-brand-accent" />
-                  <p className="mt-1 font-medium text-foreground">Payroll Profiles</p>
-                  <p className="text-[10px] text-muted-foreground">Manage salary profiles</p>
+                  <p className="mt-1 font-medium text-foreground">{t("qlPayrollProfiles")}</p>
+                  <p className="text-[10px] text-muted-foreground">{t("qlPayrollProfilesSub")}</p>
                 </Link>
                 <Link href="/hr/payroll-runs" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                   <CreditCard className="h-4 w-4 text-brand-accent" />
-                  <p className="mt-1 font-medium text-foreground">Payroll Runs</p>
-                  <p className="text-[10px] text-muted-foreground">Generate and manage runs</p>
+                  <p className="mt-1 font-medium text-foreground">{t("qlPayrollRuns")}</p>
+                  <p className="text-[10px] text-muted-foreground">{t("qlPayrollRunsSub")}</p>
                 </Link>
               </>
             )}
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">HR Overview</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("hrOverview")}</CardTitle></CardHeader>
           <CardContent>
             <div className="space-y-2">
               <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Active contracts</span>
+                <span className="text-muted-foreground">{t("ovActiveContracts")}</span>
                 <span className="font-medium text-foreground">{activeEmployees}</span>
               </div>
+              {canViewSensitive && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovContractsExpiring")}</span>
+                  <span className={`font-medium ${contractsExpiring > 0 ? "text-amber-600" : "text-foreground"}`}>{contractsExpiring}</span>
+                </div>
+              )}
+              {canViewSensitive && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovDocumentsExpiring")}</span>
+                  <span className={`font-medium ${documentsExpiring > 0 ? "text-amber-600" : "text-foreground"}`}>{documentsExpiring}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Contracts expiring soon</span>
-                <span className={`font-medium ${contractsExpiring > 0 ? "text-amber-600" : "text-foreground"}`}>{contractsExpiring}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Documents expiring soon</span>
-                <span className={`font-medium ${documentsExpiring > 0 ? "text-amber-600" : "text-foreground"}`}>{documentsExpiring}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Training overdue</span>
+                <span className="text-muted-foreground">{t("ovTrainingOverdue")}</span>
                 <span className={`font-medium ${trainingOverdue > 0 ? "text-amber-600" : "text-foreground"}`}>{trainingOverdue}</span>
               </div>
+              {canViewSensitive && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovOpenWarnings")}</span>
+                  <span className={`font-medium ${openWarnings > 0 ? "text-amber-600" : "text-foreground"}`}>{openWarnings}</span>
+                </div>
+              )}
+              {canViewSensitive && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovCriticalWarnings")}</span>
+                  <span className={`font-medium ${criticalWarnings > 0 ? "text-amber-600" : "text-foreground"}`}>{criticalWarnings}</span>
+                </div>
+              )}
               <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Open warnings</span>
-                <span className={`font-medium ${openWarnings > 0 ? "text-amber-600" : "text-foreground"}`}>{openWarnings}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Critical warnings</span>
-                <span className={`font-medium ${criticalWarnings > 0 ? "text-amber-600" : "text-foreground"}`}>{criticalWarnings}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Training due soon</span>
+                <span className="text-muted-foreground">{t("ovTrainingDueSoon")}</span>
                 <span className={`font-medium ${trainingDueSoon > 0 ? "text-amber-600" : "text-foreground"}`}>{trainingDueSoon}</span>
               </div>
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Lost/damaged assets</span>
-                <span className={`font-medium ${lostDamagedAssets > 0 ? "text-amber-600" : "text-foreground"}`}>{lostDamagedAssets}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Offboarding in progress</span>
-                <span className="font-medium text-foreground">{offboardingInProgress}</span>
-              </div>
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">Payroll status</span>
-                <span className="font-medium text-foreground">{latestPayrollRun?.status ?? "—"}</span>
-              </div>
+              {canViewSensitive && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovLostDamagedAssets")}</span>
+                  <span className={`font-medium ${lostDamagedAssets > 0 ? "text-amber-600" : "text-foreground"}`}>{lostDamagedAssets}</span>
+                </div>
+              )}
+              {canViewSensitive && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovOffboarding")}</span>
+                  <span className="font-medium text-foreground">{offboardingInProgress}</span>
+                </div>
+              )}
+              {canViewSensitive && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovPayrollStatus")}</span>
+                  <span className="font-medium text-foreground">{latestPayrollRun?.status ?? "—"}</span>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
