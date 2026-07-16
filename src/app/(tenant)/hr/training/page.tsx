@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GraduationCap, BookOpen, Plus, AlertTriangle, CheckCircle2, Clock, Eye, Lock } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrTraining");
 
   const featureCheck = await canUseHrFeature(tid, "hr_training");
   if (!featureCheck.allowed) {
@@ -28,8 +30,8 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">Training &amp; Development requires Growth plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access training features."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -80,16 +82,16 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Training</h1>
-          <p className="text-sm text-muted-foreground">{totalCourses} courses · {totalAssignments} assignments · {overdueAssignments} overdue</p>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("totalCourses")}: {totalCourses} · {t("totalAssignments")}: {totalAssignments} · {t("overdueCount", { count: overdueAssignments })}</p>
         </div>
         {canManage && (
           <div className="flex items-center gap-2">
             <Link href="/hr/training/courses/new" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-              <Plus className="h-3.5 w-3.5" /> New Course
+              <Plus className="h-3.5 w-3.5" /> {t("newCourse")}
             </Link>
             <Link href="/hr/training/assignments/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-              <Plus className="h-3.5 w-3.5" /> Assign Training
+              <Plus className="h-3.5 w-3.5" /> {t("assignTraining")}
             </Link>
           </div>
         )}
@@ -98,47 +100,47 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
       <div className="grid gap-4 sm:grid-cols-5">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totalCourses}</p>
-          <p className="text-xs text-muted-foreground">Total courses</p>
+          <p className="text-xs text-muted-foreground">{t("totalCourses")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{activeCourses}</p>
-          <p className="text-xs text-muted-foreground">Active courses</p>
+          <p className="text-xs text-muted-foreground">{t("activeCourses")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totalAssignments}</p>
-          <p className="text-xs text-muted-foreground">Total assignments</p>
+          <p className="text-xs text-muted-foreground">{t("totalAssignments")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{completedAssignments}</p>
-          <p className="text-xs text-muted-foreground">Completed</p>
+          <p className="text-xs text-muted-foreground">{t("completed")}</p>
         </Card>
         <Card className={`border-border p-4 ${overdueAssignments > 0 ? "border-amber-300 bg-amber-50/40" : ""}`}>
           <p className="text-2xl font-bold text-foreground">{overdueAssignments}</p>
-          <p className="text-xs text-muted-foreground">Overdue</p>
+          <p className="text-xs text-muted-foreground">{t("overdue")}</p>
         </Card>
       </div>
 
       <Tabs defaultValue={tab || "courses"} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="courses">Courses</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
+          <TabsTrigger value="courses">{t("coursesTab")}</TabsTrigger>
+          <TabsTrigger value="assignments">{t("assignmentsTab")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="courses">
           <Card className="border-border">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Training Courses</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("trainingCourses")}</CardTitle>
                 {canManage && (
                   <Link href="/hr/training/courses" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-                    View All
+                    {t("viewAll")}
                   </Link>
                 )}
               </div>
             </CardHeader>
             <CardContent>
               {courses.length === 0 ? (
-                <EmptyState title="No training courses" description="Create your first training course" icon={BookOpen} />
+                <EmptyState title={t("noTrainingCourses")} description={t("noTrainingCoursesDesc")} icon={BookOpen} />
               ) : (
                 <div className="divide-y divide-border/60">
                   {courses.slice(0, 10).map((c) => (
@@ -149,11 +151,11 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
                         </div>
                         <div>
                           <p className="font-medium text-foreground">{c.title}</p>
-                          <p className="text-xs text-muted-foreground">{categoryLabel(c.category)}{c.requiredForJobTitle ? ` · Required for ${c.requiredForJobTitle}` : ""}</p>
+                          <p className="text-xs text-muted-foreground">{categoryLabel(c.category)}{c.requiredForJobTitle ? ` · ${t("requiredFor")} ${c.requiredForJobTitle}` : ""}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={c.active ? "default" : "outline"} className="text-[10px]">{c.active ? "Active" : "Inactive"}</Badge>
+                        <Badge variant={c.active ? "default" : "outline"} className="text-[10px]">{c.active ? t("active") : t("inactive")}</Badge>
                         <Eye className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </Link>
@@ -168,15 +170,15 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
           <Card className="border-border">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Training Assignments</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("trainingAssignments")}</CardTitle>
                 <Link href="/hr/training/assignments" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-                  View All
+                  {t("viewAll")}
                 </Link>
               </div>
             </CardHeader>
             <CardContent>
               {assignments.length === 0 ? (
-                <EmptyState title="No training assignments" description="Assign training to employees" icon={GraduationCap} />
+                <EmptyState title={t("noTrainingAssignments")} description={t("noTrainingAssignmentsDesc")} icon={GraduationCap} />
               ) : (
                 <div className="divide-y divide-border/60">
                   {assignments.slice(0, 10).map((a) => (
@@ -188,7 +190,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
                         <div>
                           <p className="font-medium text-foreground">{a.employee.fullName}</p>
                           <p className="text-xs text-muted-foreground">
-                            {a.course.title} · {a.dueDate ? `Due ${new Date(a.dueDate).toLocaleDateString()}` : "No due date"}
+                            {a.course.title} · {a.dueDate ? `${t("due")} ${new Date(a.dueDate).toLocaleDateString()}` : t("noDueDate")}
                           </p>
                         </div>
                       </div>

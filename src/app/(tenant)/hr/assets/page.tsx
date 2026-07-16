@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { canUseHrFeature } from "@/lib/hr/feature-gates";
 import { hasHrPermission, getManagedBranchIds } from "@/lib/hr/permissions";
 import { Package, Lock, Plus, Eye, ArrowRightLeft } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,7 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
   const { tab, status } = await searchParams;
+  const t = await getTranslations("hrAssets");
 
   const featureCheck = await canUseHrFeature(tid, "hr_assets");
   if (!featureCheck.allowed) {
@@ -25,8 +27,8 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">Asset Management requires Growth plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access asset management."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -85,17 +87,17 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Assets & Uniforms</h1>
-          <p className="text-sm text-muted-foreground">{totalCount} total assets · {availableCount} available · {activeAssignments} assigned</p>
+          <h1 className="text-lg font-bold text-foreground">{t("assetsAndUniforms")}</h1>
+          <p className="text-sm text-muted-foreground">{t("totalSummary", { total: totalCount, available: availableCount, assigned: activeAssignments })}</p>
         </div>
         <div className="flex items-center gap-2">
           {canManage && (
             <>
               <Link href="/hr/assets/assignments/new" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-                <ArrowRightLeft className="h-3.5 w-3.5" /> New Assignment
+                <ArrowRightLeft className="h-3.5 w-3.5" /> {t("newAssignment")}
               </Link>
               <Link href="/hr/assets/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-                <Plus className="h-3.5 w-3.5" /> Add Asset
+                <Plus className="h-3.5 w-3.5" /> {t("addAsset")}
               </Link>
             </>
           )}
@@ -105,51 +107,51 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
       <div className="grid gap-4 sm:grid-cols-6">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totalCount}</p>
-          <p className="text-xs text-muted-foreground">Total assets</p>
+          <p className="text-xs text-muted-foreground">{t("totalAssets")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{availableCount}</p>
-          <p className="text-xs text-muted-foreground">Available</p>
+          <p className="text-xs text-muted-foreground">{t("available")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{assignedCount}</p>
-          <p className="text-xs text-muted-foreground">Assigned</p>
+          <p className="text-xs text-muted-foreground">{t("assigned")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{lostCount}</p>
-          <p className="text-xs text-muted-foreground">Lost</p>
+          <p className="text-xs text-muted-foreground">{t("lost")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{damagedCount}</p>
-          <p className="text-xs text-muted-foreground">Damaged</p>
+          <p className="text-xs text-muted-foreground">{t("damaged")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{retiredCount}</p>
-          <p className="text-xs text-muted-foreground">Retired</p>
+          <p className="text-xs text-muted-foreground">{t("retired")}</p>
         </Card>
       </div>
 
       <Tabs defaultValue={tab || "catalog"} className="space-y-4">
         <TabsList>
-          <TabsTrigger value="catalog">Catalog</TabsTrigger>
-          <TabsTrigger value="assignments">Assignments</TabsTrigger>
+          <TabsTrigger value="catalog">{t("catalogTab")}</TabsTrigger>
+          <TabsTrigger value="assignments">{t("assignmentsTab")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="catalog">
           <Card className="border-border">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Asset Catalog</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("assetCatalog")}</CardTitle>
                 {canManage && (
                   <Link href="/hr/assets/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-                    <Plus className="h-3.5 w-3.5" /> Add Asset
+                    <Plus className="h-3.5 w-3.5" /> {t("addAsset")}
                   </Link>
                 )}
               </div>
             </CardHeader>
             <CardContent>
               {assets.length === 0 ? (
-                <EmptyState title="No assets" description="Add assets to track company equipment" icon={Package} />
+                <EmptyState title={t("noAssets")} description={t("noAssetsDesc")} icon={Package} />
               ) : (
                 <div className="divide-y divide-border/60">
                   {assets.map((a) => (
@@ -164,7 +166,7 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge variant={a.status === "AVAILABLE" ? "default" : "outline"} className={`text-[10px] ${statusColor(a.status)}`}>{a.status}</Badge>
+                        <Badge variant={a.status === "AVAILABLE" ? "default" : "outline"} className={`text-[10px] ${statusColor(a.status)}`}>{t(a.status.toLowerCase() as any)}</Badge>
                         <Eye className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </Link>
@@ -179,17 +181,17 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
           <Card className="border-border">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Assignments ({filteredAssignments.length})</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("assignmentsTitle")} ({filteredAssignments.length})</CardTitle>
                 {canManage && (
                   <Link href="/hr/assets/assignments/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-                    <Plus className="h-3.5 w-3.5" /> New Assignment
+                    <Plus className="h-3.5 w-3.5" /> {t("newAssignment")}
                   </Link>
                 )}
               </div>
             </CardHeader>
             <CardContent>
               {filteredAssignments.length === 0 ? (
-                <EmptyState title="No assignments" description="Assign assets to employees" icon={ArrowRightLeft} />
+                <EmptyState title={t("noAssignments")} description={t("noAssignmentsDesc")} icon={ArrowRightLeft} />
               ) : (
                 <div className="divide-y divide-border/60">
                   {filteredAssignments.map((aa) => (
@@ -202,7 +204,7 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
                           <p className="font-medium text-foreground">{aa.asset.name}</p>
                           <p className="text-xs text-muted-foreground">
                             {aa.employee.fullName} ({aa.employee.employeeCode}) · {new Date(aa.assignedAt).toLocaleDateString()}
-                            {aa.returnedAt && ` · Returned ${new Date(aa.returnedAt).toLocaleDateString()}`}
+                            {aa.returnedAt && ` · ${t("returned")} ${new Date(aa.returnedAt).toLocaleDateString()}`}
                           </p>
                         </div>
                       </div>

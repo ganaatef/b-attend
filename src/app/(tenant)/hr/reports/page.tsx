@@ -43,6 +43,8 @@ export default async function HRReportsPage({
   const tid = session.tenantId;
   const sp = await searchParams;
   const activeType = sp.type;
+  const t = await getTranslations("hrReports");
+  const th = await getTranslations("hrDashboard");
 
   const isBranchManager = session.role === "BRANCH_MANAGER";
   const canViewPayroll = !isBranchManager && hasPerm(session.role, "VIEW_PAYROLL");
@@ -56,8 +58,8 @@ export default async function HRReportsPage({
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">HR Reports require HR module</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access HR reports."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{th("requiresGrowthPlan")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{th("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -114,8 +116,8 @@ export default async function HRReportsPage({
   const reports: ReportCard[] = [
     {
       id: "employee-master",
-      title: "Employee Master Report",
-      description: "Complete employee directory with status, department, branch, and employment details.",
+      title: t("employeeMaster"),
+      description: t("employeeMasterDesc"),
       icon: Users,
       permission: null,
       featureGate: "hr_core",
@@ -125,8 +127,8 @@ export default async function HRReportsPage({
     },
     {
       id: "headcount",
-      title: "Headcount Report",
-      description: "Headcount summary grouped by branch, department, job title, and employment type.",
+      title: t("headcount"),
+      description: t("headcountDesc"),
       icon: BarChart3,
       permission: null,
       featureGate: "hr_core",
@@ -136,8 +138,8 @@ export default async function HRReportsPage({
     },
     {
       id: "contracts-expiry",
-      title: "Contracts Expiry Report",
-      description: "Active contracts nearing expiry with risk levels and days until expiry.",
+      title: t("contractsExpiry"),
+      description: t("contractsExpiryDesc"),
       icon: FileText,
       permission: "MANAGE_CONTRACTS",
       featureGate: "hr_core",
@@ -147,8 +149,8 @@ export default async function HRReportsPage({
     },
     {
       id: "documents-expiry",
-      title: "Documents Expiry Report",
-      description: "Employee documents with expiry dates and validity status.",
+      title: t("documentsExpiry"),
+      description: t("documentsExpiryDesc"),
       icon: ClipboardList,
       permission: "MANAGE_DOCUMENTS",
       featureGate: "hr_documents",
@@ -158,8 +160,8 @@ export default async function HRReportsPage({
     },
     {
       id: "missing-documents",
-      title: "Missing Documents Report",
-      description: "Employees with missing required documents.",
+      title: t("missingDocuments"),
+      description: t("missingDocumentsDesc"),
       icon: ClipboardList,
       permission: "MANAGE_DOCUMENTS",
       featureGate: "hr_documents",
@@ -169,8 +171,8 @@ export default async function HRReportsPage({
     },
     {
       id: "leave-balance",
-      title: "Leave Balance Report",
-      description: "Leave balances by employee, leave type, and year with usage summary.",
+      title: t("leaveBalance"),
+      description: t("leaveBalanceDesc"),
       icon: CalendarDays,
       permission: null,
       featureGate: "hr_leave",
@@ -180,8 +182,8 @@ export default async function HRReportsPage({
     },
     {
       id: "leave-usage",
-      title: "Leave Usage Report",
-      description: "Leave request history with approval status and duration details.",
+      title: t("leaveUsage"),
+      description: t("leaveUsageDesc"),
       icon: CalendarDays,
       permission: null,
       featureGate: "hr_leave",
@@ -191,8 +193,8 @@ export default async function HRReportsPage({
     },
     {
       id: "warnings",
-      title: "Warnings Report",
-      description: "Employee warnings by type, severity, and status with acknowledgment tracking.",
+      title: t("warnings"),
+      description: t("warningsDesc"),
       icon: AlertTriangle,
       permission: "MANAGE_WARNINGS",
       featureGate: "hr_core",
@@ -202,8 +204,8 @@ export default async function HRReportsPage({
     },
     {
       id: "training",
-      title: "Training Report",
-      description: "Training assignments, completion rates, scores, and overdue tracking.",
+      title: t("training"),
+      description: t("trainingDesc"),
       icon: GraduationCap,
       permission: "MANAGE_TRAINING",
       featureGate: "hr_training",
@@ -213,8 +215,8 @@ export default async function HRReportsPage({
     },
     {
       id: "assets",
-      title: "Assets Report",
-      description: "Asset inventory with assignment status, conditions, and employee allocation.",
+      title: t("assets"),
+      description: t("assetsDesc"),
       icon: Package,
       permission: "MANAGE_ASSETS",
       featureGate: "hr_assets",
@@ -224,8 +226,8 @@ export default async function HRReportsPage({
     },
     {
       id: "onboarding",
-      title: "Onboarding Report",
-      description: "Onboarding task progress with completion rates and overdue tracking.",
+      title: t("onboarding"),
+      description: t("onboardingDesc"),
       icon: UserPlus,
       permission: "MANAGE_ONBOARDING",
       featureGate: "hr_core",
@@ -235,8 +237,8 @@ export default async function HRReportsPage({
     },
     {
       id: "offboarding",
-      title: "Offboarding Report",
-      description: "Offboarding task progress with finalization status and access disabling.",
+      title: t("offboarding"),
+      description: t("offboardingDesc"),
       icon: UserMinus,
       permission: "MANAGE_OFFBOARDING",
       featureGate: "hr_core",
@@ -246,8 +248,8 @@ export default async function HRReportsPage({
     },
     {
       id: "payroll-profiles",
-      title: "Payroll Profile Report",
-      description: "Payroll profiles with salary types, payment methods, and active status.",
+      title: t("payrollProfiles"),
+      description: t("payrollProfilesDesc"),
       icon: Wallet,
       permission: "VIEW_PAYROLL",
       featureGate: "hr_payroll",
@@ -257,8 +259,8 @@ export default async function HRReportsPage({
     },
     {
       id: "payroll-runs",
-      title: "Payroll Run Summary Report",
-      description: "Payroll run history with status, totals, approval, and lock tracking.",
+      title: t("payrollRuns"),
+      description: t("payrollRunsDesc"),
       icon: CreditCard,
       permission: "VIEW_PAYROLL",
       featureGate: "hr_payroll",
@@ -276,8 +278,6 @@ export default async function HRReportsPage({
     if (r.permission && !hasPerm(session.role, r.permission)) return false;
     return true;
   });
-
-  const t = await getTranslations("hrReports");
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
@@ -342,8 +342,8 @@ export default async function HRReportsPage({
 
       {visibleReports.length === 0 && (
         <EmptyState
-          title="No reports available"
-          description="You don't have permission to view any HR reports."
+          title={t("noReports")}
+          description={t("noReportsDesc")}
           icon={FileBarChart}
         />
       )}

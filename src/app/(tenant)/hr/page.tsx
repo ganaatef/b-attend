@@ -62,6 +62,8 @@ export default async function HrDashboardPage() {
 
   const canViewPayroll = isOwnerOrHrAdmin;
   const canViewSensitive = isOwnerOrHrAdmin;
+  const canManageTraining = isOwnerOrHrAdmin || (await hasHrPermission("MANAGE_TRAINING"));
+  const canManageAssets = isOwnerOrHrAdmin || (await hasHrPermission("MANAGE_ASSETS"));
 
   const thirtyDays = new Date();
   thirtyDays.setDate(thirtyDays.getDate() + 30);
@@ -109,12 +111,12 @@ export default async function HrDashboardPage() {
     { key: "pendingLeave", value: pendingLeaveRequests, icon: FileText, sub: t("pendingLeaveSub"), highlight: pendingLeaveRequests > 0, alwaysShow: true },
     { key: "contractsExpiring", value: contractsExpiring, icon: AlertTriangle, sub: t("contractsExpiringSub"), highlight: contractsExpiring > 0, sensitive: true },
     { key: "documentsExpiring", value: documentsExpiring, icon: FileText, sub: t("documentsExpiringSub"), highlight: documentsExpiring > 0, sensitive: true },
-    { key: "trainingOverdue", value: trainingOverdue, icon: GraduationCap, sub: t("trainingOverdueSub"), highlight: trainingOverdue > 0, alwaysShow: true },
-    { key: "assetsAssigned", value: assetsAssigned, icon: Package, sub: t("assetsAssignedSub"), alwaysShow: true },
+    { key: "trainingOverdue", value: trainingOverdue, icon: GraduationCap, sub: t("trainingOverdueSub"), highlight: trainingOverdue > 0, show: canManageTraining },
+    { key: "assetsAssigned", value: assetsAssigned, icon: Package, sub: t("assetsAssignedSub"), show: canManageAssets },
     { key: "onboardingPending", value: onboardingPending, icon: UserPlus, sub: t("onboardingPendingSub"), sensitive: true },
     { key: "openWarnings", value: openWarnings, icon: AlertTriangle, sub: t("openWarningsSub"), highlight: openWarnings > 0, sensitive: true },
     { key: "criticalWarnings", value: criticalWarnings, icon: AlertTriangle, sub: t("criticalWarningsSub"), highlight: criticalWarnings > 0, sensitive: true },
-    { key: "trainingDueSoon", value: trainingDueSoon, icon: GraduationCap, sub: t("trainingDueSoonSub"), highlight: trainingDueSoon > 0, alwaysShow: true },
+    { key: "trainingDueSoon", value: trainingDueSoon, icon: GraduationCap, sub: t("trainingDueSoonSub"), highlight: trainingDueSoon > 0, show: canManageTraining },
     { key: "lostDamagedAssets", value: lostDamagedAssets, icon: Package, sub: t("lostDamagedAssetsSub"), highlight: lostDamagedAssets > 0, sensitive: true },
     { key: "offboarding", value: offboardingInProgress, icon: UserMinus, sub: t("offboardingSub"), sensitive: true },
     { key: "latestPayroll", value: latestPayrollRun ? latestPayrollRun.status : "—", icon: CreditCard, sub: latestPayrollRun ? `${latestPayrollRun.month}/${latestPayrollRun.year}` : t("noRunsYet"), sensitive: true },
@@ -126,7 +128,11 @@ export default async function HrDashboardPage() {
     ] : []),
   ];
 
-  const visibleCards = cards.filter((c) => canViewSensitive || c.alwaysShow);
+  const visibleCards = cards.filter((c) => {
+    if (c.sensitive) return canViewSensitive;
+    if (c.show === false) return false;
+    return true;
+  });
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
@@ -210,16 +216,20 @@ export default async function HrDashboardPage() {
                 <p className="text-[10px] text-muted-foreground">{t("qlWarningsSub", { count: openWarnings })}</p>
               </Link>
             )}
-            <Link href="/hr/training" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
-              <GraduationCap className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">{t("qlTraining")}</p>
-              <p className="text-[10px] text-muted-foreground">{t("qlTrainingSub", { count: trainingOverdue })}</p>
-            </Link>
-            <Link href="/hr/assets" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
-              <Package className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">{t("qlAssets")}</p>
-              <p className="text-[10px] text-muted-foreground">{t("qlAssetsSub", { count: assetsAssigned })}</p>
-            </Link>
+            {canManageTraining && (
+              <Link href="/hr/training" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
+                <GraduationCap className="h-4 w-4 text-brand-accent" />
+                <p className="mt-1 font-medium text-foreground">{t("qlTraining")}</p>
+                <p className="text-[10px] text-muted-foreground">{t("qlTrainingSub", { count: trainingOverdue })}</p>
+              </Link>
+            )}
+            {canManageAssets && (
+              <Link href="/hr/assets" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
+                <Package className="h-4 w-4 text-brand-accent" />
+                <p className="mt-1 font-medium text-foreground">{t("qlAssets")}</p>
+                <p className="text-[10px] text-muted-foreground">{t("qlAssetsSub", { count: assetsAssigned })}</p>
+              </Link>
+            )}
             {canViewSensitive && (
               <>
                 <Link href="/hr/onboarding" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
@@ -270,10 +280,12 @@ export default async function HrDashboardPage() {
                   <span className={`font-medium ${documentsExpiring > 0 ? "text-amber-600" : "text-foreground"}`}>{documentsExpiring}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">{t("ovTrainingOverdue")}</span>
-                <span className={`font-medium ${trainingOverdue > 0 ? "text-amber-600" : "text-foreground"}`}>{trainingOverdue}</span>
-              </div>
+              {canManageTraining && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovTrainingOverdue")}</span>
+                  <span className={`font-medium ${trainingOverdue > 0 ? "text-amber-600" : "text-foreground"}`}>{trainingOverdue}</span>
+                </div>
+              )}
               {canViewSensitive && (
                 <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                   <span className="text-muted-foreground">{t("ovOpenWarnings")}</span>
@@ -286,10 +298,12 @@ export default async function HrDashboardPage() {
                   <span className={`font-medium ${criticalWarnings > 0 ? "text-amber-600" : "text-foreground"}`}>{criticalWarnings}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                <span className="text-muted-foreground">{t("ovTrainingDueSoon")}</span>
-                <span className={`font-medium ${trainingDueSoon > 0 ? "text-amber-600" : "text-foreground"}`}>{trainingDueSoon}</span>
-              </div>
+              {canManageTraining && (
+                <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
+                  <span className="text-muted-foreground">{t("ovTrainingDueSoon")}</span>
+                  <span className={`font-medium ${trainingDueSoon > 0 ? "text-amber-600" : "text-foreground"}`}>{trainingDueSoon}</span>
+                </div>
+              )}
               {canViewSensitive && (
                 <div className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                   <span className="text-muted-foreground">{t("ovLostDamagedAssets")}</span>

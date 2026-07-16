@@ -147,7 +147,10 @@
     font-family: var(--font-geist-sans), system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  html[dir="rtl"],
   html[dir="rtl"] body,
+  html[lang="ar"],
+  html[lang="ar"] body,
   html[dir="rtl"] button,
   html[dir="rtl"] input,
   html[dir="rtl"] select,
@@ -172,7 +175,7 @@
   html[dir="rtl"] main,
   html[dir="rtl"] aside,
   html[dir="rtl"] section {
-    font-family: var(--font-cairo), system-ui, sans-serif;
+    font-family: var(--font-cairo), Cairo, system-ui, sans-serif !important;
   }
   /* Subtle brand scrollbar for long lists */
   .battend-scroll::-webkit-scrollbar {
