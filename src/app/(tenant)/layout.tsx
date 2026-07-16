@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { AppShell, type AppShellSession } from "@/components/layout/AppShell";
 import { Suspense } from "react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -16,25 +17,25 @@ export default async function TenantLayout({ children }: { children: React.React
     redirect("/login?next=/dashboard");
   }
 
-  // Load subscription for the banner
+  const t = await getTranslations("tenant");
+
   const tenant = await db.tenant.findUnique({
     where: { id: session.tenantId },
     include: { subscription: true },
   });
   if (!tenant) redirect("/login?next=/dashboard");
 
-  // If tenant is PENDING_ACTIVATION or REJECTED, show activation screen
   if (tenant.status === "PENDING_ACTIVATION" || tenant.status === "REJECTED") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-6">
         <div className="max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
-          <h1 className="text-lg font-bold text-foreground">Your account is being reviewed</h1>
+          <h1 className="text-lg font-bold text-foreground">{t("accountReview")}</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            Our team is reviewing your signup request. You will receive an email at <span className="font-medium text-foreground">{tenant.ownerEmail}</span> once your account is activated.
+            {t("accountReviewDesc", { email: tenant.ownerEmail })}
           </p>
-          <p className="mt-4 text-xs text-muted-foreground">Status: {tenant.status.replace(/_/g, " ")}</p>
+          <p className="mt-4 text-xs text-muted-foreground">{t("status")}: {tenant.status.replace(/_/g, " ")}</p>
           <form action="/api/auth/logout" method="post" className="mt-4">
-            <button type="submit" className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted">Sign out</button>
+            <button type="submit" className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted">{t("signOut")}</button>
           </form>
         </div>
       </div>
@@ -52,7 +53,7 @@ export default async function TenantLayout({ children }: { children: React.React
 
   return (
     <AppShell session={appShellSession}>
-      <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">Loading...</div>}>{children}</Suspense>
+      <Suspense fallback={<div className="p-4 text-sm text-muted-foreground">{t("loading")}</div>}>{children}</Suspense>
     </AppShell>
   );
 }

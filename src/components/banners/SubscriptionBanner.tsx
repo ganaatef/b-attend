@@ -1,11 +1,10 @@
 /**
  * Subscription banner — shown at top of authenticated pages.
- * Phase 1: renders based on subscription status passed from server.
- * Phase 2+: full integration with grace period, trial days, etc.
  */
 import Link from "next/link";
 import { AlertTriangle, Clock, CreditCard, PauseCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getTranslations } from "next-intl/server";
 
 interface SubscriptionBannerProps {
   status: string;
@@ -13,8 +12,10 @@ interface SubscriptionBannerProps {
   className?: string;
 }
 
-export function SubscriptionBanner({ status, trialEndsAt, className }: SubscriptionBannerProps) {
+export async function SubscriptionBanner({ status, trialEndsAt, className }: SubscriptionBannerProps) {
   if (!status || status === "ACTIVE") return null;
+
+  const t = await getTranslations("subscription");
 
   let icon = <Clock className="h-4 w-4" />;
   let message = "";
@@ -23,23 +24,23 @@ export function SubscriptionBanner({ status, trialEndsAt, className }: Subscript
   if (status === "TRIALING" && trialEndsAt) {
     const days = Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24)));
     icon = <Clock className="h-4 w-4" />;
-    message = `Trial active — ${days} day${days === 1 ? "" : "s"} remaining.`;
+    message = t("trialActive", { days });
     tone = "info";
   } else if (status === "PENDING_ACTIVATION" || status === "PENDING_PAYMENT") {
     icon = <Clock className="h-4 w-4" />;
-    message = "Your account is pending activation. Our team will reach out shortly.";
+    message = t("pendingActivation");
     tone = "info";
   } else if (status === "PAST_DUE" || status === "GRACE_PERIOD" || status === "MANUAL_REVIEW") {
     icon = <AlertTriangle className="h-4 w-4" />;
-    message = "Payment pending — please complete payment to avoid suspension.";
+    message = t("pastDue");
     tone = "warning";
   } else if (status === "SUSPENDED") {
     icon = <PauseCircle className="h-4 w-4" />;
-    message = "Account suspended. Clock-in/out is disabled. Visit billing to reactivate.";
+    message = t("suspended");
     tone = "danger";
   } else if (status === "CANCELLED") {
     icon = <PauseCircle className="h-4 w-4" />;
-    message = "Account cancelled — read-only mode.";
+    message = t("cancelled");
     tone = "danger";
   }
 
@@ -63,7 +64,7 @@ export function SubscriptionBanner({ status, trialEndsAt, className }: Subscript
           className="inline-flex items-center gap-1 rounded-md bg-card/70 px-2.5 py-1 text-xs font-semibold text-foreground hover:bg-card"
         >
           <CreditCard className="h-3.5 w-3.5" />
-          Billing
+          {t("billing")}
         </Link>
       )}
     </div>

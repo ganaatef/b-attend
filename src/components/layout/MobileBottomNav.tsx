@@ -2,23 +2,24 @@
 
 /**
  * Mobile bottom nav — shown on screens < md.
- * Highlights the active route based on pathname prefix.
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { LayoutDashboard, Clock, CalendarDays, CheckSquare, User as UserIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
-  { href: "/dashboard", label: "Home", icon: LayoutDashboard },
-  { href: "/today", label: "Today", icon: Clock },
-  { href: "/schedules", label: "Schedules", icon: CalendarDays },
-  { href: "/approvals", label: "Requests", icon: CheckSquare },
-  { href: "/profile", label: "Profile", icon: UserIcon },
+  { href: "/dashboard", labelKey: "home" as const, icon: LayoutDashboard },
+  { href: "/today", labelKey: "today" as const, icon: Clock },
+  { href: "/schedules", labelKey: "schedules" as const, icon: CalendarDays },
+  { href: "/approvals", labelKey: "requests" as const, icon: CheckSquare },
+  { href: "/profile", labelKey: "profile" as const, icon: UserIcon },
 ];
 
 export function MobileBottomNav() {
   const pathname = usePathname();
+  const t = useTranslations("mobileNav");
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 flex h-16 items-center justify-around border-t border-border bg-background/95 backdrop-blur md:hidden">
       {items.map((it) => {
@@ -34,7 +35,7 @@ export function MobileBottomNav() {
             )}
           >
             <Icon className="h-5 w-5" />
-            <span>{it.label}</span>
+            <span>{t(it.labelKey)}</span>
           </Link>
         );
       })}

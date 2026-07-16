@@ -1,8 +1,3 @@
-// ===================================================================
-// LoginForm — client form for /login.
-// Uses loginAction server action.
-// ===================================================================
-
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -10,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useActionState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Form, TextField } from "@/components/forms/fields";
 import { loginSchema, type LoginInput } from "@/lib/validations";
@@ -21,6 +17,7 @@ export function LoginForm() {
   const sp = useSearchParams();
   const reason = sp.get("reason");
   const next = sp.get("next");
+  const t = useTranslations("auth");
 
   const [state, formAction, pending] = useActionState<LoginState, FormData>(
     loginAction,
@@ -45,11 +42,11 @@ export function LoginForm() {
 
   const reasonBanner =
     reason === "unauthenticated"
-      ? "Please sign in to continue."
+      ? t("pleaseSignIn")
       : reason === "loggedout"
-        ? "You have been signed out."
+        ? t("signedOut")
         : reason === "forbidden"
-          ? "You don't have permission to access that page."
+          ? t("noPermission")
           : null;
 
   return (
@@ -68,7 +65,7 @@ export function LoginForm() {
         <TextField
           control={form.control}
           name="email"
-          label="Email"
+          label={t("email")}
           type="email"
           placeholder="you@company.com"
           required
@@ -77,9 +74,9 @@ export function LoginForm() {
         <TextField
           control={form.control}
           name="password"
-          label="Password"
+          label={t("password")}
           type="password"
-          placeholder="Your password"
+          placeholder="••••••••"
           required
           autoComplete="current-password"
         />
@@ -98,7 +95,7 @@ export function LoginForm() {
           size="lg"
         >
           <LogIn className="mr-2 h-4 w-4" />
-          {pending ? "Signing in…" : "Sign in"}
+          {pending ? t("signingIn") : t("signInButton")}
         </Button>
       </form>
     </Form>

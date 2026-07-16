@@ -2,12 +2,14 @@
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { ClockPage } from "./ClockPage";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function ClockRoute() {
   const session = await getSession();
   if (!session?.tenantId) return null;
+  const t = await getTranslations("clock");
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 

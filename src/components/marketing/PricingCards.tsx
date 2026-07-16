@@ -1,15 +1,10 @@
-// ===================================================================
-// PricingCards — server component that reads plans from the DB and
-// renders the pricing card grid. Used by /pricing and the landing
-// page pricing preview.
-// ===================================================================
-
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { Check, Sparkles } from "lucide-react";
 import { cn, formatCurrency } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { getTranslations } from "next-intl/server";
 
 export async function PricingCards({
   showAll = true,
@@ -18,6 +13,8 @@ export async function PricingCards({
   showAll?: boolean;
   limit?: number;
 }) {
+  const t = await getTranslations("pricing");
+
   let plans = await db.plan.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
@@ -45,7 +42,7 @@ export async function PricingCards({
           >
             {isPopular ? (
               <span className="absolute -top-3 left-1/2 -translate-x-1/2">
-                <Badge className="bg-brand-accent text-white">Most popular</Badge>
+                <Badge className="bg-brand-accent text-white">{t("mostPopular")}</Badge>
               </span>
             ) : null}
             <div className="mb-4">
@@ -60,24 +57,24 @@ export async function PricingCards({
             <div className="mb-5">
               {isCustom ? (
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-foreground">Custom</span>
+                  <span className="text-3xl font-bold text-foreground">{t("custom")}</span>
                 </div>
               ) : isTrial ? (
                 <div className="flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-foreground">Free</span>
-                  <span className="text-sm text-muted-foreground">14 days</span>
+                  <span className="text-3xl font-bold text-foreground">{t("free")}</span>
+                  <span className="text-sm text-muted-foreground">{t("trialDays")}</span>
                 </div>
               ) : (
                 <div className="flex items-baseline gap-1">
                   <span className="text-3xl font-bold text-foreground">
                     {formatCurrency(plan.priceMonthly, plan.currency)}
                   </span>
-                  <span className="text-sm text-muted-foreground">/mo</span>
+                  <span className="text-sm text-muted-foreground">{t("perMonth")}</span>
                 </div>
               )}
               {!isCustom && !isTrial && plan.priceAnnual > 0 ? (
                 <p className="mt-1 text-xs text-muted-foreground">
-                  or {formatCurrency(plan.priceAnnual, plan.currency)}/yr
+                  {t("orAnnual", { price: formatCurrency(plan.priceAnnual, plan.currency) })}
                 </p>
               ) : null}
               {plan.description ? (
@@ -90,19 +87,19 @@ export async function PricingCards({
             <div className="mb-5 grid grid-cols-2 gap-2 text-xs text-foreground/80">
               <div>
                 <div className="font-semibold">{plan.maxBranches}</div>
-                <div className="text-muted-foreground">Branches</div>
+                <div className="text-muted-foreground">{t("branchesPlural")}</div>
               </div>
               <div>
                 <div className="font-semibold">{plan.maxEmployees}</div>
-                <div className="text-muted-foreground">Employees</div>
+                <div className="text-muted-foreground">{t("employeesPlural")}</div>
               </div>
               <div>
                 <div className="font-semibold">{plan.maxManagers}</div>
-                <div className="text-muted-foreground">Managers</div>
+                <div className="text-muted-foreground">{t("managersPlural")}</div>
               </div>
               <div>
                 <div className="font-semibold">{plan.maxKiosks}</div>
-                <div className="text-muted-foreground">Kiosks</div>
+                <div className="text-muted-foreground">{t("kiosksPlural")}</div>
               </div>
             </div>
 
@@ -120,12 +117,12 @@ export async function PricingCards({
                 <Button asChild variant="outline" className="w-full">
                   <Link href="/contact?plan=enterprise">
                     <Sparkles className="mr-2 h-4 w-4" />
-                    Contact sales
+                    {t("contactSales")}
                   </Link>
                 </Button>
               ) : isTrial ? (
                 <Button asChild className="w-full bg-brand-navy hover:bg-brand-navy/90">
-                  <Link href="/signup?plan=trial">Start free trial</Link>
+                  <Link href="/signup?plan=trial">{t("startTrial")}</Link>
                 </Button>
               ) : (
                 <Button
@@ -137,7 +134,7 @@ export async function PricingCards({
                       : "bg-brand-navy hover:bg-brand-navy/90",
                   )}
                 >
-                  <Link href={`/signup?plan=${plan.slug}`}>Choose {plan.name}</Link>
+                  <Link href={`/signup?plan=${plan.slug}`}>{t("choosePlan", { plan: plan.name })}</Link>
                 </Button>
               )}
             </div>

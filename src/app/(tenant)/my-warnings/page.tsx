@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { AlertTriangle } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyWarningsPage() {
+  const t = await getTranslations("myWarnings");
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
 
@@ -18,12 +20,12 @@ export default async function MyWarningsPage() {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         <div>
-          <h1 className="text-lg font-bold text-foreground">My Warnings</h1>
-          <p className="text-sm text-muted-foreground">View warnings issued to you.</p>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Card>
           <CardContent className="py-6">
-            <p className="text-center text-sm text-muted-foreground">Your user is not linked to an employee record. Contact HR.</p>
+            <p className="text-center text-sm text-muted-foreground">{t("noLinkedEmployee")}</p>
           </CardContent>
         </Card>
       </div>
@@ -47,13 +49,13 @@ export default async function MyWarningsPage() {
   const statusBadge = (status: string) => {
     switch (status) {
       case "OPEN":
-        return <Badge variant="destructive">Open</Badge>;
+        return <Badge variant="destructive">{t("open")}</Badge>;
       case "ACKNOWLEDGED":
-        return <Badge variant="default" className="bg-amber-500 text-white border-transparent">Acknowledged</Badge>;
+        return <Badge variant="default" className="bg-amber-500 text-white border-transparent">{t("acknowledged")}</Badge>;
       case "RESOLVED":
-        return <Badge variant="default" className="bg-brand-success text-white border-transparent">Resolved</Badge>;
+        return <Badge variant="default" className="bg-brand-success text-white border-transparent">{t("resolved")}</Badge>;
       case "CANCELLED":
-        return <Badge variant="outline">Cancelled</Badge>;
+        return <Badge variant="outline">{t("cancelled")}</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
@@ -62,13 +64,13 @@ export default async function MyWarningsPage() {
   const severityBadge = (severity: string) => {
     switch (severity) {
       case "CRITICAL":
-        return <Badge variant="destructive">Critical</Badge>;
+        return <Badge variant="destructive">{t("critical")}</Badge>;
       case "HIGH":
-        return <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">High</Badge>;
+        return <Badge variant="outline" className="bg-red-50 text-red-600 border-red-200">{t("high")}</Badge>;
       case "MEDIUM":
-        return <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">Medium</Badge>;
+        return <Badge variant="outline" className="bg-amber-50 text-amber-600 border-amber-200">{t("medium")}</Badge>;
       case "LOW":
-        return <Badge variant="outline">Low</Badge>;
+        return <Badge variant="outline">{t("low")}</Badge>;
       default:
         return <Badge variant="outline">{severity}</Badge>;
     }
@@ -83,11 +85,11 @@ export default async function MyWarningsPage() {
 
       <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-foreground">Warnings ({warnings.length})</CardTitle>
+          <CardTitle className="text-sm font-semibold text-foreground">{t("warningsCount", { count: warnings.length })}</CardTitle>
         </CardHeader>
         <CardContent>
           {warnings.length === 0 ? (
-            <EmptyState title="No warnings" icon={AlertTriangle} />
+            <EmptyState title={t("noWarnings")} icon={AlertTriangle} />
           ) : (
             <div className="space-y-3">
               {warnings.map((w) => (
@@ -102,11 +104,11 @@ export default async function MyWarningsPage() {
                   </div>
                   {w.reason && <p className="mt-1 text-xs text-muted-foreground">{w.reason}</p>}
                   {w.acknowledgedByEmployee && w.acknowledgedAt && (
-                    <p className="mt-1 text-[10px] text-muted-foreground">Acknowledged on {new Date(w.acknowledgedAt).toLocaleDateString()}</p>
+                    <p className="mt-1 text-[10px] text-muted-foreground">{t("acknowledgedOn", { date: new Date(w.acknowledgedAt).toLocaleDateString() })}</p>
                   )}
                   {w.status === "OPEN" && !w.acknowledgedByEmployee && (
                     <div className="mt-2 space-y-1">
-                      <p className="text-[10px] text-muted-foreground">Acknowledgment confirms the warning was viewed, not necessarily accepted.</p>
+                      <p className="text-[10px] text-muted-foreground">{t("acknowledgeNote")}</p>
                       <form action={async (formData: FormData) => {
                         "use server";
                         const warningId = formData.get("warningId") as string;
@@ -115,7 +117,7 @@ export default async function MyWarningsPage() {
                       }}>
                         <input type="hidden" name="warningId" value={w.id} />
                         <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-                          Acknowledge
+                          {t("acknowledge")}
                         </button>
                       </form>
                     </div>

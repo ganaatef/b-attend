@@ -1,8 +1,5 @@
 "use client";
 
-/**
- * /contact form — uses the contactAction Server Action via useFormState.
- */
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
@@ -13,34 +10,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Loader2 } from "lucide-react";
-
-const businessTypes: { value: string; label: string }[] = [
-  { value: "RESTAURANT", label: "Restaurant" },
-  { value: "CAFE", label: "Cafe" },
-  { value: "CLOUD_KITCHEN", label: "Cloud kitchen" },
-  { value: "CENTRAL_KITCHEN", label: "Central kitchen" },
-  { value: "RETAIL_CHAIN", label: "Retail chain" },
-  { value: "GYM", label: "Gym / Fitness" },
-  { value: "CLINIC", label: "Clinic / Pharmacy" },
-  { value: "WAREHOUSE", label: "Warehouse" },
-  { value: "SECURITY_COMPANY", label: "Security company" },
-  { value: "CLEANING_COMPANY", label: "Cleaning company" },
-  { value: "MULTI_BRANCH_OPS", label: "Multi-branch operations" },
-  { value: "OTHER", label: "Other" },
-];
+import { useTranslations } from "next-intl";
 
 const initialState: ContactState = { ok: false };
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("contact");
   return (
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
       {pending ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Sending...
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("submitting")}
         </>
       ) : (
-        "Send message"
+        t("submit")
       )}
     </Button>
   );
@@ -48,14 +32,31 @@ function SubmitButton() {
 
 export function ContactForm() {
   const [state, formAction] = useActionState<ContactState, FormData>(contactAction, initialState);
+  const t = useTranslations("contact");
+  const tBusiness = useTranslations("businessTypes");
+
+  const businessTypes: { value: string; label: string }[] = [
+    { value: "RESTAURANT", label: tBusiness("RESTAURANT") },
+    { value: "CAFE", label: tBusiness("CAFE") },
+    { value: "CLOUD_KITCHEN", label: tBusiness("CLOUD_KITCHEN") },
+    { value: "CENTRAL_KITCHEN", label: tBusiness("CENTRAL_KITCHEN") },
+    { value: "RETAIL_CHAIN", label: tBusiness("RETAIL_CHAIN") },
+    { value: "GYM", label: tBusiness("GYM") },
+    { value: "CLINIC", label: tBusiness("CLINIC") },
+    { value: "WAREHOUSE", label: tBusiness("WAREHOUSE") },
+    { value: "SECURITY_COMPANY", label: tBusiness("SECURITY_COMPANY") },
+    { value: "CLEANING_COMPANY", label: tBusiness("CLEANING_COMPANY") },
+    { value: "MULTI_BRANCH_OPS", label: tBusiness("MULTI_BRANCH_OPS") },
+    { value: "OTHER", label: tBusiness("OTHER") },
+  ];
 
   if (state.ok) {
     return (
       <div className="rounded-lg border border-brand-success/30 bg-brand-success/5 p-6 text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-brand-success" />
-        <h2 className="mt-3 text-base font-semibold text-foreground">Thanks — we received your message</h2>
+        <h2 className="mt-3 text-base font-semibold text-foreground">{t("successTitle")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Our team will get back to you within one business day.
+          {t("successDesc")}
         </p>
       </div>
     );
@@ -67,24 +68,24 @@ export function ContactForm() {
     <form action={formAction} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="name">Full name *</Label>
+          <Label htmlFor="name">{t("fullName")}</Label>
           <Input id="name" name="name" placeholder="Ahmed Mansour" required />
           {fe.name ? <p className="mt-1 text-xs text-destructive">{fe.name}</p> : null}
         </div>
         <div>
-          <Label htmlFor="company">Company</Label>
+          <Label htmlFor="company">{t("company")}</Label>
           <Input id="company" name="company" placeholder="Cairo Bite Chain" />
         </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="phone">Phone *</Label>
+          <Label htmlFor="phone">{t("phone")}</Label>
           <Input id="phone" name="phone" type="tel" placeholder="+20 100 123 4567" required />
           {fe.phone ? <p className="mt-1 text-xs text-destructive">{fe.phone}</p> : null}
         </div>
         <div>
-          <Label htmlFor="email">Email *</Label>
+          <Label htmlFor="email">{t("email")}</Label>
           <Input id="email" name="email" type="email" placeholder="ahmed@example.com" required />
           {fe.email ? <p className="mt-1 text-xs text-destructive">{fe.email}</p> : null}
         </div>
@@ -92,10 +93,10 @@ export function ContactForm() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
-          <Label htmlFor="businessType">Business type</Label>
+          <Label htmlFor="businessType">{t("businessType")}</Label>
           <Select name="businessType">
             <SelectTrigger id="businessType">
-              <SelectValue placeholder="Select" />
+              <SelectValue placeholder={t("select")} />
             </SelectTrigger>
             <SelectContent>
               {businessTypes.map((b) => (
@@ -105,22 +106,22 @@ export function ContactForm() {
           </Select>
         </div>
         <div>
-          <Label htmlFor="employeesCount">Employees</Label>
+          <Label htmlFor="employeesCount">{t("employees")}</Label>
           <Input id="employeesCount" name="employeesCount" type="number" min={0} placeholder="30" />
         </div>
         <div>
-          <Label htmlFor="branchesCount">Branches</Label>
+          <Label htmlFor="branchesCount">{t("branches")}</Label>
           <Input id="branchesCount" name="branchesCount" type="number" min={0} placeholder="3" />
         </div>
       </div>
 
       <div>
-        <Label htmlFor="message">Message *</Label>
+        <Label htmlFor="message">{t("message")}</Label>
         <Textarea
           id="message"
           name="message"
           rows={5}
-          placeholder="Tell us what you need: number of branches, employees, scheduling complexity, etc."
+          placeholder={t("messagePlaceholder")}
           required
         />
         {fe.message ? <p className="mt-1 text-xs text-destructive">{fe.message}</p> : null}
@@ -136,13 +137,14 @@ export function ContactForm() {
 }
 
 export default function ContactPage() {
+  const t = useTranslations("contact");
   return (
     <PublicLayout>
       <section className="border-b border-border bg-gradient-to-b from-card to-background">
         <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">Talk to us</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{t("title")}</h1>
           <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-            Sales, support, partnerships — we read every message.
+            {t("subtitle")}
           </p>
         </div>
       </section>
@@ -153,11 +155,11 @@ export default function ContactPage() {
           </div>
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Support</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("supportLabel")}</p>
               <p className="mt-1 text-sm font-medium text-foreground">support@b-attend.app</p>
             </div>
             <div className="rounded-lg border border-border bg-card p-4">
-              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Billing</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("billingLabel")}</p>
               <p className="mt-1 text-sm font-medium text-foreground">billing@b-attend.app</p>
             </div>
           </div>

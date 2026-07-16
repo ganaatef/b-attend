@@ -7,14 +7,16 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { UserForm } from "./UserForm";
 import { Users } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
+  const t = await getTranslations("users");
   const session = await getSession();
   if (!session?.tenantId) return null;
   if (session.role !== "COMPANY_OWNER" && session.role !== "HR_ADMIN") {
-    return <div className="p-4 text-sm text-muted-foreground">User management is only available to owners and HR admins.</div>;
+    return <div className="p-4 text-sm text-muted-foreground">{t("accessDenied")}</div>;
   }
   const [users, branches] = await Promise.all([
     db.user.findMany({ where: { companyId: session.tenantId }, include: { employee: true }, orderBy: { createdAt: "desc" } }),
@@ -23,22 +25,22 @@ export default async function UsersPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <div><h1 className="text-lg font-bold text-foreground">Users</h1><p className="text-sm text-muted-foreground">{users.length} users in your company.</p></div>
+      <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("count", { count: users.length })}</p></div>
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Invite new user</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("inviteNewUser")}</CardTitle></CardHeader>
         <CardContent><UserForm branches={branches} /></CardContent>
       </Card>
       <Card className="border-border">
-        {users.length === 0 ? <EmptyState title="No users yet" icon={Users} /> : (
+        {users.length === 0 ? <EmptyState title={t("noUsers")} icon={Users} /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Name</th>
-                  <th className="px-4 py-3 text-left font-medium">Email</th>
-                  <th className="px-4 py-3 text-left font-medium">Role</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Last login</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("name")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("email")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("role")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("status")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("lastLogin")}</th>
                 </tr>
               </thead>
               <tbody>

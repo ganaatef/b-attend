@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages } from "next-intl/server";
+import { cookies } from "next/headers";
+import { type Locale, defaultLocale, locales } from "@/i18n/config";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -50,18 +54,32 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+async function getLocale(): Promise<Locale> {
+  const cookieStore = await cookies();
+  const cookieLocale = cookieStore.get("NEXT_LOCALE")?.value;
+  if (cookieLocale && locales.includes(cookieLocale as Locale)) {
+    return cookieLocale as Locale;
+  }
+  return defaultLocale;
+}
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const messages = await getMessages();
+
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={locale} dir={locale === "ar" ? "rtl" : "ltr"} suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        {children}
-        <Toaster />
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          {children}
+          <Toaster />
+        </NextIntlClientProvider>
       </body>
     </html>
   );

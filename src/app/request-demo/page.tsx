@@ -1,8 +1,5 @@
 "use client";
 
-/**
- * /request-demo — longer form than /contact. Uses demoRequestAction.
- */
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { PublicLayout } from "@/components/layout/PublicLayout";
@@ -13,34 +10,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CheckCircle2, Loader2 } from "lucide-react";
-
-const businessTypes: { value: string; label: string }[] = [
-  { value: "RESTAURANT", label: "Restaurant" },
-  { value: "CAFE", label: "Cafe" },
-  { value: "CLOUD_KITCHEN", label: "Cloud kitchen" },
-  { value: "CENTRAL_KITCHEN", label: "Central kitchen" },
-  { value: "RETAIL_CHAIN", label: "Retail chain" },
-  { value: "GYM", label: "Gym / Fitness" },
-  { value: "CLINIC", label: "Clinic / Pharmacy" },
-  { value: "WAREHOUSE", label: "Warehouse" },
-  { value: "SECURITY_COMPANY", label: "Security company" },
-  { value: "CLEANING_COMPANY", label: "Cleaning company" },
-  { value: "MULTI_BRANCH_OPS", label: "Multi-branch operations" },
-  { value: "OTHER", label: "Other" },
-];
+import { useTranslations } from "next-intl";
 
 const initialState: DemoState = { ok: false };
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("demo");
   return (
     <Button type="submit" disabled={pending} className="w-full sm:w-auto">
       {pending ? (
         <>
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Requesting...
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("submitting")}
         </>
       ) : (
-        "Request demo"
+        t("submit")
       )}
     </Button>
   );
@@ -48,14 +32,31 @@ function SubmitButton() {
 
 export function DemoForm() {
   const [state, formAction] = useActionState<DemoState, FormData>(demoRequestAction, initialState);
+  const t = useTranslations("demo");
+  const tBusiness = useTranslations("businessTypes");
+
+  const businessTypes: { value: string; label: string }[] = [
+    { value: "RESTAURANT", label: tBusiness("RESTAURANT") },
+    { value: "CAFE", label: tBusiness("CAFE") },
+    { value: "CLOUD_KITCHEN", label: tBusiness("CLOUD_KITCHEN") },
+    { value: "CENTRAL_KITCHEN", label: tBusiness("CENTRAL_KITCHEN") },
+    { value: "RETAIL_CHAIN", label: tBusiness("RETAIL_CHAIN") },
+    { value: "GYM", label: tBusiness("GYM") },
+    { value: "CLINIC", label: tBusiness("CLINIC") },
+    { value: "WAREHOUSE", label: tBusiness("WAREHOUSE") },
+    { value: "SECURITY_COMPANY", label: tBusiness("SECURITY_COMPANY") },
+    { value: "CLEANING_COMPANY", label: tBusiness("CLEANING_COMPANY") },
+    { value: "MULTI_BRANCH_OPS", label: tBusiness("MULTI_BRANCH_OPS") },
+    { value: "OTHER", label: tBusiness("OTHER") },
+  ];
 
   if (state.ok) {
     return (
       <div className="rounded-lg border border-brand-success/30 bg-brand-success/5 p-6 text-center">
         <CheckCircle2 className="mx-auto h-10 w-10 text-brand-success" />
-        <h2 className="mt-3 text-base font-semibold text-foreground">Demo requested</h2>
+        <h2 className="mt-3 text-base font-semibold text-foreground">{t("successTitle")}</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Our sales team will reach out within one business day to schedule a 30-minute walkthrough.
+          {t("successDesc")}
         </p>
       </div>
     );
@@ -67,12 +68,12 @@ export function DemoForm() {
     <form action={formAction} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="name">Full name *</Label>
+          <Label htmlFor="name">{t("fullName")}</Label>
           <Input id="name" name="name" placeholder="Ahmed Mansour" required />
           {fe.name ? <p className="mt-1 text-xs text-destructive">{fe.name}</p> : null}
         </div>
         <div>
-          <Label htmlFor="company">Company *</Label>
+          <Label htmlFor="company">{t("company")}</Label>
           <Input id="company" name="company" placeholder="Cairo Bite Chain" required />
           {fe.company ? <p className="mt-1 text-xs text-destructive">{fe.company}</p> : null}
         </div>
@@ -80,12 +81,12 @@ export function DemoForm() {
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <Label htmlFor="phone">Phone *</Label>
+          <Label htmlFor="phone">{t("phone")}</Label>
           <Input id="phone" name="phone" type="tel" placeholder="+20 100 123 4567" required />
           {fe.phone ? <p className="mt-1 text-xs text-destructive">{fe.phone}</p> : null}
         </div>
         <div>
-          <Label htmlFor="email">Email *</Label>
+          <Label htmlFor="email">{t("email")}</Label>
           <Input id="email" name="email" type="email" placeholder="ahmed@example.com" required />
           {fe.email ? <p className="mt-1 text-xs text-destructive">{fe.email}</p> : null}
         </div>
@@ -93,10 +94,10 @@ export function DemoForm() {
 
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
-          <Label htmlFor="businessType">Business type *</Label>
+          <Label htmlFor="businessType">{t("businessType")}</Label>
           <Select name="businessType">
             <SelectTrigger id="businessType">
-              <SelectValue placeholder="Select" />
+              <SelectValue placeholder={t("select")} />
             </SelectTrigger>
             <SelectContent>
               {businessTypes.map((b) => (
@@ -107,24 +108,24 @@ export function DemoForm() {
           {fe.businessType ? <p className="mt-1 text-xs text-destructive">{fe.businessType}</p> : null}
         </div>
         <div>
-          <Label htmlFor="employeesCount">Employees *</Label>
+          <Label htmlFor="employeesCount">{t("employees")}</Label>
           <Input id="employeesCount" name="employeesCount" type="number" min={1} placeholder="30" required />
           {fe.employeesCount ? <p className="mt-1 text-xs text-destructive">{fe.employeesCount}</p> : null}
         </div>
         <div>
-          <Label htmlFor="branchesCount">Branches *</Label>
+          <Label htmlFor="branchesCount">{t("branches")}</Label>
           <Input id="branchesCount" name="branchesCount" type="number" min={1} placeholder="3" required />
           {fe.branchesCount ? <p className="mt-1 text-xs text-destructive">{fe.branchesCount}</p> : null}
         </div>
       </div>
 
       <div>
-        <Label htmlFor="message">Anything specific you want to see in the demo?</Label>
+        <Label htmlFor="message">{t("message")}</Label>
         <Textarea
           id="message"
           name="message"
           rows={4}
-          placeholder="Multi-branch scheduling, geofence, payroll export, etc."
+          placeholder={t("messagePlaceholder")}
         />
       </div>
 
@@ -136,16 +137,16 @@ export function DemoForm() {
 }
 
 export default function RequestDemoPage() {
+  const t = useTranslations("demo");
   return (
     <PublicLayout>
       <section className="border-b border-border bg-gradient-to-b from-card to-background">
         <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            Book a 30-minute demo
+            {t("title")}
           </h1>
           <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-            See B-Attend live with your use case. We&apos;ll walk through attendance, scheduling,
-            approvals, and payroll export.
+            {t("subtitle")}
           </p>
         </div>
       </section>

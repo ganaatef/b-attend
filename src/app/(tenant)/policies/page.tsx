@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Clock } from "lucide-react";
 import { PolicyForm } from "./PolicyForm";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function PoliciesPage() {
+  const t = await getTranslations("policies");
   const session = await getSession();
   if (!session?.tenantId) return null;
   const policies = await db.shiftPolicy.findMany({
@@ -20,24 +22,24 @@ export default async function PoliciesPage() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <div><h1 className="text-lg font-bold text-foreground">Shift policies</h1><p className="text-sm text-muted-foreground">{policies.length} policies.</p></div>
+      <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("count", { count: policies.length })}</p></div>
       <Card className="border-border p-4">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Add shift policy</h2>
+        <h2 className="mb-3 text-sm font-semibold text-foreground">{t("addShiftPolicy")}</h2>
         <PolicyForm />
       </Card>
       <Card className="border-border">
-        {policies.length === 0 ? <EmptyState title="No shift policies" icon={Clock} /> : (
+        {policies.length === 0 ? <EmptyState title={t("noPolicies")} icon={Clock} /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Name</th>
-                  <th className="px-4 py-3 text-left font-medium">Start → End</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Break</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Late grace</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Overtime after</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Weekend</th>
-                  <th className="px-4 py-3 text-left font-medium">Employees</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("name")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("startEnd")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("break")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("lateGrace")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("overtime")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("weekend")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("employees")}</th>
                 </tr>
               </thead>
               <tbody>

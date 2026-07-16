@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Users, Plus } from "lucide-react";
 import { EmployeeForm } from "./EmployeeForm";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmployeesPage() {
+  const t = await getTranslations("employees");
   const session = await getSession();
   if (!session?.tenantId) return null;
   const [employees, branches, departments, policies] = await Promise.all([
@@ -27,25 +29,25 @@ export default async function EmployeesPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-lg font-bold text-foreground">Employees</h1><p className="text-sm text-muted-foreground">{employees.length} employees.</p></div>
-        <Link href="/employees/new" className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> New employee</Link>
+        <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("count", { count: employees.length })}</p></div>
+        <Link href="/employees/new" className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> {t("newEmployee")}</Link>
       </div>
       <Card className="border-border p-4">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Quick add</h2>
+        <h2 className="mb-3 text-sm font-semibold text-foreground">{t("quickAdd")}</h2>
         <EmployeeForm branches={branches} departments={departments} policies={policies} />
       </Card>
       <Card className="border-border">
-        {employees.length === 0 ? <EmptyState title="No employees" icon={Users} /> : (
+        {employees.length === 0 ? <EmptyState title={t("noEmployees")} icon={Users} /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Code</th>
-                  <th className="px-4 py-3 text-left font-medium">Name</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Branch</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Department</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Job title</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("code")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("name")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("branch")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("department")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("jobTitle")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("status")}</th>
                 </tr>
               </thead>
               <tbody>

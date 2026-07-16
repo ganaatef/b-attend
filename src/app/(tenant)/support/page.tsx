@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { TicketForm } from "./TicketForm";
 import { LifeBuoy } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function SupportPage() {
   const session = await getSession();
   if (!session?.tenantId) return null;
+  const t = await getTranslations("support");
   const tickets = await db.supportTicket.findMany({
     where: { companyId: session.tenantId },
     orderBy: { createdAt: "desc" },
@@ -21,23 +23,23 @@ export default async function SupportPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <div><h1 className="text-lg font-bold text-foreground">Support</h1><p className="text-sm text-muted-foreground">Submit a ticket or check existing ones.</p></div>
+      <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("subtitle")}</p></div>
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">New ticket</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("newTicketCard")}</CardTitle></CardHeader>
         <CardContent><TicketForm /></CardContent>
       </Card>
       <Card className="border-border">
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Your tickets ({tickets.length})</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("yourTickets", { count: tickets.length })}</CardTitle></CardHeader>
         <CardContent>
-          {tickets.length === 0 ? <EmptyState title="No tickets yet" icon={LifeBuoy} /> : (
+          {tickets.length === 0 ? <EmptyState title={t("noTicketsYet")} icon={LifeBuoy} /> : (
             <div className="divide-y divide-border/60">
-              {tickets.map((t) => (
-                <Link key={t.id} href={`/support/${t.id}`} className="flex items-center justify-between py-3 hover:bg-muted/30">
+              {tickets.map((ticket) => (
+                <Link key={ticket.id} href={`/support/${ticket.id}`} className="flex items-center justify-between py-3 hover:bg-muted/30">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-foreground">{t.subject}</p>
-                    <p className="text-xs text-muted-foreground">{t.category ?? "Uncategorized"} · {t._count.messages} messages · {new Date(t.createdAt).toLocaleDateString()}</p>
+                    <p className="truncate font-medium text-foreground">{ticket.subject}</p>
+                    <p className="text-xs text-muted-foreground">{ticket.category ?? t("uncategorized")} · {ticket._count.messages} {t("messagesCount")} · {new Date(ticket.createdAt).toLocaleDateString()}</p>
                   </div>
-                  <Badge variant="outline" className="text-xs">{t.status.replace(/_/g, " ")}</Badge>
+                  <Badge variant="outline" className="text-xs">{ticket.status.replace(/_/g, " ")}</Badge>
                 </Link>
               ))}
             </div>

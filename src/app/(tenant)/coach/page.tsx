@@ -28,6 +28,7 @@ import {
 import { generateEmployeeCoachSummary as generateSummaryFromLib } from "@/lib/coach/employee-summary";
 import { generateDailyMotivation } from "@/lib/ai/provider";
 import { canUseAiFeature } from "@/lib/ai/feature-gates";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -43,6 +44,7 @@ function startOfMonth(d: Date): Date {
 }
 
 export default async function CoachPage() {
+  const t = await getTranslations("coach");
   const session = await getSession();
   if (!session?.tenantId) return null;
 
@@ -56,7 +58,7 @@ export default async function CoachPage() {
   if (!employee) {
     return (
       <div className="mx-auto max-w-2xl">
-        <EmptyState title="No employee record linked" description="Your user account is not linked to an employee record. Please contact your HR admin." icon={Sparkles} />
+        <EmptyState title={t("noEmployeeRecord")} description={t("noEmployeeDesc")} icon={Sparkles} />
       </div>
     );
   }
@@ -72,10 +74,10 @@ export default async function CoachPage() {
         <Card>
           <CardContent className="pt-6 text-center">
             <Lock className="mx-auto h-10 w-10 text-muted-foreground" />
-            <h2 className="mt-3 text-base font-semibold text-foreground">B-Coach AI is not available on your plan</h2>
+            <h2 className="mt-3 text-base font-semibold text-foreground">{t("notAvailable")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{coachGate.reason}</p>
             <Link href="/billing" className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
-              View plans
+              {t("viewPlans")}
             </Link>
           </CardContent>
         </Card>
@@ -214,9 +216,9 @@ export default async function CoachPage() {
       <div>
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-brand-accent" />
-          <h1 className="text-lg font-bold text-foreground">My Coach AI</h1>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">Supportive coaching insights based on your attendance. No judgment — just development.</p>
+        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
       {/* Daily motivation — most prominent */}
@@ -230,7 +232,7 @@ export default async function CoachPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm leading-relaxed text-foreground/90">{motivation.body}</p>
-            <p className="mt-3 text-xs text-muted-foreground">Today&apos;s theme: {motivation.theme.replace(/_/g, " ").toLowerCase()}</p>
+            <p className="mt-3 text-xs text-muted-foreground">{t("todayTheme", { theme: motivation.theme.replace(/_/g, " ").toLowerCase() })}</p>
           </CardContent>
         </Card>
       )}
@@ -240,8 +242,8 @@ export default async function CoachPage() {
         <Card>
           <CardContent className="py-8">
             <EmptyState
-              title="Your coaching summary will appear after a few attendance records are available."
-              description="Once you have scheduled shifts and clock-in records, your AI coach will generate personalized insights, consistency score, and development tips."
+              title={t("coachingSummaryEmpty")}
+              description={t("coachingSummaryEmptyDesc")}
               icon={Sparkles}
             />
           </CardContent>
@@ -253,7 +255,7 @@ export default async function CoachPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-foreground">Consistency Score (this month)</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("consistencyScore")}</CardTitle>
               <Badge className={`${levelColor[scoreResult.level]} text-xs`}>{scoreResult.level.replace(/_/g, " ")}</Badge>
             </div>
           </CardHeader>
@@ -261,7 +263,7 @@ export default async function CoachPage() {
             <div className="flex items-end gap-4">
               <div>
                 <p className={`text-5xl font-bold ${scoreColor[scoreResult.level]}`}>{scoreResult.score}</p>
-                <p className="text-xs text-muted-foreground">out of 100</p>
+                <p className="text-xs text-muted-foreground">{t("outOf100")}</p>
               </div>
               <div className="flex-1 text-sm text-muted-foreground">
                 <p className="leading-relaxed">{scoreResult.explanation}</p>
@@ -269,7 +271,7 @@ export default async function CoachPage() {
             </div>
             {scoreResult.positiveSignals.length > 0 && (
               <div className="mt-4">
-                <p className="text-xs font-semibold text-brand-success uppercase tracking-wider">Positive signals</p>
+                <p className="text-xs font-semibold text-brand-success uppercase tracking-wider">{t("positiveSignals")}</p>
                 <ul className="mt-1 space-y-0.5">
                   {scoreResult.positiveSignals.map((s, i) => <li key={i} className="text-xs text-foreground/90">✓ {s}</li>)}
                 </ul>
@@ -277,14 +279,14 @@ export default async function CoachPage() {
             )}
             {scoreResult.improvementSignals.length > 0 && (
               <div className="mt-3">
-                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">Development areas</p>
+                <p className="text-xs font-semibold text-amber-700 uppercase tracking-wider">{t("developmentAreas")}</p>
                 <ul className="mt-1 space-y-0.5">
                   {scoreResult.improvementSignals.map((s, i) => <li key={i} className="text-xs text-foreground/90">→ {s}</li>)}
                 </ul>
               </div>
             )}
             <p className="mt-4 rounded-md bg-muted/50 px-3 py-2 text-xs text-muted-foreground">
-              This score is for coaching only. It does not affect your salary, evaluation, or HR decisions. Use it as a self-development tool.
+              {t("scoreDisclaimer")}
             </p>
           </CardContent>
         </Card>
@@ -294,28 +296,28 @@ export default async function CoachPage() {
       {hasEnoughData && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">This week</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("thisWeek")}</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <Stat label="Scheduled" value={weekStats.scheduledDays} />
-                <Stat label="Present" value={weekStats.presentDays} />
-                <Stat label="Late" value={weekStats.lateDays} />
-                <Stat label="Absent" value={weekStats.absentDays} />
-                <Stat label="Late minutes" value={weekStats.totalLateMinutes} />
-                <Stat label="Overtime (min)" value={weekStats.overtimeMinutes} />
+                <Stat label={t("scheduled")} value={weekStats.scheduledDays} />
+                <Stat label={t("present")} value={weekStats.presentDays} />
+                <Stat label={t("late")} value={weekStats.lateDays} />
+                <Stat label={t("absent")} value={weekStats.absentDays} />
+                <Stat label={t("lateMinutes")} value={weekStats.totalLateMinutes} />
+                <Stat label={t("overtimeMin")} value={weekStats.overtimeMinutes} />
               </div>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">This month</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("thisMonth")}</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <Stat label="Scheduled" value={monthStats.scheduledDays} />
-                <Stat label="Present" value={monthStats.presentDays} />
-                <Stat label="Late" value={monthStats.lateDays} />
-                <Stat label="Absent" value={monthStats.absentDays} />
-                <Stat label="Late minutes" value={monthStats.totalLateMinutes} />
-                <Stat label="Overtime (min)" value={monthStats.overtimeMinutes} />
+                <Stat label={t("scheduled")} value={monthStats.scheduledDays} />
+                <Stat label={t("present")} value={monthStats.presentDays} />
+                <Stat label={t("late")} value={monthStats.lateDays} />
+                <Stat label={t("absent")} value={monthStats.absentDays} />
+                <Stat label={t("lateMinutes")} value={monthStats.totalLateMinutes} />
+                <Stat label={t("overtimeMin")} value={monthStats.overtimeMinutes} />
               </div>
             </CardContent>
           </Card>
@@ -330,13 +332,13 @@ export default async function CoachPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-brand-success" />
-                  <CardTitle className="text-sm font-semibold text-foreground">My strengths</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-foreground">{t("myStrengths")}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <p className="text-sm leading-relaxed text-foreground/90">{summary.positiveSummary}</p>
                 {summary.cached && (
-                  <p className="mt-2 text-xs text-muted-foreground">Cached snapshot from a previous visit.</p>
+                  <p className="mt-2 text-xs text-muted-foreground">{t("cachedSnapshot")}</p>
                 )}
               </CardContent>
             </Card>
@@ -344,7 +346,7 @@ export default async function CoachPage() {
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-2">
                   <Target className="h-4 w-4 text-amber-600" />
-                  <CardTitle className="text-sm font-semibold text-foreground">Improvement areas</CardTitle>
+                  <CardTitle className="text-sm font-semibold text-foreground">{t("improvementAreas")}</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
@@ -355,9 +357,9 @@ export default async function CoachPage() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-sm text-muted-foreground">No specific improvement areas this period.</p>
+                  <p className="text-sm text-muted-foreground">{t("noImprovementAreas")}</p>
                 )}
-                <p className="mt-3 text-xs font-medium text-amber-700">Practical advice</p>
+                <p className="mt-3 text-xs font-medium text-amber-700">{t("practicalAdvice")}</p>
                 <p className="mt-1 text-sm text-foreground/90">{summary.practicalAdvice}</p>
               </CardContent>
             </Card>
@@ -368,7 +370,7 @@ export default async function CoachPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Sunrise className="h-4 w-4 text-brand-accent" />
-                <CardTitle className="text-sm font-semibold text-foreground">Suggested action for tomorrow</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("suggestedActionTomorrow")}</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
@@ -385,25 +387,25 @@ export default async function CoachPage() {
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Heart className="h-4 w-4 text-brand-accent" />
-                <CardTitle className="text-sm font-semibold text-foreground">My progress streak</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("myProgressStreak")}</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-4xl font-bold text-brand-accent">{streak}</p>
-              <p className="text-xs text-muted-foreground">consecutive on-time days</p>
-              <p className="mt-2 text-xs text-muted-foreground">A streak counts days you arrived on time with no late or absent records. Keep it growing!</p>
+              <p className="text-xs text-muted-foreground">{t("consecutiveOnTimeDays")}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{t("streakDescription")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
                 <Trophy className="h-4 w-4 text-amber-500" />
-                <CardTitle className="text-sm font-semibold text-foreground">Recent achievements</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("recentAchievements")}</CardTitle>
               </div>
             </CardHeader>
             <CardContent>
               {achievements.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No achievements yet this month. Your first on-time arrival will appear here.</p>
+                <p className="text-sm text-muted-foreground">{t("noAchievements")}</p>
               ) : (
                 <ul className="space-y-1.5">
                   {achievements.map((a, i) => <li key={i} className="text-xs text-foreground/90">🏆 {a}</li>)}
@@ -420,9 +422,9 @@ export default async function CoachPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <BookOpen className="h-4 w-4 text-brand-accent" />
-              <CardTitle className="text-sm font-semibold text-foreground">Development tip</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("developmentTip")}</CardTitle>
             </div>
-            <Link href="/coach-library" className="text-xs text-brand-accent hover:underline">View all →</Link>
+            <Link href="/coach-library" className="text-xs text-brand-accent hover:underline">{t("viewAll")}</Link>
           </div>
         </CardHeader>
         <CardContent>

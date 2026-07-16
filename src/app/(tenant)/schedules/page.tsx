@@ -7,10 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { CalendarClock, Plus } from "lucide-react";
 import { ScheduleForm } from "./ScheduleForm";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function SchedulesPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
+  const t = await getTranslations("schedules");
   const session = await getSession();
   if (!session?.tenantId) return null;
   const params = await searchParams;
@@ -36,29 +38,29 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
   return (
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-lg font-bold text-foreground">Schedules</h1><p className="text-sm text-muted-foreground">{schedules.length} schedules for {new Date(date).toLocaleDateString()}.</p></div>
-        <Link href="/schedules/bulk" className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> Bulk generate</Link>
+        <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("count", { count: schedules.length, date: new Date(date).toLocaleDateString() })}</p></div>
+        <Link href="/schedules/bulk" className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> {t("bulkGenerate")}</Link>
       </div>
       <div className="flex items-center gap-2">
-        <Link href={`/schedules?date=${prevDate.toISOString().split("T")[0]}`} className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">← Previous day</Link>
+        <Link href={`/schedules?date=${prevDate.toISOString().split("T")[0]}`} className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">{t("previousDay")}</Link>
         <input type="date" defaultValue={dayStr} onChange={(e) => window.location.href = `/schedules?date=${e.target.value}`} className="rounded-md border border-border bg-card px-3 py-1.5 text-xs" />
-        <Link href={`/schedules?date=${nextDate.toISOString().split("T")[0]}`} className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">Next day →</Link>
+        <Link href={`/schedules?date=${nextDate.toISOString().split("T")[0]}`} className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">{t("nextDay")}</Link>
       </div>
       <Card className="border-border p-4">
-        <h2 className="mb-3 text-sm font-semibold text-foreground">Add single schedule</h2>
+        <h2 className="mb-3 text-sm font-semibold text-foreground">{t("addSingleSchedule")}</h2>
         <ScheduleForm branches={branches} employees={employees} policies={policies} />
       </Card>
       <Card className="border-border">
-        {schedules.length === 0 ? <EmptyState title="No schedules for this day" icon={CalendarClock} /> : (
+        {schedules.length === 0 ? <EmptyState title={t("noSchedulesForDay")} icon={CalendarClock} /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Employee</th>
-                  <th className="px-4 py-3 text-left font-medium">Branch</th>
-                  <th className="px-4 py-3 text-left font-medium">Shift</th>
-                  <th className="px-4 py-3 text-left font-medium">Expected</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("employee")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("branch")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("shift")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("expected")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("status")}</th>
                 </tr>
               </thead>
               <tbody>

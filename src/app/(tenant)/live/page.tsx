@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Activity } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function LivePage() {
+  const t = await getTranslations("live");
   const session = await getSession();
   if (!session?.tenantId) return null;
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -53,18 +55,18 @@ export default async function LivePage() {
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-brand-success opacity-75"></span>
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-brand-success"></span>
         </span>
-        <h1 className="text-lg font-bold text-foreground">Live attendance</h1>
+        <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
         <span className="text-xs text-muted-foreground">{formatDateTime(new Date())}</span>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { label: "Scheduled", value: stats.scheduled },
-          { label: "Present", value: stats.present },
-          { label: "Late", value: stats.late },
-          { label: "Absent", value: stats.absent },
-          { label: "Missing out", value: stats.missingClockOut },
-          { label: "Outside geo", value: stats.outsideGeofence },
+          { label: t("scheduled"), value: stats.scheduled },
+          { label: t("present"), value: stats.present },
+          { label: t("late"), value: stats.late },
+          { label: t("absent"), value: stats.absent },
+          { label: t("missingOut"), value: stats.missingClockOut },
+          { label: t("outsideGeo"), value: stats.outsideGeofence },
         ].map((s) => (
           <Card key={s.label} className="border-border p-3">
             <p className="text-2xl font-bold text-foreground">{s.value}</p>
@@ -74,18 +76,18 @@ export default async function LivePage() {
       </div>
 
       <Card className="border-border">
-        <div className="border-b border-border px-4 py-3 text-sm font-semibold text-foreground">Recent punches (today)</div>
-        {punches.length === 0 ? <EmptyState title="No punches yet today" icon={Activity} /> : (
+        <div className="border-b border-border px-4 py-3 text-sm font-semibold text-foreground">{t("recentPunchesToday")}</div>
+        {punches.length === 0 ? <EmptyState title={t("noPunchesToday")} icon={Activity} /> : (
           <div className="max-h-[60vh] overflow-y-auto battend-scroll">
             <table className="w-full text-sm">
               <thead className="sticky top-0 border-b border-border bg-card text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-2.5 text-left font-medium">Time</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Employee</th>
-                  <th className="hidden px-4 py-2.5 text-left font-medium sm:table-cell">Branch</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Action</th>
-                  <th className="hidden px-4 py-2.5 text-left font-medium sm:table-cell">Source</th>
-                  <th className="px-4 py-2.5 text-left font-medium">Geofence</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t("time")}</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t("employee")}</th>
+                  <th className="hidden px-4 py-2.5 text-left font-medium sm:table-cell">{t("branch")}</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t("action")}</th>
+                  <th className="hidden px-4 py-2.5 text-left font-medium sm:table-cell">{t("source")}</th>
+                  <th className="px-4 py-2.5 text-left font-medium">{t("geofence")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -97,7 +99,13 @@ export default async function LivePage() {
                     <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{p.type.replace(/_/g, " ")}</Badge></td>
                     <td className="hidden px-4 py-2.5 text-xs text-muted-foreground sm:table-cell">{p.source}</td>
                     <td className="px-4 py-2.5">
-                      {p.insideGeofence ? <Badge variant="outline" className="text-xs bg-brand-success/10 text-brand-success border-transparent">Inside</Badge> : <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-transparent">{p.distanceMeters}m away</Badge>}
+                      {p.insideGeofence ? (
+                        <Badge variant="outline" className="text-xs bg-brand-success/10 text-brand-success border-transparent">{t("inside")}</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 border-transparent">
+                          {t("metersAway", { distance: p.distanceMeters ?? 0})}
+                        </Badge>
+                      )}
                     </td>
                   </tr>
                 ))}

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { CheckSquare } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,7 @@ const statusBadge = (s: string) => {
 export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const session = await getSession();
   if (!session?.tenantId) return null;
+  const t = await getTranslations("approvals");
   const params = await searchParams;
   const where: any = { companyId: session.tenantId };
   if (params.status) where.status = params.status;
@@ -37,29 +39,30 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
     take: 200,
   });
 
-  const statuses = ["ALL", "PENDING", "APPROVED", "REJECTED", "CANCELLED"];
+  const statuses = ["ALL", "PENDING", "APPROVED", "REJECTED", "CANCELLED"] as const;
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <div><h1 className="text-lg font-bold text-foreground">Approvals</h1><p className="text-sm text-muted-foreground">{requests.length} requests.</p></div>
+      <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("requests", { count: requests.length })}</p></div>
       <div className="flex flex-wrap gap-1.5">
         {statuses.map((s) => {
           const active = (params.status ?? "ALL") === s || (s === "ALL" && !params.status);
-          return <Link key={s} href={s === "ALL" ? "/approvals" : `/approvals?status=${s}`} className={`rounded-md px-3 py-1.5 text-xs font-medium ${active ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:bg-muted"}`}>{s}</Link>;
+          const label = s === "ALL" ? t("all") : s === "PENDING" ? t("pending") : s === "APPROVED" ? t("approved") : s === "REJECTED" ? t("rejected") : s === "CANCELLED" ? t("cancelled") : s;
+          return <Link key={s} href={s === "ALL" ? "/approvals" : `/approvals?status=${s}`} className={`rounded-md px-3 py-1.5 text-xs font-medium ${active ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:bg-muted"}`}>{label}</Link>;
         })}
       </div>
       <Card className="border-border">
-        {requests.length === 0 ? <EmptyState title="No approval requests" icon={CheckSquare} /> : (
+        {requests.length === 0 ? <EmptyState title={t("noApprovals")} icon={CheckSquare} /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Employee</th>
-                  <th className="px-4 py-3 text-left font-medium">Type</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Date</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Reason</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Created</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("employee")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("type")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("date")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("reason")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("status")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("created")}</th>
                 </tr>
               </thead>
               <tbody>

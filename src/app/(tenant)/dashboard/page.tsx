@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SubscriptionBadge } from "@/components/badges/StatusBadges";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Users, Building2, CalendarClock, CheckCircle2, AlertCircle, Clock, FileBarChart } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,9 @@ export default async function DashboardPage() {
   const session = await getSession();
   if (!session?.tenantId) return null;
   const tid = session.tenantId;
+
+  const t = await getTranslations("dashboard");
+  const tSub = await getTranslations("subscription");
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -34,17 +38,17 @@ export default async function DashboardPage() {
   ]);
 
   const cards = [
-    { label: "Active employees", value: employees, icon: Users, sub: `${branches} branches · ${departments} depts` },
-    { label: "Scheduled today", value: schedulesToday, icon: CalendarClock, sub: `${policies} shift policies` },
-    { label: "Clock actions today", value: punchesToday, icon: Clock, sub: "Punches recorded" },
-    { label: "Pending approvals", value: pendingApprovals, icon: AlertCircle, sub: "Awaiting review", highlight: pendingApprovals > 0 },
+    { label: t("activeEmployees"), value: employees, icon: Users, sub: `${branches} ${t("branches")} · ${departments} ${t("depts")}` },
+    { label: t("scheduledToday"), value: schedulesToday, icon: CalendarClock, sub: `${policies} ${t("shiftPolicies")}` },
+    { label: t("clockActionsToday"), value: punchesToday, icon: Clock, sub: t("punchesRecorded") },
+    { label: t("pendingApprovals"), value: pendingApprovals, icon: AlertCircle, sub: t("awaitingReview"), highlight: pendingApprovals > 0 },
   ];
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-foreground">Welcome, {session.name}</h1>
-        <p className="text-sm text-muted-foreground">{tenant?.name} · {subscription?.plan.name} plan {subscription && <SubscriptionBadge status={subscription.status} />}</p>
+        <h1 className="text-lg font-bold text-foreground">{t("welcome", { name: session.name })}</h1>
+        <p className="text-sm text-muted-foreground">{tenant?.name} · {subscription?.plan.name} {t("plan")} {subscription && <SubscriptionBadge status={subscription.status} />}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -71,13 +75,13 @@ export default async function DashboardPage() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-foreground">Recent outside-geofence punches</CardTitle>
-              <Link href="/live" className="text-xs text-brand-accent hover:underline">Live attendance →</Link>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("recentExceptions")}</CardTitle>
+              <Link href="/live" className="text-xs text-brand-accent hover:underline">{t("liveAttendance")}</Link>
             </div>
           </CardHeader>
           <CardContent>
             {recentExceptions.length === 0 ? (
-              <EmptyState title="No exceptions today" icon={CheckCircle2} />
+              <EmptyState title={t("noExceptions")} icon={CheckCircle2} />
             ) : (
               <div className="space-y-2">
                 {recentExceptions.map((p) => (
@@ -86,7 +90,7 @@ export default async function DashboardPage() {
                       <p className="font-medium text-foreground">{p.employee?.fullName}</p>
                       <p className="text-xs text-muted-foreground">{p.branch?.name}</p>
                     </div>
-                    <span className="text-xs text-amber-700">{p.distanceMeters}m away</span>
+                    <span className="text-xs text-amber-700">{p.distanceMeters}m</span>
                   </div>
                 ))}
               </div>
@@ -95,23 +99,23 @@ export default async function DashboardPage() {
         </Card>
 
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Quick links</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("quickLinks")}</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-2">
             <Link href="/live" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <Building2 className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Live attendance</p>
+              <p className="mt-1 font-medium text-foreground">{t("liveAtt")}</p>
             </Link>
             <Link href="/employees" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <Users className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Employees</p>
+              <p className="mt-1 font-medium text-foreground">{t("employees")}</p>
             </Link>
             <Link href="/schedules" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <CalendarClock className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Schedules</p>
+              <p className="mt-1 font-medium text-foreground">{t("schedules")}</p>
             </Link>
             <Link href="/reports" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <FileBarChart className="h-4 w-4 text-brand-accent" />
-              <p className="mt-1 font-medium text-foreground">Reports</p>
+              <p className="mt-1 font-medium text-foreground">{t("reports")}</p>
             </Link>
           </CardContent>
         </Card>

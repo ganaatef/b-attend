@@ -6,10 +6,12 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { MyLeaveClient } from "./MyLeaveClient";
 import { CalendarDays } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyLeavePage() {
+  const t = await getTranslations("myLeave");
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
 
@@ -22,12 +24,12 @@ export default async function MyLeavePage() {
     return (
       <div className="mx-auto max-w-3xl space-y-4">
         <div>
-          <h1 className="text-lg font-bold text-foreground">My Leave</h1>
-          <p className="text-sm text-muted-foreground">View your leave balances and submit requests.</p>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
         <Card>
           <CardContent className="py-6">
-            <p className="text-center text-sm text-muted-foreground">Your user is not linked to an employee record. Contact HR.</p>
+            <p className="text-center text-sm text-muted-foreground">{t("noLinkedEmployee")}</p>
           </CardContent>
         </Card>
       </div>
@@ -67,11 +69,11 @@ export default async function MyLeavePage() {
 
       <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-foreground">Leave Balances ({currentYear})</CardTitle>
+          <CardTitle className="text-sm font-semibold text-foreground">{t("leaveBalances", { year: currentYear })}</CardTitle>
         </CardHeader>
         <CardContent>
           {leaveBalances.length === 0 ? (
-            <EmptyState title="No leave balances" icon={CalendarDays} />
+            <EmptyState title={t("noLeaveBalances")} icon={CalendarDays} />
           ) : (
             <div className="divide-y divide-border/60">
               {leaveBalances.map((lb) => (
@@ -81,8 +83,8 @@ export default async function MyLeavePage() {
                     <p className="text-xs text-muted-foreground">{lb.leaveType.code}</p>
                   </div>
                   <div className="text-right text-xs">
-                    <p className="font-medium text-foreground">{lb.remaining}/{lb.openingBalance + lb.accrued} remaining</p>
-                    <p className="text-muted-foreground">Used: {lb.used} · Pending: {lb.pending}</p>
+                    <p className="font-medium text-foreground">{lb.remaining}/{lb.openingBalance + lb.accrued} {t("remainingCount")}</p>
+                    <p className="text-muted-foreground">{t("usedLabel")} {lb.used} · {t("pendingLabel")} {lb.pending}</p>
                   </div>
                 </div>
               ))}
@@ -95,11 +97,11 @@ export default async function MyLeavePage() {
 
       <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-foreground">My Leave Requests</CardTitle>
+          <CardTitle className="text-sm font-semibold text-foreground">{t("myLeaveRequests")}</CardTitle>
         </CardHeader>
         <CardContent>
           {leaveRequests.length === 0 ? (
-            <EmptyState title="No leave requests yet" icon={CalendarDays} />
+            <EmptyState title={t("noLeaveRequests")} icon={CalendarDays} />
           ) : (
             <div className="divide-y divide-border/60">
               {leaveRequests.map((lr) => (
@@ -111,7 +113,7 @@ export default async function MyLeavePage() {
                     <div>
                       <p className="font-medium text-foreground">{lr.leaveType.name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {new Date(lr.startDate).toLocaleDateString()} — {new Date(lr.endDate).toLocaleDateString()} · {lr.daysCount} day{lr.daysCount > 1 ? "s" : ""}
+                        {new Date(lr.startDate).toLocaleDateString()} — {new Date(lr.endDate).toLocaleDateString()} · {lr.daysCount} {lr.daysCount > 1 ? t("daysPlural") : t("day")}
                       </p>
                       {lr.reason && <p className="text-[10px] text-muted-foreground truncate max-w-[300px]">{lr.reason}</p>}
                     </div>

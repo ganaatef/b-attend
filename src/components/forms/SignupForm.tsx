@@ -10,6 +10,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useActionState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -40,6 +41,8 @@ export function SignupForm({
   plans: SignupPlanOption[];
   initialPlanId?: string;
 }) {
+  const t = useTranslations("signup");
+
   const [state, formAction, pending] = useActionState<SignupState, FormData>(
     signupAction,
     { ok: false },
@@ -82,13 +85,13 @@ export function SignupForm({
         {/* Owner account */}
         <fieldset className="space-y-5">
           <legend className="text-sm font-semibold text-foreground">
-            Your account
+            {t("ownerDetails")}
           </legend>
           <div className="grid gap-5 sm:grid-cols-2">
             <TextField
               control={form.control}
               name="fullName"
-              label="Full name"
+              label={t("fullName")}
               placeholder="e.g. Ahmed Reda"
               required
               autoComplete="name"
@@ -96,7 +99,7 @@ export function SignupForm({
             <TextField
               control={form.control}
               name="phone"
-              label="Phone"
+              label={t("phone")}
               placeholder="+20 100 123 4567"
               required
               autoComplete="tel"
@@ -106,7 +109,7 @@ export function SignupForm({
             <TextField
               control={form.control}
               name="email"
-              label="Email"
+              label={t("email")}
               type="email"
               placeholder="you@company.com"
               required
@@ -115,9 +118,9 @@ export function SignupForm({
             <TextField
               control={form.control}
               name="password"
-              label="Password"
+              label={t("password")}
               type="password"
-              placeholder="At least 8 characters"
+              placeholder={t("min8Chars")}
               required
               autoComplete="new-password"
             />
@@ -127,20 +130,20 @@ export function SignupForm({
         {/* Company */}
         <fieldset className="space-y-5 border-t border-border pt-6">
           <legend className="text-sm font-semibold text-foreground">
-            Company details
+            {t("companyDetails")}
           </legend>
           <div className="grid gap-5 sm:grid-cols-2">
             <TextField
               control={form.control}
               name="companyName"
-              label="Company name"
+              label={t("companyName")}
               placeholder="e.g. Sample Restaurant Co."
               required
             />
             <TextField
               control={form.control}
               name="city"
-              label="City"
+              label={t("city")}
               placeholder="e.g. Cairo"
               required
             />
@@ -149,14 +152,14 @@ export function SignupForm({
             <BusinessTypeSelect
               control={form.control}
               name="businessType"
-              label="Business type"
+              label={t("businessType")}
               required
             />
             <div className="grid grid-cols-2 gap-3">
               <NumberField
                 control={form.control}
                 name="employeesCount"
-                label="Employees"
+                label={t("employeesCount")}
                 placeholder="e.g. 40"
                 required
                 min={1}
@@ -164,7 +167,7 @@ export function SignupForm({
               <NumberField
                 control={form.control}
                 name="branchesCount"
-                label="Branches"
+                label={t("branchesCount")}
                 placeholder="e.g. 3"
                 required
                 min={1}
@@ -176,43 +179,38 @@ export function SignupForm({
         {/* Plan */}
         <fieldset className="space-y-5 border-t border-border pt-6">
           <legend className="text-sm font-semibold text-foreground">
-            Plan &amp; billing
+            {t("preferredPlan")} &amp; {t("billingCycle")}
           </legend>
           <div className="grid gap-5 sm:grid-cols-2">
             <PlanSelect
               control={form.control}
               name="preferredPlanId"
-              label="Preferred plan"
+              label={t("preferredPlan")}
               plans={plans}
               required
             />
             <BillingCycleSelect
               control={form.control}
               name="billingCycle"
-              label="Billing cycle"
+              label={t("billingCycle")}
               required
             />
           </div>
           <TextareaField
             control={form.control}
             name="message"
-            label="Anything else? (optional)"
-            placeholder="Tell us about your timeline or any specific questions."
+            label={t("messageOptional")}
+            placeholder={t("messagePlaceholder")}
             rows={3}
           />
         </fieldset>
 
         <div className="rounded-lg border border-border bg-muted/40 p-4 text-xs text-muted-foreground">
-          By submitting, you agree to our{" "}
+          {t("termsAgreement")}{" "}
           <a href="/legal/terms" className="underline hover:text-foreground">
-            Terms of Service
+            {t("terms")}
           </a>{" "}
-          and{" "}
-          <a href="/legal/privacy" className="underline hover:text-foreground">
-            Privacy Policy
-          </a>
-          . New tenants are activated manually by our team (usually within one
-          business day) to fit B2B sales.
+          {t("privacy")}
         </div>
 
         <div className="flex items-center justify-end">
@@ -223,7 +221,7 @@ export function SignupForm({
             size="lg"
           >
             <UserPlus className="mr-2 h-4 w-4" />
-            {pending ? "Submitting…" : "Submit signup request"}
+            {pending ? t("submitting") : t("submit")}
           </Button>
         </div>
       </form>

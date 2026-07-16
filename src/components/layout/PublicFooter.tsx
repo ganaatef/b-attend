@@ -3,8 +3,10 @@
  */
 import Link from "next/link";
 import { Logo } from "@/components/layout/Logo";
+import { getTranslations } from "next-intl/server";
 
-export function PublicFooter() {
+export async function PublicFooter() {
+  const t = await getTranslations("public");
   const year = new Date().getFullYear();
   return (
     <footer className="mt-auto border-t border-border bg-card/40">
@@ -15,40 +17,40 @@ export function PublicFooter() {
             <span className="text-base font-semibold text-foreground">B-Attend</span>
           </div>
           <p className="mt-2 text-sm text-muted-foreground">
-            Smart attendance and shift control for operational teams everywhere.
+            {t("positioning")}
           </p>
-          <p className="mt-2 text-xs text-muted-foreground">Be present. Be verified.</p>
+          <p className="mt-2 text-xs text-muted-foreground">{t("tagline")}</p>
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Product</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("product")}</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><Link href="/features" className="text-foreground/80 hover:text-foreground">Features</Link></li>
-            <li><Link href="/pricing" className="text-foreground/80 hover:text-foreground">Pricing</Link></li>
-            <li><Link href="/request-demo" className="text-foreground/80 hover:text-foreground">Request Demo</Link></li>
-            <li><Link href="/signup" className="text-foreground/80 hover:text-foreground">Get Started</Link></li>
+            <li><Link href="/features" className="text-foreground/80 hover:text-foreground">{t("features")}</Link></li>
+            <li><Link href="/pricing" className="text-foreground/80 hover:text-foreground">{t("pricing")}</Link></li>
+            <li><Link href="/request-demo" className="text-foreground/80 hover:text-foreground">{t("requestDemo")}</Link></li>
+            <li><Link href="/signup" className="text-foreground/80 hover:text-foreground">{t("getStarted")}</Link></li>
           </ul>
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Company</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("company")}</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><Link href="/contact" className="text-foreground/80 hover:text-foreground">Contact</Link></li>
-            <li><Link href="/login" className="text-foreground/80 hover:text-foreground">Login</Link></li>
+            <li><Link href="/contact" className="text-foreground/80 hover:text-foreground">{t("contact")}</Link></li>
+            <li><Link href="/login" className="text-foreground/80 hover:text-foreground">{t("login")}</Link></li>
           </ul>
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Legal</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{t("legal")}</h4>
           <ul className="mt-3 space-y-2 text-sm">
-            <li><Link href="/legal/privacy" className="text-foreground/80 hover:text-foreground">Privacy Policy</Link></li>
-            <li><Link href="/legal/terms" className="text-foreground/80 hover:text-foreground">Terms of Service</Link></li>
+            <li><Link href="/legal/privacy" className="text-foreground/80 hover:text-foreground">{t("privacyPolicy")}</Link></li>
+            <li><Link href="/legal/terms" className="text-foreground/80 hover:text-foreground">{t("termsOfService")}</Link></li>
           </ul>
         </div>
       </div>
       <div className="border-t border-border/60">
         <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-muted-foreground sm:px-6 lg:px-8">
-           © {year} B-Attend. Built for operational teams everywhere.
+           {t("copyright", { year })}
         </div>
       </div>
     </footer>

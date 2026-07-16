@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ import { CalendarCheck2 } from "lucide-react";
 
 export function DemoRequestForm() {
   const router = useRouter();
+  const t = useTranslations("demo");
   const [state, formAction, pending] = useActionState<
     DemoState,
     FormData
@@ -46,7 +48,7 @@ export function DemoRequestForm() {
 
   useEffect(() => {
     if (state?.ok) {
-      toast.success("Demo request received. We'll reach out within one business day.");
+      toast.success(t("successDesc"));
       form.reset();
       router.refresh();
     } else if (state && !state.ok && state.error) {
@@ -68,14 +70,14 @@ export function DemoRequestForm() {
           <TextField
             control={form.control}
             name="name"
-            label="Full name"
+            label={t("fullName")}
             placeholder="e.g. Menna Tarek"
             required
           />
           <TextField
             control={form.control}
             name="company"
-            label="Company"
+            label={t("company")}
             placeholder="e.g. CloudKitchen Example"
           />
         </div>
@@ -83,7 +85,7 @@ export function DemoRequestForm() {
           <TextField
             control={form.control}
             name="email"
-            label="Work email"
+            label={t("email")}
             type="email"
             placeholder="you@company.com"
             required
@@ -92,7 +94,7 @@ export function DemoRequestForm() {
           <TextField
             control={form.control}
             name="phone"
-            label="Phone"
+            label={t("phone")}
             placeholder="+20 100 123 4567"
             required
             autoComplete="tel"
@@ -101,21 +103,21 @@ export function DemoRequestForm() {
         <BusinessTypeSelect
           control={form.control}
           name="businessType"
-          label="Business type"
+          label={t("businessType")}
           required
         />
         <div className="grid gap-5 sm:grid-cols-2">
           <NumberField
             control={form.control}
             name="employeesCount"
-            label="Approx. employees"
+            label={t("employees")}
             placeholder="e.g. 40"
             min={0}
           />
           <NumberField
             control={form.control}
             name="branchesCount"
-            label="Number of branches"
+            label={t("branches")}
             placeholder="e.g. 3"
             min={0}
           />
@@ -123,14 +125,14 @@ export function DemoRequestForm() {
         <TextareaField
           control={form.control}
           name="message"
-          label="What are you trying to solve?"
-          placeholder="Tell us about your current attendance process and what you'd like to improve."
+          label={t("message")}
+          placeholder={t("messagePlaceholder")}
           rows={4}
         />
         <div className="flex items-center justify-end">
           <Button type="submit" disabled={pending} className="bg-brand-navy hover:bg-brand-navy/90">
             <CalendarCheck2 className="mr-2 h-4 w-4" />
-            {pending ? "Submitting…" : "Request demo"}
+            {pending ? t("submitting") : t("submit")}
           </Button>
         </div>
       </form>

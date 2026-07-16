@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Download, FileBarChart, FileText, CalendarClock, AlertTriangle, Clock, Building2, Wallet } from "lucide-react";
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,8 @@ const reportTypes = [
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; branchId?: string }> }) {
   const session = await getSession();
   if (!session?.tenantId) return null;
-  if (session.role === "EMPLOYEE") return <div className="p-4 text-sm text-muted-foreground">Reports are not available for employees.</div>;
+  const t = await getTranslations("reports");
+  if (session.role === "EMPLOYEE") return <div className="p-4 text-sm text-muted-foreground">{t("reportsNotAvailable")}</div>;
 
   const params = await searchParams;
   const today = new Date();
@@ -43,29 +45,29 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <div><h1 className="text-lg font-bold text-foreground">Reports</h1><p className="text-sm text-muted-foreground">All reports export CSV with UTF-8 BOM (Excel-ready, Arabic-compatible).</p></div>
+      <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("csvExportInfo")}</p></div>
 
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Filters</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("filters")}</CardTitle></CardHeader>
         <CardContent>
           <form className="grid gap-3 sm:grid-cols-3">
             <div>
-              <Label htmlFor="from">From</Label>
+              <Label htmlFor="from">{t("from")}</Label>
               <input id="from" name="from" type="date" defaultValue={from} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
             </div>
             <div>
-              <Label htmlFor="to">To</Label>
+              <Label htmlFor="to">{t("to")}</Label>
               <input id="to" name="to" type="date" defaultValue={to} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm" />
             </div>
             <div>
-              <Label htmlFor="branchId">Branch</Label>
+              <Label htmlFor="branchId">{t("branch")}</Label>
               <select id="branchId" name="branchId" defaultValue={params.branchId ?? ""} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm">
-                <option value="">All branches</option>
+                <option value="">{t("allBranches")}</option>
                 {branches.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
               </select>
             </div>
             <div className="sm:col-span-3">
-              <Button type="submit" size="sm" variant="outline">Apply filters</Button>
+              <Button type="submit" size="sm" variant="outline">{t("applyFilters")}</Button>
             </div>
           </form>
         </CardContent>
@@ -74,18 +76,27 @@ export default async function ReportsPage({ searchParams }: { searchParams: Prom
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {reportTypes.map((r) => {
           const Icon = r.icon;
-          return (
+  const reportLabels: Record<string, { label: string; description: string }> = {
+    daily: { label: t("dailyAttendance"), description: t("dailyAttendanceDesc") },
+    monthly: { label: t("monthlySummary"), description: t("monthlySummaryDesc") },
+    exceptions: { label: t("exceptions"), description: t("exceptionsDesc") },
+    overtime: { label: t("overtimeReportLabel"), description: t("overtimeReportDesc") },
+    branch: { label: t("branchAttendance"), description: t("branchAttendanceDesc") },
+    payroll: { label: t("payrollExport"), description: t("payrollExportDesc") },
+  };
+
+  return (
             <Card key={r.key} className="border-border p-4">
               <div className="flex items-start gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-md bg-brand-accent/10 text-brand-accent"><Icon className="h-5 w-5" /></div>
                 <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-foreground">{r.label}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">{r.description}</p>
+                  <h3 className="text-sm font-semibold text-foreground">{reportLabels[r.key].label}</h3>
+                  <p className="mt-1 text-xs text-muted-foreground">{reportLabels[r.key].description}</p>
                 </div>
               </div>
               <div className="mt-4 flex gap-2">
                 <a href={`/api/tenant/reports/csv?type=${r.key}&${queryParams.toString()}`} className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90">
-                  <Download className="h-3.5 w-3.5" /> Export CSV
+                  <Download className="h-3.5 w-3.5" /> {t("exportCSV")}
                 </a>
               </div>
             </Card>

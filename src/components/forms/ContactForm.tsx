@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useActionState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Form, TextField, TextareaField } from "@/components/forms/fields";
@@ -18,6 +19,7 @@ import { Send } from "lucide-react";
 
 export function ContactForm() {
   const router = useRouter();
+  const t = useTranslations("contact");
   const [state, formAction, pending] = useActionState<
     ContactState,
     FormData
@@ -37,7 +39,7 @@ export function ContactForm() {
 
   useEffect(() => {
     if (state?.ok) {
-      toast.success("Thanks! We'll be in touch within one business day.");
+      toast.success(t("successDesc"));
       form.reset();
       router.refresh();
     } else if (state && !state.ok && state.error) {
@@ -60,14 +62,14 @@ export function ContactForm() {
           <TextField
             control={form.control}
             name="name"
-            label="Full name"
+            label={t("fullName")}
             placeholder="e.g. Ahmed Reda"
             required
           />
           <TextField
             control={form.control}
             name="company"
-            label="Company"
+            label={t("company")}
             placeholder="e.g. Sample Restaurant Co."
           />
         </div>
@@ -75,7 +77,7 @@ export function ContactForm() {
           <TextField
             control={form.control}
             name="email"
-            label="Email"
+            label={t("email")}
             type="email"
             placeholder="you@company.com"
             required
@@ -84,7 +86,7 @@ export function ContactForm() {
           <TextField
             control={form.control}
             name="phone"
-            label="Phone"
+            label={t("phone")}
             placeholder="+20 100 123 4567"
             required
             autoComplete="tel"
@@ -93,14 +95,14 @@ export function ContactForm() {
         <TextareaField
           control={form.control}
           name="message"
-          label="How can we help?"
-          placeholder="Tell us a bit about your operation, number of branches, and what you're trying to solve."
+          label={t("message")}
+          placeholder={t("messagePlaceholder")}
           rows={5}
         />
         <div className="flex items-center justify-end gap-3">
           <Button type="submit" disabled={pending} className="bg-brand-navy hover:bg-brand-navy/90">
             <Send className="mr-2 h-4 w-4" />
-            {pending ? "Sending…" : "Send message"}
+            {pending ? t("submitting") : t("submit")}
           </Button>
         </div>
       </form>

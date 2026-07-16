@@ -13,6 +13,7 @@ import { clockAction } from "./actions";
 import type { Employee, Schedule, ShiftPolicy, Punch, Branch } from "@prisma/client";
 import { Loader2, MapPin, LogIn, LogOut, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 type EmployeeWithRelations = Employee & { branch: Branch | null; defaultShiftPolicy: ShiftPolicy | null };
 
@@ -23,6 +24,7 @@ interface ClockPageProps {
 }
 
 export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
+  const t = useTranslations("clock");
   const [state, formAction] = useActionState(clockAction, { ok: false } as { ok: boolean; error?: string; punchId?: string; insideGeofence?: boolean; distanceMeters?: number; status?: string; type?: string });
   const [pending, setPending] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -30,7 +32,7 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
   if (!employee) {
     return (
       <Card><CardContent className="py-12">
-        <p className="text-center text-sm text-muted-foreground">Your user account is not linked to an employee record. Please contact your HR admin.</p>
+        <p className="text-center text-sm text-muted-foreground">{t("noEmployeeDesc")}</p>
       </CardContent></Card>
     );
   }
@@ -43,7 +45,7 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
     setPending(true);
     try {
       if (!("geolocation" in navigator)) {
-        setGeoError("Geolocation is not supported by your browser.");
+        setGeoError(t("geolocationNotSupported"));
         setPending(false);
         return;
       }
@@ -57,13 +59,13 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
       formData.set("longitude", String(pos.coords.longitude));
       formData.set("source", "MOBILE_WEB");
       const result = await clockAction({}, formData);
-      if (!result.ok) setGeoError(result.error ?? "Clock failed");
+      if (!result.ok) setGeoError(result.error ?? t("clockFailed"));
       else window.location.reload();
     } catch (err: any) {
-      if (err?.code === 1) setGeoError("Location permission denied. Enable location access and try again, or submit a manual request.");
-      else if (err?.code === 2) setGeoError("Location unavailable. Check your GPS / network.");
-      else if (err?.code === 3) setGeoError("Location request timed out. Try again.");
-      else setGeoError("Failed to capture location. " + (err?.message ?? ""));
+      if (err?.code === 1) setGeoError(t("locationPermissionDenied"));
+      else if (err?.code === 2) setGeoError(t("locationUnavailable"));
+      else if (err?.code === 3) setGeoError(t("locationTimeout"));
+      else setGeoError(t("locationCaptureFailed", { message: err?.message ?? "" }));
     } finally {
       setPending(false);
     }
@@ -74,7 +76,7 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
   return (
     <div className="mx-auto max-w-md space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-foreground">Clock in / out</h1>
+        <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{formatDateTime(new Date())}</p>
       </div>
 
@@ -86,25 +88,25 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
             </div>
             <h2 className="text-base font-semibold text-foreground">{employee.fullName}</h2>
             <p className="text-xs text-muted-foreground">{employee.employeeCode} · {employee.jobTitle ?? "—"}</p>
-            <p className="text-xs text-muted-foreground">{branch?.name ?? "No branch assigned"}</p>
+            <p className="text-xs text-muted-foreground">{branch?.name ?? t("noBranchAssigned")}</p>
           </div>
 
           {schedule ? (
             <div className="mt-4 rounded-md border border-border bg-card/50 p-3 text-xs">
-              <p className="font-medium text-foreground">Today&apos;s shift: {schedule.shiftPolicy?.name ?? "—"}</p>
+              <p className="font-medium text-foreground">{t("todayShift", { shift: schedule.shiftPolicy?.name ?? "—" })}</p>
               <p className="text-muted-foreground">
                 {schedule.expectedStart ? new Date(schedule.expectedStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} → {schedule.expectedEnd ? new Date(schedule.expectedEnd).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
               </p>
             </div>
           ) : (
             <div className="mt-4 rounded-md border border-amber-300 bg-amber-50/40 p-3 text-xs text-amber-800">
-              No schedule for today. Clock-in will be flagged for manager approval.
+              {t("noScheduleWarning")}
             </div>
           )}
 
           {lastPunch && (
             <div className="mt-3 text-xs text-muted-foreground">
-              Last action: <span className="font-medium text-foreground">{lastPunch.type.replace(/_/g, " ")}</span> at {new Date(lastPunch.timestamp).toLocaleTimeString()}
+              {t("lastAction")}: <span className="font-medium text-foreground">{lastPunch.type.replace(/_/g, " ")}</span> at {new Date(lastPunch.timestamp).toLocaleTimeString()}
             </div>
           )}
         </CardContent>
@@ -116,8 +118,8 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
             <input type="hidden" name="employeeId" value={employee.id} />
             <input type="hidden" name="type" value={nextAction} />
             <Button type="submit" size="lg" className="w-full" disabled={pending}>
-              {pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Capturing location...</> :
-                nextAction === "CLOCK_IN" ? <><LogIn className="mr-2 h-4 w-4" /> Clock In</> : <><LogOut className="mr-2 h-4 w-4" /> Clock Out</>}
+              {pending ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t("capturingLocation")}</> :
+                nextAction === "CLOCK_IN" ? <><LogIn className="mr-2 h-4 w-4" /> {t("clockIn")}</> : <><LogOut className="mr-2 h-4 w-4" /> {t("clockOut")}</>}
             </Button>
           </form>
           {geoError && (
@@ -130,14 +132,14 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
             <div className="mt-3 flex items-start gap-2 rounded-md border border-brand-success/30 bg-brand-success/5 p-2 text-xs text-brand-success">
               <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" />
               <span>
-                {state.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} successfully.
-                {!state.insideGeofence && " You are OUTSIDE the geofence — punch flagged for manager approval."}
-                {state.distanceMeters !== undefined && ` Distance: ${state.distanceMeters}m from branch.`}
+                {state.type === "CLOCK_IN" ? t("clockInSuccess") : t("clockOutSuccess")} successfully.
+                {!state.insideGeofence && ` ${t("outsideGeofenceWarning")}`}
+                {state.distanceMeters !== undefined && ` ${t("distanceFromBranch", { distance: String(state.distanceMeters) })}`}
               </span>
             </div>
           )}
           <div className="mt-3 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <MapPin className="h-3 w-3" /> Location captured only at clock in/out.
+            <MapPin className="h-3 w-3" /> {t("locationCapturedOnly")}
           </div>
         </CardContent>
       </Card>
