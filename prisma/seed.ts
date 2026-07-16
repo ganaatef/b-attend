@@ -11,7 +11,7 @@
  *  - 6 departments (Kitchen, Service, Cashier, Delivery, Stewarding, Management)
  *  - 5 shift policies (Morning, Evening, Night, Kitchen Double, Part Time)
  *  - 9 tenant users (owner, hr, manager, manager2, employee × 5)
- *  - 15 employees with schedules for the current month
+ *  - 17 employees (15 staff + 2 managers) with schedules for the current month
  *  - Sample attendance + approvals + invoices
  *
  * Run with: bun prisma/seed.ts
@@ -244,7 +244,8 @@ async function main() {
   console.log(`  ✓ ShiftPolicies: ${policies.length}`);
 
   // ─────────────────────────────────────────────
-  // 10. Employees (15) — distributed across branches/departments
+  // 10. Employees (17) — distributed across branches/departments
+  //     Includes manager employees linked to manager@b-attend.app / manager2@b-attend.app
   // ─────────────────────────────────────────────
   const employeeDefs = [
     { code: "EMP001", name: "Ahmed Mansour", phone: "+20 100 111 0001", email: "employee@b-attend.app", branch: "NC", department: "Service", jobTitle: "Waiter", policy: "Morning", managerId: null },
@@ -262,6 +263,8 @@ async function main() {
     { code: "EMP013", name: "Hossam Tarek", phone: "+20 100 111 0013", email: "emp013@b-attend.app", branch: "MD", department: "Cashier", jobTitle: "Cashier", policy: "Morning", managerId: null },
     { code: "EMP014", name: "Reem Hassan", phone: "+20 100 111 0014", email: "emp014@b-attend.app", branch: "MD", department: "Service", jobTitle: "Hostess", policy: "Part Time", managerId: null },
     { code: "EMP015", name: "Karim Nabil", phone: "+20 100 111 0015", email: "emp015@b-attend.app", branch: "MD", department: "Delivery", jobTitle: "Driver", policy: "Evening", managerId: null },
+    { code: "MGR001", name: "New Cairo Manager", phone: "+20 100 222 0001", email: "manager@b-attend.app", branch: "NC", department: "Management", jobTitle: "Branch Manager", policy: "Morning", managerId: null },
+    { code: "MGR002", name: "Nasr City Manager", phone: "+20 100 222 0002", email: "manager2@b-attend.app", branch: "NS", department: "Management", jobTitle: "Branch Manager", policy: "Morning", managerId: null },
   ];
   const employeeMap: Record<string, { id: string }> = {};
   for (const e of employeeDefs) {
@@ -285,10 +288,20 @@ async function main() {
     });
     employeeMap[e.code] = { id: created.id };
   }
-  // Link employee@b-attend.app user to EMP001
-  const empUser = await db.user.findUnique({ where: { companyId_email: { companyId: tenant.id, email: "employee@b-attend.app" } } });
-  if (empUser) {
-    await db.employee.update({ where: { id: employeeMap["EMP001"].id }, data: { userId: empUser.id } });
+  // Bidirectional linking: user.employeeId ↔ employee.userId
+  const userEmployeeLinks: { email: string; employeeCode: string }[] = [
+    { email: "employee@b-attend.app", employeeCode: "EMP001" },
+    { email: "manager@b-attend.app", employeeCode: "MGR001" },
+    { email: "manager2@b-attend.app", employeeCode: "MGR002" },
+  ];
+  for (const link of userEmployeeLinks) {
+    const user = await db.user.findUnique({ where: { companyId_email: { companyId: tenant.id, email: link.email } } });
+    const empId = employeeMap[link.employeeCode]?.id;
+    if (user && empId) {
+      await db.user.update({ where: { id: user.id }, data: { employeeId: empId } });
+      await db.employee.update({ where: { id: empId }, data: { userId: user.id } });
+      console.log(`  ✓ Linked: ${user.email} ↔ ${link.employeeCode}`);
+    }
   }
   console.log(`  ✓ Employees: ${employeeDefs.length}`);
 
@@ -338,6 +351,7 @@ async function main() {
   // ─────────────────────────────────────────────
   // 12. Sample punches + attendance for the past 7 days (1 employee = EMP001)
   // ─────────────────────────────────────────────
+  const empUser = await db.user.findUnique({ where: { companyId_email: { companyId: tenant.id, email: "employee@b-attend.app" } } });
   const emp1 = employeeMap["EMP001"];
   for (let i = 1; i <= 7; i++) {
     const day = new Date(now);

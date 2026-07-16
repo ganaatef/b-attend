@@ -12,7 +12,7 @@ async function repairDemoLinks() {
 
     // 1. Find demo tenant
     const demoTenant = await prisma.tenant.findFirst({
-      where: { name: "Demo Company" },
+      where: { slug: "b-attend-demo" },
       include: { users: true, employees: true },
     });
 
@@ -64,7 +64,7 @@ async function repairDemoLinks() {
     });
 
     const demoEmployee = employees.find((e) => e.employeeCode === "EMP001");
-    const demoManager = employees.find((e) => e.fullName?.toLowerCase().includes("cairo manager") || e.fullName?.toLowerCase().includes("manager"));
+    const demoManager = employees.find((e) => e.employeeCode === "MGR001");
 
     console.log("📋 Matching employees found:");
     if (demoEmployee) {
