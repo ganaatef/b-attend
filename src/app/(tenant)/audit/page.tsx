@@ -11,10 +11,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AuditPage({ searchParams }: { searchParams: Promise<{ action?: string }> }) {
   const session = await getSession();
-  if (!session?.tenantId) return null;
-  if (session.role !== "COMPANY_OWNER" && session.role !== "HR_ADMIN") {
-    return <div className="p-4 text-sm text-muted-foreground">Audit log is only visible to owners and HR admins.</div>;
-  }
+  if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role !== "COMPANY_OWNER" && session.role !== "HR_ADMIN") return null;
   const params = await searchParams;
   const where: any = { companyId: session.tenantId };
   if (params.action) where.action = params.action;

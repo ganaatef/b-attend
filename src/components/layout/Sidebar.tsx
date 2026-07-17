@@ -121,8 +121,6 @@ const tenantBranchManagerNavKeys: NavItem[] = [
   { href: "/approvals", labelKey: "approvals", icon: CheckSquare },
   { href: "/reports", labelKey: "reports", icon: FileBarChart },
   { href: "/hr", labelKey: "hrDashboard", icon: Briefcase },
-  { href: "/hr/departments", labelKey: "departments", icon: FolderTree },
-  { href: "/hr/job-titles", labelKey: "jobTitles", icon: Award },
   { href: "/hr/leaves", labelKey: "leaveManagement", icon: CalendarDays },
   { href: "/hr/training", labelKey: "training", icon: GraduationCap },
   { href: "/hr/assets", labelKey: "assets", icon: Package },

@@ -16,7 +16,8 @@ function money(amount: number, currency = "EGP") { return `${formatNumber(amount
 
 export default async function BillingPage() {
   const session = await getSession();
-  if (!session?.tenantId) return null;
+  if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role !== "COMPANY_OWNER") return null;
   const t = await getTranslations("billing");
   const [tenant, subscription, invoices, planUsage] = await Promise.all([
     db.tenant.findUnique({ where: { id: session.tenantId } }),
