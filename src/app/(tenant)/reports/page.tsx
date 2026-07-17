@@ -23,9 +23,9 @@ const reportTypes = [
 
 export default async function ReportsPage({ searchParams }: { searchParams: Promise<{ from?: string; to?: string; branchId?: string }> }) {
   const session = await getSession();
-  if (!session?.tenantId) return null;
+  if (!session?.tenantId || session.kind !== "tenant") return null;
   const t = await getTranslations("reports");
-  if (session.role === "EMPLOYEE") return <div className="p-4 text-sm text-muted-foreground">{t("reportsNotAvailable")}</div>;
+  if (session.role === "EMPLOYEE") return null;
 
   const params = await searchParams;
   const today = new Date();

@@ -26,6 +26,7 @@ function hasPerm(role: string, perm: HrPermission): boolean {
 export default async function OnboardingDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const { employeeId } = await params;
   const tid = session.tenantId;
 

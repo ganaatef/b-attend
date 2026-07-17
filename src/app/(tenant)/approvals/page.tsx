@@ -19,7 +19,8 @@ const statusBadge = (s: string) => {
 
 export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const session = await getSession();
-  if (!session?.tenantId) return null;
+  if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role === "EMPLOYEE") return null;
   const t = await getTranslations("approvals");
   const params = await searchParams;
   const where: any = { companyId: session.tenantId };

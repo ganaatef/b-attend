@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 export default async function BranchesPage() {
   const t = await getTranslations("branches");
   const session = await getSession();
-  if (!session?.tenantId) return null;
+  if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role === "EMPLOYEE") return null;
   const branches = await db.branch.findMany({
     where: { companyId: session.tenantId, deletedAt: null },
     include: { _count: { select: { employees: true, schedules: true } } },

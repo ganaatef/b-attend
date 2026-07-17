@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 export default async function EmployeesPage() {
   const t = await getTranslations("employees");
   const session = await getSession();
-  if (!session?.tenantId) return null;
+  if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role === "EMPLOYEE") return null;
   const [employees, branches, departments, policies] = await Promise.all([
     db.employee.findMany({
       where: { companyId: session.tenantId, deletedAt: null },

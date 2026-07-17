@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function PoliciesPage() {
   const t = await getTranslations("policies");
   const session = await getSession();
-  if (!session?.tenantId) return null;
+  if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role === "EMPLOYEE") return null;
   const policies = await db.shiftPolicy.findMany({
     where: { companyId: session.tenantId },
     include: { _count: { select: { schedules: true, employees: true } } },

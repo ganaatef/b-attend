@@ -14,7 +14,8 @@ export const dynamic = "force-dynamic";
 export default async function SchedulesPage({ searchParams }: { searchParams: Promise<{ date?: string }> }) {
   const t = await getTranslations("schedules");
   const session = await getSession();
-  if (!session?.tenantId) return null;
+  if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role === "EMPLOYEE") return null;
   const params = await searchParams;
   const date = params.date ? new Date(params.date) : new Date();
   date.setHours(0, 0, 0, 0);

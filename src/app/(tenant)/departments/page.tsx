@@ -13,7 +13,8 @@ export const dynamic = "force-dynamic";
 
 export default async function DepartmentsPage() {
   const session = await getSession();
-  if (!session?.tenantId) return null;
+  if (!session?.tenantId || session.kind !== "tenant") return null;
+  if (session.role === "EMPLOYEE") return null;
   const departments = await db.department.findMany({
     where: { companyId: session.tenantId },
     include: { _count: { select: { employees: true } } },

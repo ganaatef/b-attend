@@ -10,6 +10,7 @@ export const dynamic = "force-dynamic";
 export default async function OnboardingPage() {
   const session = await getSession();
   if (!session || session.kind !== "tenant" || !session.tenantId) redirect("/login?next=/onboarding");
+  if (session.role === "EMPLOYEE") return null;
 
   const [tenant, settings, branches, departments, policies, employees, schedules] = await Promise.all([
     db.tenant.findUnique({ where: { id: session.tenantId } }),
