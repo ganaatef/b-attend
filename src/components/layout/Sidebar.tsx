@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import {
   LayoutDashboard,
   Building2,
@@ -147,6 +147,13 @@ const tenantEmployeeNavKeys: NavItem[] = [
 export function Sidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
   const t = useTranslations("nav");
+  const locale = useLocale();
+  const roleLabels: Record<string, string> = {
+    COMPANY_OWNER: locale === "ar" ? "مالك الشركة" : "Company Owner",
+    HR_ADMIN: locale === "ar" ? "مسؤول الموارد البشرية" : "HR Admin",
+    BRANCH_MANAGER: locale === "ar" ? "مدير فرع" : "Branch Manager",
+    EMPLOYEE: locale === "ar" ? "موظف" : "Employee",
+  };
 
   const items =
     user.kind === "platform"
@@ -201,7 +208,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-semibold text-sidebar-foreground">{user.name}</p>
-            <p className="truncate text-[10px] uppercase tracking-wider text-sidebar-foreground/60">{user.role.replace(/_/g, " ")}</p>
+            <p className="truncate text-[10px] uppercase tracking-wider text-sidebar-foreground/60">{roleLabels[user.role] || user.role.replace(/_/g, " ")}</p>
           </div>
         </div>
       </div>

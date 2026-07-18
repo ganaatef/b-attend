@@ -26,7 +26,7 @@ export default async function DashboardPage() {
 
   const [
     employees, branches, departments, policies, schedulesToday, punchesToday,
-    pendingApprovals, recentExceptions, tenant, subscription,
+    pendingApprovals, recentExceptions, tenant, subscription, currentUser,
   ] = await Promise.all([
     db.employee.count({ where: { companyId: tid, deletedAt: null, status: "ACTIVE" } }),
     db.branch.count({ where: { companyId: tid, deletedAt: null } }),
@@ -38,7 +38,10 @@ export default async function DashboardPage() {
     db.punch.findMany({ where: { companyId: tid, insideGeofence: false }, include: { employee: true, branch: true }, take: 5, orderBy: { timestamp: "desc" } }),
     db.tenant.findUnique({ where: { id: tid } }),
     db.subscription.findUnique({ where: { tenantId: tid }, include: { plan: true } }),
+    db.user.findUnique({ where: { id: session.sub } }),
   ]);
+
+  const displayName = locale === "ar" ? (currentUser?.name || session.name) : session.name;
 
   const cards = [
     { label: t("activeEmployees"), value: employees, icon: Users, sub: `${branches} ${t("branches")} · ${departments} ${t("depts")}` },
@@ -50,8 +53,8 @@ export default async function DashboardPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-foreground">{t("welcome", { name: session.name })}</h1>
-        <p className="text-sm text-muted-foreground">{tenant?.name} · {subscription?.plan.name} {t("plan")} {subscription && <SubscriptionBadge status={subscription.status} />}</p>
+        <h1 className="text-lg font-bold text-foreground">{t("welcome", { name: displayName })}</h1>
+        <p className="text-sm text-muted-foreground">{locale === "ar" ? (tenant?.nameAr || tenant?.name) : tenant?.name} · {locale === "ar" ? (subscription?.plan.nameAr || subscription?.plan.name) : subscription?.plan.name} {t("plan")} {subscription && <SubscriptionBadge status={subscription.status} />}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

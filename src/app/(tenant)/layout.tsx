@@ -25,6 +25,8 @@ export default async function TenantLayout({ children }: { children: React.React
   });
   if (!tenant) redirect("/login?next=/dashboard");
 
+  const currentUser = await db.user.findUnique({ where: { id: session.sub } });
+
   if (tenant.status === "PENDING_ACTIVATION" || tenant.status === "REJECTED") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-6">
@@ -43,7 +45,7 @@ export default async function TenantLayout({ children }: { children: React.React
   }
 
   const appShellSession: AppShellSession = {
-    name: session.name,
+    name: currentUser?.name || session.name,
     email: session.email,
     role: session.role,
     kind: "tenant",

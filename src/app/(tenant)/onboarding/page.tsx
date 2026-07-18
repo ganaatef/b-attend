@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OnboardingWizard } from "./OnboardingWizard";
 import { redirect } from "next/navigation";
+import { getLocale } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ export default async function OnboardingPage() {
   if (!session || session.kind !== "tenant" || !session.tenantId) redirect("/login?next=/onboarding");
   if (session.role === "EMPLOYEE") return null;
 
+  const locale = await getLocale();
   const [tenant, settings, branches, departments, policies, employees, schedules] = await Promise.all([
     db.tenant.findUnique({ where: { id: session.tenantId } }),
     db.companySettings.findUnique({ where: { companyId: session.tenantId } }),
@@ -36,7 +38,7 @@ export default async function OnboardingPage() {
     <div className="mx-auto max-w-4xl space-y-4">
       <div>
         <h1 className="text-lg font-bold text-foreground">Welcome, {session.name}</h1>
-        <p className="text-sm text-muted-foreground">Let&apos;s set up {tenant?.name}. You can complete these steps in any order.</p>
+        <p className="text-sm text-muted-foreground">Let&apos;s set up {locale === "ar" ? (tenant?.nameAr || tenant?.name) : tenant?.name}. You can complete these steps in any order.</p>
       </div>
       <Card>
         <CardContent className="pt-4">
