@@ -1,7 +1,7 @@
 /**
  * repair-demo-arabic-names.ts
  *
- * Idempotent script to update demo user/tenant display names to Arabic.
+ * Idempotent script to update demo user/tenant display names and employee Arabic names.
  * Safe for production — only updates specific demo records, no deletes.
  *
  * Usage: npx tsx scripts/repair-demo-arabic-names.ts
@@ -22,12 +22,32 @@ const DEMO_TENANT = {
   nameAr: "مجموعة B-Attend التجريبية",
 };
 
+const EMPLOYEE_ARABIC_NAMES: Record<string, { fullName: string; arabicName: string }> = {
+  EMP001: { fullName: "Demo Employee", arabicName: "الموظف التجريبي" },
+  EMP002: { fullName: "Sara Adel", arabicName: "سارة عادل" },
+  EMP003: { fullName: "Khaled Ibrahim", arabicName: "خالد إبراهيم" },
+  EMP004: { fullName: "Mona Sami", arabicName: "منى سامي" },
+  EMP005: { fullName: "Youssef Ali", arabicName: "يوسف علي" },
+  EMP006: { fullName: "Fatma Hassan", arabicName: "فاطمة حسن" },
+  EMP007: { fullName: "Omar Khaled", arabicName: "عمر خالد" },
+  EMP008: { fullName: "Nour Ahmed", arabicName: "نور أحمد" },
+  EMP009: { fullName: "Mahmoud Adel", arabicName: "محمود عادل" },
+  EMP010: { fullName: "Heba Samir", arabicName: "هبة سمير" },
+  EMP011: { fullName: "Tarek Mokhtar", arabicName: "طارق مختار" },
+  EMP012: { fullName: "Laila Mostafa", arabicName: "ليلى مصطفى" },
+  EMP013: { fullName: "Hossam Tarek", arabicName: "حسام طارق" },
+  EMP014: { fullName: "Reem Hassan", arabicName: "ريم حسن" },
+  EMP015: { fullName: "Karim Nabil", arabicName: "كريم نبيل" },
+  MGR001: { fullName: "New Cairo Manager", arabicName: "مدير فرع التجمع" },
+  MGR002: { fullName: "Nasr City Manager", arabicName: "مدير فرع مدينة نصر" },
+};
+
 async function main() {
   console.log("🔧 Repairing demo Arabic display names...\n");
 
   // Find the demo tenant
   const tenant = await prisma.tenant.findFirst({
-    where: { slug: "demo-restaurant" },
+    where: { slug: { contains: "demo" } },
   });
 
   if (!tenant) {
@@ -67,33 +87,43 @@ async function main() {
     updated++;
   }
 
-  // Also update employee records for demo users
-  for (const [email, data] of Object.entries(DEMO_NAMES)) {
+  // Update employee records: preserve English fullName, populate arabicName
+  let empUpdated = 0;
+  for (const [code, data] of Object.entries(EMPLOYEE_ARABIC_NAMES)) {
     const emp = await prisma.employee.findFirst({
-      where: { companyId: tenant.id, email },
+      where: { companyId: tenant.id, employeeCode: code },
     });
 
-    if (!emp) continue;
-
-    const empNameMap: Record<string, string> = {
-      "owner@b-attend.app": "مالك الشركة التجريبية",
-      "hr@b-attend.app": "مسؤول الموارد البشرية",
-      "manager@b-attend.app": "مدير فرع التجمع",
-      "manager2@b-attend.app": "مدير فرع مدينة نصر",
-      "employee@b-attend.app": "الموظف التجريبي",
-    };
-
-    const newName = empNameMap[email];
-    if (newName && emp.fullName !== newName) {
-      await prisma.employee.update({
-        where: { id: emp.id },
-        data: { fullName: newName },
-      });
-      console.log(`✅ Employee ${emp.employeeCode} — "${emp.fullName}" → "${newName}"`);
+    if (!emp) {
+      console.log(`⚠️  Employee ${code} not found. Skipping.`);
+      continue;
     }
+
+    const needsFullName = emp.fullName !== data.fullName;
+    const needsArabicName = emp.arabicName !== data.arabicName;
+
+    if (!needsFullName && !needsArabicName) {
+      console.log(`✓  ${code} — already up to date. Skipping.`);
+      continue;
+    }
+
+    const updateData: { fullName?: string; arabicName?: string } = {};
+    if (needsFullName) updateData.fullName = data.fullName;
+    if (needsArabicName) updateData.arabicName = data.arabicName;
+
+    await prisma.employee.update({
+      where: { id: emp.id },
+      data: updateData,
+    });
+
+    const changes = [];
+    if (needsFullName) changes.push(`fullName: "${emp.fullName}" → "${data.fullName}"`);
+    if (needsArabicName) changes.push(`arabicName: "${emp.arabicName ?? ""}" → "${data.arabicName}"`);
+    console.log(`✅ Employee ${code} — ${changes.join(", ")}`);
+    empUpdated++;
   }
 
-  console.log(`\n🎉 Done. ${updated} user(s) updated.`);
+  console.log(`\n🎉 Done. ${updated} user(s), ${empUpdated} employee(s) updated.`);
 }
 
 main()

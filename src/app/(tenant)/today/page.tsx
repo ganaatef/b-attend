@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Clock, LogIn, LogOut, ClipboardList, CheckSquare, CalendarClock } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { employeeDisplayName } from "@/lib/employee-display";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function TodayPage() {
   const session = await getSession();
   if (!session?.tenantId) return null;
   const t = await getTranslations("today");
+  const locale = await getLocale();
   const user = await db.user.findUnique({ where: { id: session.sub }, include: { employee: { include: { branch: true } } } });
   const employee = user?.employee;
 
@@ -47,8 +49,8 @@ export default async function TodayPage() {
   return (
     <div className="mx-auto max-w-md space-y-4">
       <div className="text-center">
-        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent/10 text-xl font-bold text-brand-accent">{employee.fullName.charAt(0).toUpperCase()}</div>
-        <h1 className="text-lg font-bold text-foreground">{t("hi", { name: employee.fullName.split(" ")[0] })}</h1>
+        <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent/10 text-xl font-bold text-brand-accent">{employeeDisplayName(employee, locale).charAt(0).toUpperCase()}</div>
+        <h1 className="text-lg font-bold text-foreground">{t("hi", { name: employeeDisplayName(employee, locale).split(" ")[0] })}</h1>
         <p className="text-sm text-muted-foreground">{employee.jobTitle ?? ""} · {employee.branch?.name ?? t("noBranch")}</p>
       </div>
 

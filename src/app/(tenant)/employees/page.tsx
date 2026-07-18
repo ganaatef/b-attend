@@ -7,12 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Users, Plus } from "lucide-react";
 import { EmployeeForm } from "./EmployeeForm";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { employeeDisplayName } from "@/lib/employee-display";
 
 export const dynamic = "force-dynamic";
 
 export default async function EmployeesPage() {
   const t = await getTranslations("employees");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
@@ -55,7 +57,7 @@ export default async function EmployeesPage() {
                 {employees.map((e) => (
                   <tr key={e.id} className="border-b border-border/60 last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-3"><Link href={`/employees/${e.id}`} className="font-medium text-brand-accent hover:underline">{e.employeeCode}</Link></td>
-                    <td className="px-4 py-3"><p className="font-medium text-foreground">{e.fullName}</p><p className="text-xs text-muted-foreground">{e.phone ?? "—"}</p></td>
+                    <td className="px-4 py-3"><p className="font-medium text-foreground">{employeeDisplayName(e, locale)}</p><p className="text-xs text-muted-foreground">{e.phone ?? "—"}</p></td>
                     <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{e.branch?.name ?? "—"}</td>
                     <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{e.department?.name ?? "—"}</td>
                     <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{e.jobTitle ?? "—"}</td>

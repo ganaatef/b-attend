@@ -13,7 +13,8 @@ import { clockAction } from "./actions";
 import type { Employee, Schedule, ShiftPolicy, Punch, Branch } from "@prisma/client";
 import { Loader2, MapPin, LogIn, LogOut, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { employeeDisplayName } from "@/lib/employee-display";
 
 type EmployeeWithRelations = Employee & { branch: Branch | null; defaultShiftPolicy: ShiftPolicy | null };
 
@@ -25,6 +26,7 @@ interface ClockPageProps {
 
 export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
   const t = useTranslations("clock");
+  const locale = useLocale();
   const [state, formAction] = useActionState(clockAction, { ok: false } as { ok: boolean; error?: string; punchId?: string; insideGeofence?: boolean; distanceMeters?: number; status?: string; type?: string });
   const [pending, setPending] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
@@ -84,9 +86,9 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
         <CardContent className="pt-4">
           <div className="text-center">
             <div className="mx-auto mb-3 flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent/10 text-xl font-bold text-brand-accent">
-              {employee.fullName.charAt(0).toUpperCase()}
+              {employeeDisplayName(employee, locale).charAt(0).toUpperCase()}
             </div>
-            <h2 className="text-base font-semibold text-foreground">{employee.fullName}</h2>
+            <h2 className="text-base font-semibold text-foreground">{employeeDisplayName(employee, locale)}</h2>
             <p className="text-xs text-muted-foreground">{employee.employeeCode} · {employee.jobTitle ?? "—"}</p>
             <p className="text-xs text-muted-foreground">{branch?.name ?? t("noBranchAssigned")}</p>
           </div>

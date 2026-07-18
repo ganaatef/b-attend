@@ -13,12 +13,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { clockAction, kioskLookupAction } from "../clock/actions";
 import type { Branch } from "@prisma/client";
 import { Loader2, LogIn, LogOut, Search, RotateCcw } from "lucide-react";
+import { useLocale } from "next-intl";
+import { employeeDisplayName } from "@/lib/employee-display";
 
 interface KioskProps {
   branches: Branch[];
 }
 
 export function KioskPage({ branches }: KioskProps) {
+  const locale = useLocale();
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
   const [lookup, setLookup] = useState<{ ok: boolean; error?: string; employee?: any; schedule?: any; lastPunch?: any; nextAction?: string } | null>(null);
   const [pending, setPending] = useState(false);
@@ -106,9 +109,9 @@ export function KioskPage({ branches }: KioskProps) {
             <div className="space-y-4">
               <div className="rounded-lg border border-border bg-card/50 p-4 text-center">
                 <div className="mx-auto mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-brand-accent/10 text-2xl font-bold text-brand-accent">
-                  {lookup.employee.fullName.charAt(0).toUpperCase()}
+                  {employeeDisplayName(lookup.employee, locale).charAt(0).toUpperCase()}
                 </div>
-                <p className="text-lg font-semibold text-foreground">{lookup.employee.fullName}</p>
+                <p className="text-lg font-semibold text-foreground">{employeeDisplayName(lookup.employee, locale)}</p>
                 <p className="text-sm text-muted-foreground">{lookup.employee.employeeCode} · {lookup.employee.jobTitle ?? "—"}</p>
                 <p className="text-xs text-muted-foreground">{lookup.employee.branchName ?? "—"}</p>
                 {lookup.schedule && (

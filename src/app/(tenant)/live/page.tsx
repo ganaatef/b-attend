@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Activity } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { employeeDisplayName } from "@/lib/employee-display";
 
 export const dynamic = "force-dynamic";
 
 export default async function LivePage() {
   const t = await getTranslations("live");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
@@ -95,7 +97,7 @@ export default async function LivePage() {
                 {punches.map((p) => (
                   <tr key={p.id} className="border-b border-border/60 last:border-0">
                     <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(p.timestamp).toLocaleTimeString()}</td>
-                    <td className="px-4 py-2.5"><p className="font-medium text-foreground">{p.employee?.fullName}</p><p className="text-xs text-muted-foreground">{p.employee?.employeeCode}</p></td>
+                    <td className="px-4 py-2.5"><p className="font-medium text-foreground">{employeeDisplayName(p.employee, locale)}</p><p className="text-xs text-muted-foreground">{p.employee?.employeeCode}</p></td>
                     <td className="hidden px-4 py-2.5 text-muted-foreground sm:table-cell">{p.branch?.name ?? "—"}</td>
                     <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{p.type.replace(/_/g, " ")}</Badge></td>
                     <td className="hidden px-4 py-2.5 text-xs text-muted-foreground sm:table-cell">{p.source}</td>

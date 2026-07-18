@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SubscriptionBadge } from "@/components/badges/StatusBadges";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Users, Building2, CalendarClock, CheckCircle2, AlertCircle, Clock, FileBarChart } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { employeeDisplayName } from "@/lib/employee-display";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function DashboardPage() {
 
   const t = await getTranslations("dashboard");
   const tSub = await getTranslations("subscription");
+  const locale = await getLocale();
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
@@ -88,7 +90,7 @@ export default async function DashboardPage() {
                 {recentExceptions.map((p) => (
                   <div key={p.id} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm">
                     <div>
-                      <p className="font-medium text-foreground">{p.employee?.fullName}</p>
+                      <p className="font-medium text-foreground">{employeeDisplayName(p.employee, locale)}</p>
                       <p className="text-xs text-muted-foreground">{p.branch?.name}</p>
                     </div>
                     <span className="text-xs text-amber-700">{p.distanceMeters}m</span>
