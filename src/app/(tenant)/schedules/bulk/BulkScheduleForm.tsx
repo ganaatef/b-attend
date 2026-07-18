@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,10 +11,14 @@ import type { Branch, Employee, ShiftPolicy } from "@prisma/client";
 import { Loader2 } from "lucide-react";
 
 export function BulkScheduleForm({ branches, employees, policies }: { branches: Branch[]; employees: Employee[]; policies: ShiftPolicy[] }) {
-  const [state, formAction] = useActionState(bulkScheduleAction, { ok: false } as { ok: boolean; error?: string; created?: number; skipped?: number });
+  const [state, formAction] = useActionState(bulkScheduleAction, { ok: false } as { ok: boolean; error?: string; created?: number; skipped?: number; conflicts?: number });
   const { pending } = useFormStatus();
+  const [selectedBranch, setSelectedBranch] = useState("");
 
-  // Helper: collect checked employee IDs into the hidden field
+  const filteredEmployees = selectedBranch
+    ? employees.filter((e) => e.branchId === selectedBranch)
+    : employees;
+
   function handleSelectAll(e: React.ChangeEvent<HTMLInputElement>) {
     document.querySelectorAll<HTMLInputElement>('input[name="employeeIds"]').forEach((cb) => { if (cb.value) cb.checked = e.target.checked; });
     syncHidden();
@@ -30,7 +34,10 @@ export function BulkScheduleForm({ branches, employees, policies }: { branches: 
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
           <Label htmlFor="branchId">Branch *</Label>
-          <Select name="branchId" required><SelectTrigger id="branchId"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
+          <Select name="branchId" required value={selectedBranch} onValueChange={(v) => { setSelectedBranch(v); syncHidden(); }}>
+            <SelectTrigger id="branchId"><SelectValue placeholder="Select" /></SelectTrigger>
+            <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+          </Select>
         </div>
         <div>
           <Label htmlFor="shiftPolicyId">Shift policy *</Label>
@@ -42,11 +49,11 @@ export function BulkScheduleForm({ branches, employees, policies }: { branches: 
       </div>
       <div>
         <div className="flex items-center justify-between">
-          <Label>Employees *</Label>
+          <Label>Employees * {selectedBranch && <span className="text-xs text-muted-foreground">({filteredEmployees.length} in branch)</span>}</Label>
           <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" onChange={handleSelectAll} /> Select all</label>
         </div>
         <div className="mt-2 max-h-64 overflow-y-auto rounded-md border border-border bg-card p-2 space-y-1 battend-scroll">
-          {employees.length === 0 ? <p className="text-xs text-muted-foreground">No employees. Add employees first.</p> : employees.map((e) => (
+          {filteredEmployees.length === 0 ? <p className="text-xs text-muted-foreground">{selectedBranch ? "No employees in this branch" : "Select a branch first"}</p> : filteredEmployees.map((e) => (
             <label key={e.id} className="flex items-center gap-2 rounded px-2 py-1 text-sm hover:bg-muted/40">
               <input type="checkbox" name="employeeIds" value={e.id} onChange={syncHidden} />
               <span className="text-foreground">{e.fullName}</span>
@@ -57,7 +64,7 @@ export function BulkScheduleForm({ branches, employees, policies }: { branches: 
         <input type="hidden" id="employeeIds-hidden" name="employeeIds" value="" />
       </div>
       {state.error && <p className="text-xs text-destructive">{state.error}</p>}
-      {state.ok && <p className="text-xs text-brand-success">Created {state.created} schedules. Skipped {state.skipped} duplicates.</p>}
+      {state.ok && <p className="text-xs text-brand-success">Created {state.created} schedules. Skipped {state.skipped} duplicates.{(state.conflicts ?? 0) > 0 ? ` ${state.conflicts} conflicts.` : ""}</p>}
       <Button type="submit" size="sm" disabled={pending}>{pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Generating...</> : "Generate schedules"}</Button>
     </form>
   );

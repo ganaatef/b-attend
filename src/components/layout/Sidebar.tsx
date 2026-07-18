@@ -134,6 +134,7 @@ const tenantBranchManagerNavKeys: NavItem[] = [
 const tenantEmployeeNavKeys: NavItem[] = [
   { href: "/today", labelKey: "today", icon: CalendarClock },
   { href: "/clock", labelKey: "clockInOut", icon: Clock },
+  { href: "/my-schedule", labelKey: "mySchedule", icon: CalendarDays },
   { href: "/attendance", labelKey: "myAttendance", icon: ClipboardList },
   { href: "/my-leave", labelKey: "myLeave", icon: CalendarDays },
   { href: "/requests", labelKey: "myRequests", icon: CheckSquare },

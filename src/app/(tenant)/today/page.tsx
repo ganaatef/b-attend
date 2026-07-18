@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
-import { Clock, LogIn, LogOut, ClipboardList, CheckSquare, CalendarClock } from "lucide-react";
+import { Clock, LogIn, LogOut, ClipboardList, CheckSquare, CalendarClock, MapPin, CalendarDays } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
 
@@ -23,14 +23,16 @@ export default async function TodayPage() {
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const nextWeek = new Date(today); nextWeek.setDate(nextWeek.getDate() + 7);
 
-  let schedule: any = null, punches: any[] = [], attendanceMonth: any[] = [], pendingRequests: any[] = [];
+  let schedule: any = null, punches: any[] = [], attendanceMonth: any[] = [], pendingRequests: any[] = [], nextSchedule: any = null;
   if (employee) {
-    [schedule, punches, attendanceMonth, pendingRequests] = await Promise.all([
-      db.schedule.findUnique({ where: { companyId_employeeId_date: { companyId: session.tenantId, employeeId: employee.id, date: today } }, include: { shiftPolicy: true } }),
+    [schedule, punches, attendanceMonth, pendingRequests, nextSchedule] = await Promise.all([
+      db.schedule.findUnique({ where: { companyId_employeeId_date: { companyId: session.tenantId, employeeId: employee.id, date: today } }, include: { shiftPolicy: true, branch: true } }),
       db.punch.findMany({ where: { employeeId: employee.id, timestamp: { gte: today, lt: tomorrow } }, orderBy: { timestamp: "desc" } }),
       db.attendanceDay.findMany({ where: { employeeId: employee.id, date: { gte: monthStart } }, orderBy: { date: "desc" } }),
       db.approvalRequest.findMany({ where: { employeeId: employee.id, status: "PENDING" } }),
+      db.schedule.findFirst({ where: { companyId: session.tenantId, employeeId: employee.id, date: { gt: today, lt: nextWeek } }, include: { shiftPolicy: true, branch: true }, orderBy: { date: "asc" } }),
     ]);
   }
 
@@ -46,6 +48,21 @@ export default async function TodayPage() {
   const totalLate = attendanceMonth.reduce((s, a) => s + a.lateMinutes, 0);
   const totalWorked = attendanceMonth.reduce((s, a) => s + a.workedMinutes, 0);
 
+  function formatTime(d: Date | null) {
+    if (!d) return "—";
+    return new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function calcDuration(start: Date | null, end: Date | null) {
+    if (!start || !end) return null;
+    const s = new Date(start); const e = new Date(end);
+    let mins = Math.round((e.getTime() - s.getTime()) / 60000);
+    if (mins <= 0) mins += 24 * 60;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+
   return (
     <div className="mx-auto max-w-md space-y-4">
       <div className="text-center">
@@ -56,16 +73,31 @@ export default async function TodayPage() {
 
       <Card>
         <CardContent className="pt-4">
-          <p className="text-xs text-muted-foreground">{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
+          <p className="text-xs text-muted-foreground">{new Date().toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
           {schedule ? (
-            <div className="mt-2">
+            <div className="mt-2 space-y-1">
               <p className="text-sm font-medium text-foreground">{t("todaysShift", { shift: schedule.shiftPolicy?.name ?? "" })}</p>
-              <p className="text-sm text-muted-foreground">
-                {schedule.expectedStart ? new Date(schedule.expectedStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} → {schedule.expectedEnd ? new Date(schedule.expectedEnd).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
-              </p>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Clock className="h-3.5 w-3.5" />
+                <span>{formatTime(schedule.expectedStart)} → {formatTime(schedule.expectedEnd)}</span>
+                {calcDuration(schedule.expectedStart, schedule.expectedEnd) && (
+                  <span className="text-xs">({calcDuration(schedule.expectedStart, schedule.expectedEnd)})</span>
+                )}
+              </div>
+              {schedule.branch && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" /> {schedule.branch.name}
+                </div>
+              )}
             </div>
           ) : (
             <p className="mt-2 text-sm text-muted-foreground">{t("noSchedule")}</p>
+          )}
+          {nextSchedule && (
+            <div className="mt-2 rounded-md bg-muted/30 px-3 py-2">
+              <p className="text-xs font-medium text-foreground">{t("nextShift")}: {nextSchedule.shiftPolicy?.name ?? "—"}</p>
+              <p className="text-xs text-muted-foreground">{new Date(nextSchedule.date).toLocaleDateString()} · {formatTime(nextSchedule.expectedStart)} → {formatTime(nextSchedule.expectedEnd)}</p>
+            </div>
           )}
           {lastPunch && (
             <p className="mt-2 text-xs text-muted-foreground">{t("lastActionAt", { action: lastPunch.type.replace(/_/g, " "), time: new Date(lastPunch.timestamp).toLocaleTimeString() })}</p>
@@ -92,7 +124,11 @@ export default async function TodayPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
+        <Link href="/my-schedule" className="rounded-lg border border-border bg-card p-3 text-center hover:bg-muted/40">
+          <CalendarDays className="mx-auto h-5 w-5 text-brand-accent" />
+          <p className="mt-1 text-xs font-medium text-foreground">{t("mySchedule")}</p>
+        </Link>
         <Link href="/attendance" className="rounded-lg border border-border bg-card p-3 text-center hover:bg-muted/40">
           <ClipboardList className="mx-auto h-5 w-5 text-brand-accent" />
           <p className="mt-1 text-xs font-medium text-foreground">{t("myAttendance")}</p>

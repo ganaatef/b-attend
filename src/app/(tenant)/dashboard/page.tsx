@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Users, Building2, CalendarClock, CheckCircle2, AlertCircle, Clock, FileBarChart } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
+import { getManagedBranchIds } from "@/lib/hr/permissions";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,12 @@ export default async function DashboardPage() {
   const tSub = await getTranslations("subscription");
   const locale = await getLocale();
 
+  const isBranchManager = session.role === "BRANCH_MANAGER";
+  const managedBranchIds = isBranchManager ? await getManagedBranchIds(session.sub, tid) : [];
+
+  const branchScope = isBranchManager ? { in: managedBranchIds } : undefined;
+  const empBranchFilter = isBranchManager ? { branchId: { in: managedBranchIds } } : {};
+
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 
@@ -28,14 +35,14 @@ export default async function DashboardPage() {
     employees, branches, departments, policies, schedulesToday, punchesToday,
     pendingApprovals, recentExceptions, tenant, subscription, currentUser,
   ] = await Promise.all([
-    db.employee.count({ where: { companyId: tid, deletedAt: null, status: "ACTIVE" } }),
-    db.branch.count({ where: { companyId: tid, deletedAt: null } }),
-    db.department.count({ where: { companyId: tid } }),
+    db.employee.count({ where: { companyId: tid, deletedAt: null, status: "ACTIVE", ...empBranchFilter } }),
+    isBranchManager ? Promise.resolve(managedBranchIds.length) : db.branch.count({ where: { companyId: tid, deletedAt: null } }),
+    isBranchManager ? Promise.resolve(0) : db.department.count({ where: { companyId: tid } }),
     db.shiftPolicy.count({ where: { companyId: tid } }),
-    db.schedule.count({ where: { companyId: tid, date: { gte: today, lt: tomorrow } } }),
-    db.punch.count({ where: { companyId: tid, timestamp: { gte: today } } }),
+    db.schedule.count({ where: { companyId: tid, date: { gte: today, lt: tomorrow }, ...(branchScope ? { branchId: branchScope } : {}) } }),
+    db.punch.count({ where: { companyId: tid, timestamp: { gte: today }, ...empBranchFilter } }),
     db.approvalRequest.count({ where: { companyId: tid, status: "PENDING" } }),
-    db.punch.findMany({ where: { companyId: tid, insideGeofence: false }, include: { employee: true, branch: true }, take: 5, orderBy: { timestamp: "desc" } }),
+    db.punch.findMany({ where: { companyId: tid, insideGeofence: false, ...empBranchFilter }, include: { employee: true, branch: true }, take: 5, orderBy: { timestamp: "desc" } }),
     db.tenant.findUnique({ where: { id: tid } }),
     db.subscription.findUnique({ where: { tenantId: tid }, include: { plan: true } }),
     db.user.findUnique({ where: { id: session.sub } }),
@@ -44,7 +51,7 @@ export default async function DashboardPage() {
   const displayName = locale === "ar" ? (currentUser?.name || session.name) : session.name;
 
   const cards = [
-    { label: t("activeEmployees"), value: employees, icon: Users, sub: `${branches} ${t("branches")} · ${departments} ${t("depts")}` },
+    { label: t("activeEmployees"), value: employees, icon: Users, sub: `${branches} ${t("branches")}${!isBranchManager ? ` · ${departments} ${t("depts")}` : ""}` },
     { label: t("scheduledToday"), value: schedulesToday, icon: CalendarClock, sub: `${policies} ${t("shiftPolicies")}` },
     { label: t("clockActionsToday"), value: punchesToday, icon: Clock, sub: t("punchesRecorded") },
     { label: t("pendingApprovals"), value: pendingApprovals, icon: AlertCircle, sub: t("awaitingReview"), highlight: pendingApprovals > 0 },

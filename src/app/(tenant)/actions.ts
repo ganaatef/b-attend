@@ -364,11 +364,17 @@ export async function createPolicyAction(prev: any, formData: FormData) {
 // Schedules — single + bulk
 // ─────────────────────────────────────────────
 
+import { getManagedBranchIds } from "@/lib/hr/permissions";
+
+function isManager(role: string) { return role === "BRANCH_MANAGER"; }
+
 const ScheduleSchema = z.object({
   employeeId: z.string().min(1),
   branchId: z.string().min(1),
   date: z.string().min(1),
   shiftPolicyId: z.string().min(1),
+  plannedStart: z.string().optional(),
+  plannedEnd: z.string().optional(),
 });
 
 export async function createScheduleAction(prev: any, formData: FormData) {
@@ -378,18 +384,49 @@ export async function createScheduleAction(prev: any, formData: FormData) {
     branchId: formData.get("branchId"),
     date: formData.get("date"),
     shiftPolicyId: formData.get("shiftPolicyId"),
+    plannedStart: formData.get("plannedStart") || undefined,
+    plannedEnd: formData.get("plannedEnd") || undefined,
   });
   if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
   const d = parsed.data;
+
+  const employee = await db.employee.findFirst({ where: { id: d.employeeId, companyId: s.tenantId!, deletedAt: null } });
+  if (!employee) return { ok: false, error: "Employee not found or inactive" };
+
+  if (isManager(s.role!)) {
+    const managedBranches = await getManagedBranchIds(s.sub, s.tenantId!);
+    if (!managedBranches.includes(d.branchId)) return { ok: false, error: "Cannot schedule for branches you don't manage" };
+    if (employee.branchId !== d.branchId) return { ok: false, error: "Employee must belong to the selected branch" };
+  }
+
   const date = new Date(d.date);
   date.setHours(0, 0, 0, 0);
   const policy = await db.shiftPolicy.findFirst({ where: { id: d.shiftPolicyId, companyId: s.tenantId! } });
   if (!policy) return { ok: false, error: "Shift policy not found" };
-  const [sh, sm] = policy.startTime.split(":").map(Number);
-  const [eh, em] = policy.endTime.split(":").map(Number);
-  const expectedStart = new Date(date); expectedStart.setHours(sh, sm, 0, 0);
-  const expectedEnd = new Date(date); expectedEnd.setHours(eh, em, 0, 0);
-  if (expectedEnd <= expectedStart) expectedEnd.setDate(expectedEnd.getDate() + 1);
+
+  let expectedStart: Date, expectedEnd: Date;
+  if (d.plannedStart && d.plannedEnd) {
+    const [psh, psm] = d.plannedStart.split(":").map(Number);
+    const [peh, pem] = d.plannedEnd.split(":").map(Number);
+    expectedStart = new Date(date); expectedStart.setHours(psh, psm, 0, 0);
+    expectedEnd = new Date(date); expectedEnd.setHours(peh, pem, 0, 0);
+    if (expectedEnd <= expectedStart) expectedEnd.setDate(expectedEnd.getDate() + 1);
+  } else {
+    const [sh, sm] = policy.startTime.split(":").map(Number);
+    const [eh, em] = policy.endTime.split(":").map(Number);
+    expectedStart = new Date(date); expectedStart.setHours(sh, sm, 0, 0);
+    expectedEnd = new Date(date); expectedEnd.setHours(eh, em, 0, 0);
+    if (expectedEnd <= expectedStart) expectedEnd.setDate(expectedEnd.getDate() + 1);
+  }
+
+  const existing = await db.schedule.findUnique({ where: { companyId_employeeId_date: { companyId: s.tenantId!, employeeId: d.employeeId, date } } });
+  if (existing) return { ok: false, error: "Schedule already exists for this employee on this date." };
+
+  const overlaps = await db.schedule.findMany({
+    where: { companyId: s.tenantId!, employeeId: d.employeeId, expectedStart: { lt: expectedEnd }, expectedEnd: { gt: expectedStart } },
+  });
+  if (overlaps.length > 0) return { ok: false, error: "Schedule overlaps with an existing shift for this employee" };
+
   try {
     await db.schedule.create({
       data: { companyId: s.tenantId!, employeeId: d.employeeId, branchId: d.branchId, date, shiftPolicyId: d.shiftPolicyId, expectedStart, expectedEnd, status: "SCHEDULED" },
@@ -400,12 +437,13 @@ export async function createScheduleAction(prev: any, formData: FormData) {
     throw e;
   }
   revalidatePath("/schedules");
+  revalidatePath("/my-schedule");
   return { ok: true };
 }
 
 const BulkScheduleSchema = z.object({
   branchId: z.string().min(1),
-  employeeIds: z.string().min(1), // comma-separated
+  employeeIds: z.string().min(1),
   dateFrom: z.string().min(1),
   dateTo: z.string().min(1),
   shiftPolicyId: z.string().min(1),
@@ -428,9 +466,19 @@ export async function bulkScheduleAction(prev: any, formData: FormData) {
   if (employeeIds.length === 0) return { ok: false, error: "Select at least one employee" };
   const policy = await db.shiftPolicy.findFirst({ where: { id: d.shiftPolicyId, companyId: s.tenantId! } });
   if (!policy) return { ok: false, error: "Shift policy not found" };
+
+  if (isManager(s.role!)) {
+    const managedBranches = await getManagedBranchIds(s.sub, s.tenantId!);
+    if (!managedBranches.includes(d.branchId)) return { ok: false, error: "Cannot schedule for branches you don't manage" };
+    const branchEmps = await db.employee.findMany({ where: { companyId: s.tenantId!, branchId: d.branchId, deletedAt: null }, select: { id: true } });
+    const allowedIds = new Set(branchEmps.map((e) => e.id));
+    const invalid = employeeIds.filter((id) => !allowedIds.has(id));
+    if (invalid.length > 0) return { ok: false, error: "Some employees do not belong to the selected branch" };
+  }
+
   const weekendSet = new Set(d.weekendDays.split(",").map((x) => x.trim()));
   const dayMap: Record<string, number> = { SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6 };
-  const weekendNums = new Set([...weekendSet].map((d) => dayMap[d] ?? -1).filter((x) => x >= 0));
+  const weekendNums = new Set([...weekendSet].map((dd) => dayMap[dd] ?? -1).filter((x) => x >= 0));
   const start = new Date(d.dateFrom); start.setHours(0, 0, 0, 0);
   const end = new Date(d.dateTo); end.setHours(0, 0, 0, 0);
   if (end < start) return { ok: false, error: "End date must be after start date" };
@@ -440,6 +488,7 @@ export async function bulkScheduleAction(prev: any, formData: FormData) {
 
   let created = 0;
   let skipped = 0;
+  let conflicts = 0;
   for (const empId of employeeIds) {
     for (let dt = new Date(start); dt <= end; dt.setDate(dt.getDate() + 1)) {
       if (weekendNums.has(dt.getDay())) continue;
@@ -449,11 +498,31 @@ export async function bulkScheduleAction(prev: any, formData: FormData) {
       const expectedStart = new Date(date); expectedStart.setHours(sh, sm, 0, 0);
       const expectedEnd = new Date(date); expectedEnd.setHours(eh, em, 0, 0);
       if (expectedEnd <= expectedStart) expectedEnd.setDate(expectedEnd.getDate() + 1);
+      const overlap = await db.schedule.findFirst({
+        where: { companyId: s.tenantId!, employeeId: empId, expectedStart: { lt: expectedEnd }, expectedEnd: { gt: expectedStart } },
+      });
+      if (overlap) { conflicts++; continue; }
       await db.schedule.create({ data: { companyId: s.tenantId!, employeeId: empId, branchId: d.branchId, date, shiftPolicyId: d.shiftPolicyId, expectedStart, expectedEnd, status: "SCHEDULED" } });
       created++;
     }
   }
-  await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "SCHEDULE_GENERATED", reason: `Bulk: created ${created}, skipped ${skipped}` });
+  await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "SCHEDULE_GENERATED", reason: `Bulk: created ${created}, skipped ${skipped}, conflicts ${conflicts}` });
   revalidatePath("/schedules");
-  return { ok: true, created, skipped };
+  revalidatePath("/my-schedule");
+  return { ok: true, created, skipped, conflicts };
+}
+
+export async function deleteScheduleAction(scheduleId: string) {
+  const s = await requireTenant();
+  const schedule = await db.schedule.findFirst({ where: { id: scheduleId, companyId: s.tenantId! } });
+  if (!schedule) return { ok: false, error: "Schedule not found" };
+  if (typeof s.role === "string" && isManager(s.role) && schedule.branchId) {
+    const managedBranches = await getManagedBranchIds(s.sub, s.tenantId!);
+    if (!managedBranches.includes(schedule.branchId)) return { ok: false, error: "Cannot delete schedule for branches you don't manage" };
+  }
+  await db.schedule.delete({ where: { id: scheduleId } });
+  await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "SCHEDULE_DELETED", entityType: "Schedule", entityId: scheduleId });
+  revalidatePath("/schedules");
+  revalidatePath("/my-schedule");
+  return { ok: true };
 }

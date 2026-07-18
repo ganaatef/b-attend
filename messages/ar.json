@@ -131,7 +131,8 @@
     "myTraining": "تدريباتي",
     "myAssets": "عُهدي",
     "myWarnings": "إنذاراتي",
-    "myProfile": "ملفي الشخصي"
+    "myProfile": "ملفي الشخصي",
+    "mySchedule": "جدولي"
   },
   "header": {
     "superAdminCenter": "مركز التحكم العام",
@@ -427,7 +428,23 @@
     "selectEmployees": "اختيار الموظفين",
     "dateRange": "نطاق التاريخ",
     "from": "من",
-    "to": "إلى"
+    "to": "إلى",
+    "count": "{count} جدول في {date}.",
+    "bulkGenerate": "إنشاء مجمع",
+    "previousDay": "← اليوم السابق",
+    "nextDay": "اليوم التالي →",
+    "addSingleSchedule": "إضافة جدول فردي",
+    "noSchedulesForDay": "لا توجد جداول لهذا اليوم",
+    "shift": "الوردية",
+    "expected": "المتوقع",
+    "status": "الحالة",
+    "plannedStart": "الوقت المخطط للبداية",
+    "plannedEnd": "الوقت المخطط للنهاية",
+    "duration": "المدة",
+    "overnightShift": "وردية ليلية",
+    "usePolicyTimes": "استخدام أوقات السياسة",
+    "customTimes": "أوقات مخصصة",
+    "conflicts": "تعارض(ات)"
   },
   "shiftPolicies": {
     "title": "سياسات الورديات",
@@ -511,7 +528,23 @@
     "actualClockIn": "وقت الحضور الفعلي",
     "actualClockOut": "وقت الانصراف الفعلي",
     "status": "الحالة",
-    "noSchedule": "لا يوجد جدول اليوم"
+    "noSchedule": "لا يوجد جدول اليوم",
+    "nextShift": "الوردية القادمة",
+    "mySchedule": "جدولي"
+  },
+  "mySchedule": {
+    "title": "جدولي",
+    "todaysShift": "وردية اليوم",
+    "upcomingShifts": "الورديات القادمة",
+    "monthlyOverview": "نظرة عامة على الشهر",
+    "noScheduleToday": "لا توجد وردية مجدولة اليوم",
+    "noUpcoming": "لا توجد ورديات قادمة هذا الأسبوع",
+    "noMonthlyData": "لا توجد جداول هذا الشهر",
+    "noEmployeeTitle": "لا يوجد سجل موظف",
+    "noEmployeeDesc": "حساب المستخدم الخاص بك غير مرتبط بموظف. اتصل بـ HR.",
+    "noBranch": "لا يوجد فرع",
+    "duration": "المدة",
+    "overnight": "وردية ليلية"
   },
   "live": {
     "title": "الحضور المباشر",

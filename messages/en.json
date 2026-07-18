@@ -131,7 +131,8 @@
     "myTraining": "My Training",
     "myAssets": "My Assets",
     "myWarnings": "My Warnings",
-    "myProfile": "My Profile"
+    "myProfile": "My Profile",
+    "mySchedule": "My Schedule"
   },
   "header": {
     "superAdminCenter": "Super Admin Control Center",
@@ -448,7 +449,15 @@
     "addSingleSchedule": "Add single schedule",
     "noSchedulesForDay": "No schedules for this day",
     "shift": "Shift",
-    "expected": "Expected"
+    "expected": "Expected",
+    "status": "Status",
+    "plannedStart": "Planned Start",
+    "plannedEnd": "Planned End",
+    "duration": "Duration",
+    "overnightShift": "Overnight shift",
+    "usePolicyTimes": "Use policy times",
+    "customTimes": "Custom times",
+    "conflicts": "conflict(s)"
   },
   "shiftPolicies": {
     "title": "Shift Policies",
@@ -576,7 +585,23 @@
     "myAttendance": "My attendance",
     "myRequests": "My requests",
     "noEmployeeTitle": "No employee record",
-    "noEmployeeDesc": "Your user account is not linked to an employee. Contact HR."
+    "noEmployeeDesc": "Your user account is not linked to an employee. Contact HR.",
+    "nextShift": "Next shift",
+    "mySchedule": "My Schedule"
+  },
+  "mySchedule": {
+    "title": "My Schedule",
+    "todaysShift": "Today's Shift",
+    "upcomingShifts": "Upcoming Shifts",
+    "monthlyOverview": "Monthly Overview",
+    "noScheduleToday": "No shift scheduled for today",
+    "noUpcoming": "No upcoming shifts this week",
+    "noMonthlyData": "No schedules this month",
+    "noEmployeeTitle": "No employee record",
+    "noEmployeeDesc": "Your user account is not linked to an employee. Contact HR.",
+    "noBranch": "No branch",
+    "duration": "Duration",
+    "overnight": "Overnight shift"
   },
   "live": {
     "title": "Live Attendance",

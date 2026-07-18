@@ -4,22 +4,34 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { BulkScheduleForm } from "./BulkScheduleForm";
+import { getTranslations } from "next-intl/server";
+import { getManagedBranchIds } from "@/lib/hr/permissions";
 
 export const dynamic = "force-dynamic";
 
 export default async function BulkSchedulePage() {
+  const t = await getTranslations("schedules");
   const session = await getSession();
   if (!session?.tenantId) return null;
+  const isBranchManager = session.role === "BRANCH_MANAGER";
+  const managedBranchIds = isBranchManager ? await getManagedBranchIds(session.sub, session.tenantId) : [];
+
+  const branchWhere: any = { companyId: session.tenantId, deletedAt: null };
+  if (isBranchManager) branchWhere.id = { in: managedBranchIds };
+
+  const empWhere: any = { companyId: session.tenantId, deletedAt: null };
+  if (isBranchManager) empWhere.branchId = { in: managedBranchIds };
+
   const [branches, employees, policies] = await Promise.all([
-    db.branch.findMany({ where: { companyId: session.tenantId, deletedAt: null } }),
-    db.employee.findMany({ where: { companyId: session.tenantId, deletedAt: null }, orderBy: { fullName: "asc" } }),
+    db.branch.findMany({ where: branchWhere }),
+    db.employee.findMany({ where: empWhere, orderBy: { fullName: "asc" } }),
     db.shiftPolicy.findMany({ where: { companyId: session.tenantId } }),
   ]);
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <Link href="/schedules" className="text-xs text-muted-foreground hover:text-foreground">← Schedules</Link>
-        <h1 className="mt-1 text-lg font-bold text-foreground">Bulk schedule generation</h1>
+        <Link href="/schedules" className="text-xs text-muted-foreground hover:text-foreground">← {t("title")}</Link>
+        <h1 className="mt-1 text-lg font-bold text-foreground">{t("bulkTitle")}</h1>
         <p className="text-sm text-muted-foreground">Generate schedules across a date range for multiple employees. Weekends are skipped by default. Duplicate employee/date schedules are skipped.</p>
       </div>
       <Card>
