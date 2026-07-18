@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { markInvoicePaidAction, voidInvoiceAction } from "@/app/admin/actions";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 export function InvoiceActions({ invoiceId }: { invoiceId: string }) {
+  const t = useTranslations("adminInvoices");
   const router = useRouter();
   const [method, setMethod] = useState("BANK_TRANSFER");
   const [loading, setLoading] = useState<string | null>(null);
@@ -17,9 +19,9 @@ export function InvoiceActions({ invoiceId }: { invoiceId: string }) {
       <Select value={method} onValueChange={setMethod}>
         <SelectTrigger className="h-7 w-40 text-xs"><SelectValue /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="BANK_TRANSFER">Bank transfer</SelectItem>
-          <SelectItem value="CASH">Cash</SelectItem>
-          <SelectItem value="MANUAL">Manual</SelectItem>
+          <SelectItem value="BANK_TRANSFER">{t("bankTransfer")}</SelectItem>
+          <SelectItem value="CASH">{t("cash")}</SelectItem>
+          <SelectItem value="MANUAL">{t("manual")}</SelectItem>
         </SelectContent>
       </Select>
       <Button
@@ -36,7 +38,7 @@ export function InvoiceActions({ invoiceId }: { invoiceId: string }) {
         }}
       >
         {loading === "paid" ? <Loader2 className="mr-1 h-3 w-3 animate-spin" /> : <CheckCircle2 className="mr-1 h-3 w-3" />}
-        Mark paid
+        {t("markPaid")}
       </Button>
       <Button
         size="sm"
@@ -44,7 +46,7 @@ export function InvoiceActions({ invoiceId }: { invoiceId: string }) {
         className="h-7 text-xs text-destructive"
         disabled={loading === "void"}
         onClick={async () => {
-          if (!confirm("Void this invoice?")) return;
+          if (!confirm(t("voidConfirm"))) return;
           setLoading("void");
           const r = await voidInvoiceAction(invoiceId);
           if (!r.ok) alert(r.error);
@@ -52,7 +54,7 @@ export function InvoiceActions({ invoiceId }: { invoiceId: string }) {
           setLoading(null);
         }}
       >
-        <XCircle className="mr-1 h-3 w-3" /> Void
+        <XCircle className="mr-1 h-3 w-3" /> {t("void")}
       </Button>
     </div>
   );

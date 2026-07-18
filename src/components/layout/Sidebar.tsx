@@ -153,6 +153,8 @@ export function Sidebar({ user }: { user: SidebarUser }) {
     HR_ADMIN: locale === "ar" ? "مسؤول الموارد البشرية" : "HR Admin",
     BRANCH_MANAGER: locale === "ar" ? "مدير فرع" : "Branch Manager",
     EMPLOYEE: locale === "ar" ? "موظف" : "Employee",
+    SUPER_ADMIN: locale === "ar" ? "مدير المنصة" : "Super Admin",
+    SALES_ADMIN: locale === "ar" ? "مدير المبيعات" : "Sales Admin",
   };
 
   const items =

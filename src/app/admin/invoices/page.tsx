@@ -1,5 +1,6 @@
 /** /admin/invoices */
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { InvoiceBadge } from "@/components/badges/StatusBadges";
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic";
 function money(amount: number, currency = "EGP") { return `${formatNumber(amount)} ${currency}`; }
 
 export default async function InvoicesPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
+  const t = await getTranslations("adminInvoices");
   const params = await searchParams;
   const where: any = params.status ? { status: params.status } : {};
   const invoices = await db.invoice.findMany({
@@ -21,7 +23,17 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     orderBy: { createdAt: "desc" },
   });
 
-  const statusFilters = ["ALL", "DRAFT", "ISSUED", "PENDING_PAYMENT", "PAID", "OVERDUE", "VOID", "REFUNDED"];
+  const statusFilters = ["ALL", "DRAFT", "ISSUED", "PENDING_PAYMENT", "PAID", "OVERDUE", "VOID", "REFUNDED"] as const;
+  const statusLabels: Record<string, string> = {
+    ALL: t("all"),
+    DRAFT: t("draft"),
+    ISSUED: t("issued"),
+    PENDING_PAYMENT: t("pendingPayment"),
+    PAID: t("paid"),
+    OVERDUE: t("overdue"),
+    VOID: t("void"),
+    REFUNDED: t("refunded"),
+  };
   const totalPaid = invoices.filter((i) => i.status === "PAID").reduce((s, i) => s + i.total, 0);
   const totalOutstanding = invoices.filter((i) => i.status === "PENDING_PAYMENT" || i.status === "OVERDUE").reduce((s, i) => s + i.total, 0);
 
@@ -29,8 +41,8 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Invoices</h1>
-          <p className="text-sm text-muted-foreground">{invoices.length} invoices · {money(totalPaid)} paid · {money(totalOutstanding)} outstanding</p>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("invoiceCount", { count: invoices.length, paid: money(totalPaid), outstanding: money(totalOutstanding) })}</p>
         </div>
       </div>
       <div className="flex flex-wrap gap-1.5">
@@ -38,23 +50,23 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
           const active = (params.status ?? "ALL") === s || (s === "ALL" && !params.status);
           return (
             <Link key={s} href={s === "ALL" ? "/admin/invoices" : `/admin/invoices?status=${s}`} className={`rounded-md px-3 py-1.5 text-xs font-medium ${active ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:bg-muted"}`}>
-              {s.replace(/_/g, " ")}
+              {statusLabels[s]}
             </Link>
           );
         })}
       </div>
       <Card className="border-border">
-        {invoices.length === 0 ? <EmptyState title="No invoices" icon={CreditCard} /> : (
+        {invoices.length === 0 ? <EmptyState title={t("noInvoices")} icon={CreditCard} /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Invoice</th>
-                  <th className="px-4 py-3 text-left font-medium">Tenant</th>
-                  <th className="px-4 py-3 text-left font-medium">Total</th>
-                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">Due date</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
-                  <th className="px-4 py-3 text-left font-medium">Actions</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("invoice")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("tenant")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("total")}</th>
+                  <th className="hidden px-4 py-3 text-left font-medium sm:table-cell">{t("dueDate")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("status")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("actions")}</th>
                 </tr>
               </thead>
               <tbody>

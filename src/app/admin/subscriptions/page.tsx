@@ -1,4 +1,5 @@
 /** /admin/subscriptions */
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { SubscriptionBadge, PlanBadge, TenantStatusBadge } from "@/components/badges/StatusBadges";
@@ -9,6 +10,7 @@ import { CreditCard } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export default async function SubscriptionsPage() {
+  const t = await getTranslations("adminSubscriptions");
   const subs = await db.subscription.findMany({
     include: { tenant: true, plan: true },
     orderBy: { createdAt: "desc" },
@@ -17,21 +19,21 @@ export default async function SubscriptionsPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-foreground">Subscriptions</h1>
-        <p className="text-sm text-muted-foreground">{subs.length} total subscriptions across all tenants.</p>
+        <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("total", { count: subs.length })}</p>
       </div>
       <Card className="border-border">
-        {subs.length === 0 ? <EmptyState title="No subscriptions" icon={CreditCard} /> : (
+        {subs.length === 0 ? <EmptyState title={t("noSubscriptions")} icon={CreditCard} /> : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="border-b border-border text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">Tenant</th>
-                  <th className="px-4 py-3 text-left font-medium">Plan</th>
-                  <th className="px-4 py-3 text-left font-medium">Cycle</th>
-                  <th className="px-4 py-3 text-left font-medium">Amount</th>
-                  <th className="px-4 py-3 text-left font-medium">Period</th>
-                  <th className="px-4 py-3 text-left font-medium">Status</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("tenant")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("plan")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("billingCycle")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("amount")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("period")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("status")}</th>
                 </tr>
               </thead>
               <tbody>
