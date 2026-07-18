@@ -15,7 +15,7 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-cairo);
   --font-mono: var(--font-geist-mono);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -144,38 +144,8 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-geist-sans), system-ui, sans-serif;
+    font-family: var(--font-cairo), system-ui, sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
-  }
-  html[dir="rtl"],
-  html[dir="rtl"] body,
-  html[lang="ar"],
-  html[lang="ar"] body,
-  html[dir="rtl"] button,
-  html[dir="rtl"] input,
-  html[dir="rtl"] select,
-  html[dir="rtl"] textarea,
-  html[dir="rtl"] table,
-  html[dir="rtl"] thead,
-  html[dir="rtl"] tbody,
-  html[dir="rtl"] tfoot,
-  html[dir="rtl"] th,
-  html[dir="rtl"] td,
-  html[dir="rtl"] [class*="card"],
-  html[dir="rtl"] [class*="btn"],
-  html[dir="rtl"] [class*="badge"],
-  html[dir="rtl"] [class*="alert"],
-  html[dir="rtl"] [class*="dropdown"],
-  html[dir="rtl"] [class*="dialog"],
-  html[dir="rtl"] [class*="sheet"],
-  html[dir="rtl"] [class*="popover"],
-  html[dir="rtl"] nav,
-  html[dir="rtl"] header,
-  html[dir="rtl"] footer,
-  html[dir="rtl"] main,
-  html[dir="rtl"] aside,
-  html[dir="rtl"] section {
-    font-family: var(--font-cairo), Cairo, system-ui, sans-serif !important;
   }
   /* Subtle brand scrollbar for long lists */
   .battend-scroll::-webkit-scrollbar {
