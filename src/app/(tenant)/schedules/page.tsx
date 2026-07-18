@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { CalendarClock, Plus } from "lucide-react";
 import { ScheduleForm } from "./ScheduleForm";
+import { DateNavigator } from "./DateNavigator";
 import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
@@ -44,7 +45,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
       </div>
       <div className="flex items-center gap-2">
         <Link href={`/schedules?date=${prevDate.toISOString().split("T")[0]}`} className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">{t("previousDay")}</Link>
-        <input type="date" defaultValue={dayStr} onChange={(e) => window.location.href = `/schedules?date=${e.target.value}`} className="rounded-md border border-border bg-card px-3 py-1.5 text-xs" />
+        <DateNavigator defaultValue={dayStr} />
         <Link href={`/schedules?date=${nextDate.toISOString().split("T")[0]}`} className="rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium hover:bg-muted">{t("nextDay")}</Link>
       </div>
       <Card className="border-border p-4">

@@ -668,6 +668,7 @@
     "runMarkAbsent": "Run mark-absent",
     "savedMessage": "Settings saved."
   },
+  "billing": {
     "title": "Billing",
     "currentPlan": "Current Plan",
     "plan": "Plan",
@@ -702,6 +703,7 @@
     "upgradeDesc": "If you're hitting plan limits or need advanced features, contact our billing team to upgrade.",
     "contactBillingBtn": "Contact billing"
   },
+  "support": {
     "title": "Support",
     "newTicket": "New Ticket",
     "myTickets": "My Tickets",
