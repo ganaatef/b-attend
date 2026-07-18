@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Cairo } from "next/font/google";
+import { Cairo, Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { NextIntlClientProvider } from "next-intl";
@@ -7,20 +7,18 @@ import { getMessages } from "next-intl/server";
 import { cookies } from "next/headers";
 import { type Locale, defaultLocale, locales } from "@/i18n/config";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 const cairo = Cairo({
   variable: "--font-cairo",
   subsets: ["arabic", "latin"],
   weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -81,7 +79,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} dir={isArabic ? "rtl" : "ltr"} suppressHydrationWarning>
       <body
-        className={`${isArabic ? cairo.variable : geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+        className={`${cairo.variable} ${inter.variable} antialiased bg-background text-foreground`}
       >
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}

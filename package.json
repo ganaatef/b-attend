@@ -15,7 +15,8 @@
     "db:reset": "prisma migrate reset",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:demo": "tsx prisma/seed.ts",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "i18n:check": "tsx scripts/check-missing-translations.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
