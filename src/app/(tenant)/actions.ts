@@ -372,7 +372,7 @@ const ScheduleSchema = z.object({
 });
 
 export async function createScheduleAction(prev: any, formData: FormData) {
-  const s = await requireTenantAdmin();
+  const s = await requireTenant();
   const parsed = ScheduleSchema.safeParse({
     employeeId: formData.get("employeeId"),
     branchId: formData.get("branchId"),
@@ -413,7 +413,7 @@ const BulkScheduleSchema = z.object({
 });
 
 export async function bulkScheduleAction(prev: any, formData: FormData) {
-  const s = await requireTenantAdmin();
+  const s = await requireTenant();
   const parsed = BulkScheduleSchema.safeParse({
     branchId: formData.get("branchId"),
     employeeIds: formData.get("employeeIds"),
