@@ -146,7 +146,7 @@ async function main() {
   const tenant = existingTenant ?? await db.tenant.create({
     data: {
       name: "B-Attend Demo Restaurant Group",
-      nameAr: "بي اتيند لتجربة المطاعم",
+      nameAr: "مجموعة B-Attend التجريبية",
       slug: "b-attend-demo",
       ownerEmail: "owner@b-attend.app",
       ownerName: "Demo Owner",
@@ -183,11 +183,11 @@ async function main() {
   // 6. Tenant users (owner, hr, manager, manager2, employee)
   // ─────────────────────────────────────────────
   const tenantUsers = [
-    { email: "owner@b-attend.app", name: "Demo Owner", role: "COMPANY_OWNER" as const },
-    { email: "hr@b-attend.app", name: "Demo HR", role: "HR_ADMIN" as const },
-    { email: "manager@b-attend.app", name: "New Cairo Manager", role: "BRANCH_MANAGER" as const },
-    { email: "manager2@b-attend.app", name: "Nasr City Manager", role: "BRANCH_MANAGER" as const },
-    { email: "employee@b-attend.app", name: "Demo Employee", role: "EMPLOYEE" as const },
+    { email: "owner@b-attend.app", name: "مالك الشركة التجريبية", role: "COMPANY_OWNER" as const },
+    { email: "hr@b-attend.app", name: "مسؤول الموارد البشرية", role: "HR_ADMIN" as const },
+    { email: "manager@b-attend.app", name: "مدير فرع التجمع", role: "BRANCH_MANAGER" as const },
+    { email: "manager2@b-attend.app", name: "مدير فرع مدينة نصر", role: "BRANCH_MANAGER" as const },
+    { email: "employee@b-attend.app", name: "الموظف التجريبي", role: "EMPLOYEE" as const },
   ];
   for (const u of tenantUsers) {
     const existing = await db.user.findUnique({ where: { companyId_email: { companyId: tenant.id, email: u.email } } });
@@ -248,7 +248,7 @@ async function main() {
   //     Includes manager employees linked to manager@b-attend.app / manager2@b-attend.app
   // ─────────────────────────────────────────────
   const employeeDefs = [
-    { code: "EMP001", name: "Ahmed Mansour", phone: "+20 100 111 0001", email: "employee@b-attend.app", branch: "NC", department: "Service", jobTitle: "Waiter", policy: "Morning", managerId: null },
+    { code: "EMP001", name: "الموظف التجريبي", phone: "+20 100 111 0001", email: "employee@b-attend.app", branch: "NC", department: "Service", jobTitle: "Waiter", policy: "Morning", managerId: null },
     { code: "EMP002", name: "Sara Adel", phone: "+20 100 111 0002", email: "emp002@b-attend.app", branch: "NC", department: "Service", jobTitle: "Waiter", policy: "Evening", managerId: null },
     { code: "EMP003", name: "Khaled Ibrahim", phone: "+20 100 111 0003", email: "emp003@b-attend.app", branch: "NC", department: "Kitchen", jobTitle: "Chef", policy: "Kitchen Double", managerId: null },
     { code: "EMP004", name: "Mona Sami", phone: "+20 100 111 0004", email: "emp004@b-attend.app", branch: "NC", department: "Cashier", jobTitle: "Cashier", policy: "Morning", managerId: null },
@@ -263,8 +263,8 @@ async function main() {
     { code: "EMP013", name: "Hossam Tarek", phone: "+20 100 111 0013", email: "emp013@b-attend.app", branch: "MD", department: "Cashier", jobTitle: "Cashier", policy: "Morning", managerId: null },
     { code: "EMP014", name: "Reem Hassan", phone: "+20 100 111 0014", email: "emp014@b-attend.app", branch: "MD", department: "Service", jobTitle: "Hostess", policy: "Part Time", managerId: null },
     { code: "EMP015", name: "Karim Nabil", phone: "+20 100 111 0015", email: "emp015@b-attend.app", branch: "MD", department: "Delivery", jobTitle: "Driver", policy: "Evening", managerId: null },
-    { code: "MGR001", name: "New Cairo Manager", phone: "+20 100 222 0001", email: "manager@b-attend.app", branch: "NC", department: "Management", jobTitle: "Branch Manager", policy: "Morning", managerId: null },
-    { code: "MGR002", name: "Nasr City Manager", phone: "+20 100 222 0002", email: "manager2@b-attend.app", branch: "NS", department: "Management", jobTitle: "Branch Manager", policy: "Morning", managerId: null },
+    { code: "MGR001", name: "مدير فرع التجمع", phone: "+20 100 222 0001", email: "manager@b-attend.app", branch: "NC", department: "Management", jobTitle: "Branch Manager", policy: "Morning", managerId: null },
+    { code: "MGR002", name: "مدير فرع مدينة نصر", phone: "+20 100 222 0002", email: "manager2@b-attend.app", branch: "NS", department: "Management", jobTitle: "Branch Manager", policy: "Morning", managerId: null },
   ];
   const employeeMap: Record<string, { id: string }> = {};
   for (const e of employeeDefs) {
@@ -432,11 +432,11 @@ async function main() {
   console.log("     support@b-attend.app  — SUPPORT_AGENT");
   console.log("     billing@b-attend.app  — BILLING_ADMIN");
   console.log("   Tenant accounts (password: demo1234):");
-  console.log("     owner@b-attend.app    — COMPANY_OWNER");
-  console.log("     hr@b-attend.app       — HR_ADMIN");
-  console.log("     manager@b-attend.app  — BRANCH_MANAGER (New Cairo)");
-  console.log("     manager2@b-attend.app — BRANCH_MANAGER (Nasr City)");
-  console.log("     employee@b-attend.app — EMPLOYEE");
+  console.log("     owner@b-attend.app    — COMPANY_OWNER (مالك الشركة التجريبية)");
+  console.log("     hr@b-attend.app       — HR_ADMIN (مسؤول الموارد البشرية)");
+  console.log("     manager@b-attend.app  — BRANCH_MANAGER (مدير فرع التجمع)");
+  console.log("     manager2@b-attend.app — BRANCH_MANAGER (مدير فرع مدينة نصر)");
+  console.log("     employee@b-attend.app — EMPLOYEE (الموظف التجريبي)");
 }
 
 main()

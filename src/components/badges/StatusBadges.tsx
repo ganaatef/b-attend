@@ -1,8 +1,10 @@
 /**
- * B-Attend status badges.
+ * B-Attend status badges — locale-aware.
  */
+import { getLocale } from "next-intl/server";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { getStatusLabel } from "@/lib/status-labels";
 
 type Variant = "default" | "secondary" | "destructive" | "outline";
 
@@ -47,55 +49,61 @@ function variantFor(status: string): { variant: Variant; className?: string } {
     case "LOST":
     case "CLOSED":
     case "RESOLVED":
-    case "REJECTED":
       return { variant: "secondary" };
     default:
       return { variant: "outline" };
   }
 }
 
-export function TenantStatusBadge({ status }: { status: string }) {
+export async function TenantStatusBadge({ status }: { status: string }) {
+  const locale = await getLocale();
   const v = variantFor(status);
   return (
     <Badge variant={v.variant} className={cn(v.className)}>
-      {status.replace(/_/g, " ")}
+      {getStatusLabel(status, locale)}
     </Badge>
   );
 }
 
-export function SubscriptionBadge({ status }: { status: string }) {
+export async function SubscriptionBadge({ status }: { status: string }) {
+  const locale = await getLocale();
   const v = variantFor(status);
   return (
     <Badge variant={v.variant} className={cn(v.className)}>
-      {status.replace(/_/g, " ")}
+      {getStatusLabel(status, locale)}
     </Badge>
   );
 }
 
-export function PlanBadge({ name, isTrial, isCustom }: { name: string; isTrial?: boolean; isCustom?: boolean }) {
+export async function PlanBadge({ name, isTrial, isCustom }: { name: string; isTrial?: boolean; isCustom?: boolean }) {
+  const locale = await getLocale();
   if (isTrial) {
-    return <Badge variant="secondary" className="bg-amber-100 text-amber-900 border-transparent">Trial</Badge>;
+    const label = locale === "ar" ? "تجربة" : "Trial";
+    return <Badge variant="secondary" className="bg-amber-100 text-amber-900 border-transparent">{label}</Badge>;
   }
   if (isCustom) {
-    return <Badge variant="default" className="bg-brand-navy text-white border-transparent">Enterprise</Badge>;
+    const label = locale === "ar" ? "مخصص" : "Enterprise";
+    return <Badge variant="default" className="bg-brand-navy text-white border-transparent">{label}</Badge>;
   }
   return <Badge variant="outline" className="border-brand-accent/30 text-brand-accent">{name}</Badge>;
 }
 
-export function InvoiceBadge({ status }: { status: string }) {
+export async function InvoiceBadge({ status }: { status: string }) {
+  const locale = await getLocale();
   const v = variantFor(status);
   return (
     <Badge variant={v.variant} className={cn(v.className)}>
-      {status.replace(/_/g, " ")}
+      {getStatusLabel(status, locale)}
     </Badge>
   );
 }
 
-export function LeadBadge({ status }: { status: string }) {
+export async function LeadBadge({ status }: { status: string }) {
+  const locale = await getLocale();
   const v = variantFor(status);
   return (
     <Badge variant={v.variant} className={cn(v.className)}>
-      {status.replace(/_/g, " ")}
+      {getStatusLabel(status, locale)}
     </Badge>
   );
 }
