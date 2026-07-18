@@ -41,7 +41,7 @@ const HR_ADMIN_PERMISSIONS: HrPermission[] = [
 ];
 
 const BRANCH_MANAGER_PERMISSIONS: HrPermission[] = [
-  "VIEW_HR_DASHBOARD", "APPROVE_LEAVE",
+  "VIEW_HR_DASHBOARD", "APPROVE_LEAVE", "EXPORT_HR_EXCEL",
 ];
 
 const EMPLOYEE_PERMISSIONS: HrPermission[] = [];

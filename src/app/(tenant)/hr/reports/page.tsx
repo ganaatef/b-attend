@@ -68,6 +68,7 @@ export default async function HRReportsPage({
 
   const excelFeature = await canUseHrFeature(tid, "hr_excel_export");
   const canExcel = excelFeature.allowed || (await canUseHrFeature(tid, "excel_export")).allowed;
+  const canExportExcel = canExport && canExcel;
 
   const branchFilter = isBranchManager
     ? { branch: { managerId: session.sub } }
@@ -289,7 +290,7 @@ export default async function HRReportsPage({
             {isBranchManager && ` · ${t("branchScoped")}`}
           </p>
         </div>
-        {canExcel && (
+        {canExportExcel && (
           <Link
             href="/api/tenant/hr/reports/excel?type=all"
             className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90"
@@ -325,7 +326,7 @@ export default async function HRReportsPage({
               <CardContent className="pt-0">
                 <p className="text-[11px] text-muted-foreground mb-3">{report.description}</p>
                 <div className="flex items-center gap-2">
-                  {canExcel && (
+                  {canExportExcel && (
                     <Link
                       href={report.href}
                       className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[10px] font-medium text-foreground hover:bg-muted/40"

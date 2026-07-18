@@ -600,7 +600,18 @@
     "reply": "رد",
     "internalNote": "ملاحظة داخلية",
     "sendReply": "إرسال الرد",
-    "noTickets": "لا توجد تذاكر بعد"
+    "noTickets": "لا توجد تذاكر بعد",
+    "subtitle": "أرسل تذكرة أو تحقق من التذاكر الحالية.",
+    "newTicketCard": "تذكرة جديدة",
+    "yourTickets": "تذاكري ({count})",
+    "noTicketsYet": "لا توجد تذاكر بعد",
+    "uncategorized": "غير مصنف",
+    "messagesCount": "رسالة",
+    "submitTicket": "إرسال التذكرة",
+    "sending": "جارٍ الإرسال...",
+    "ticketCreated": "تم إنشاء التذكرة. سيرد عليك فريق الدعم الفني قريباً.",
+    "placeholderSubject": "ملخص موجز لمشكلتك",
+    "placeholderMessage": "صف مشكلتك بالتفصيل..."
   },
   "users": {
     "title": "المستخدمون",

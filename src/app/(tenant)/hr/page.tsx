@@ -64,6 +64,7 @@ export default async function HrDashboardPage() {
   const canViewSensitive = isOwnerOrHrAdmin;
   const canManageTraining = isOwnerOrHrAdmin || (await hasHrPermission("MANAGE_TRAINING"));
   const canManageAssets = isOwnerOrHrAdmin || (await hasHrPermission("MANAGE_ASSETS"));
+  const canExportExcel = await hasHrPermission("EXPORT_HR_EXCEL");
 
   const thirtyDays = new Date();
   thirtyDays.setDate(thirtyDays.getDate() + 30);
@@ -145,9 +146,11 @@ export default async function HrDashboardPage() {
           <Link href="/employees" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
             <Users className="h-3.5 w-3.5" /> {t("employeesButton")}
           </Link>
-          <Link href="/api/tenant/hr/employees/excel" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-            <Download className="h-3.5 w-3.5" /> {t("exportExcel")}
-          </Link>
+          {canExportExcel && (
+            <Link href="/api/tenant/hr/employees/excel" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
+              <Download className="h-3.5 w-3.5" /> {t("exportExcel")}
+            </Link>
+          )}
         </div>
       </div>
 
