@@ -7,14 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { CheckSquare } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
+import { displayApprovalType } from "@/lib/locale-display";
+import { getLocaleCode } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
-const statusBadge = (s: string) => {
-  if (s === "PENDING") return <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-transparent text-xs">{s}</Badge>;
-  if (s === "APPROVED") return <Badge variant="default" className="bg-brand-success text-white border-transparent text-xs">{s}</Badge>;
-  if (s === "REJECTED") return <Badge variant="destructive" className="text-xs">{s}</Badge>;
-  return <Badge variant="outline" className="text-xs">{s}</Badge>;
+const statusBadge = (s: string, locale: string) => {
+  if (s === "PENDING") return <Badge variant="secondary" className="bg-amber-100 text-amber-800 border-transparent text-xs">{getStatusLabel(s, locale)}</Badge>;
+  if (s === "APPROVED") return <Badge variant="default" className="bg-brand-success text-white border-transparent text-xs">{getStatusLabel(s, locale)}</Badge>;
+  if (s === "REJECTED") return <Badge variant="destructive" className="text-xs">{getStatusLabel(s, locale)}</Badge>;
+  return <Badge variant="outline" className="text-xs">{getStatusLabel(s, locale)}</Badge>;
 };
 
 export default async function ApprovalsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
@@ -22,6 +25,7 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
   const t = await getTranslations("approvals");
+  const locale = await getLocaleCode();
   const params = await searchParams;
   const where: any = { companyId: session.tenantId };
   if (params.status) where.status = params.status;
@@ -70,11 +74,11 @@ export default async function ApprovalsPage({ searchParams }: { searchParams: Pr
                 {requests.map((r) => (
                   <tr key={r.id} className="border-b border-border/60 last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-3"><Link href={`/employees/${r.employeeId}`} className="font-medium text-foreground hover:text-brand-accent">{r.employee?.fullName}</Link><p className="text-xs text-muted-foreground">{r.branch?.name ?? "—"}</p></td>
-                    <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{r.type.replace(/_/g, " ")}</Badge></td>
-                    <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{r.date ? new Date(r.date).toLocaleDateString() : "—"}</td>
+                    <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{displayApprovalType(r.type, locale)}</Badge></td>
+                    <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell"><bdi dir="ltr">{r.date ? new Date(r.date).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US") : "—"}</bdi></td>
                     <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell max-w-xs truncate">{r.reason}</td>
-                    <td className="px-4 py-3">{statusBadge(r.status)}</td>
-                    <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">{statusBadge(r.status, locale)}</td>
+                    <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell"><bdi dir="ltr">{new Date(r.createdAt).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi></td>
                   </tr>
                 ))}
               </tbody>

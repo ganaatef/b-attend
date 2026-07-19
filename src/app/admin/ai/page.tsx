@@ -2,7 +2,7 @@
  * /admin/ai — Super Admin AI controls.
  */
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,11 +11,14 @@ import { Brain, Activity, ToggleRight, Building2 } from "lucide-react";
 import { AiSettingsForm } from "./AiSettingsForm";
 import { toggleTenantAiAction } from "./actions";
 import { formatDateTime } from "@/lib/utils";
+import { displayAiFeature } from "@/lib/locale-display";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminAiPage() {
   const t = await getTranslations("adminAi");
+  const locale = await getLocale();
   const [settings, usageLogs, tenantsWithAi] = await Promise.all([
     db.systemSetting.findFirst({ where: { isMain: true } }),
     db.aiUsageLog.findMany({ orderBy: { createdAt: "desc" }, take: 50, include: { tenant: true } }),
@@ -116,9 +119,9 @@ export default async function AdminAiPage() {
                     <tr key={l.id} className="border-b border-border/60 last:border-0">
                       <td className="px-3 py-2 text-xs text-muted-foreground whitespace-nowrap">{formatDateTime(l.createdAt)}</td>
                       <td className="px-3 py-2 text-xs text-foreground">{l.tenant?.name ?? "—"}</td>
-                      <td className="px-3 py-2"><Badge variant="outline" className="text-[10px]">{l.feature.replace(/_/g, " ")}</Badge></td>
+                      <td className="px-3 py-2"><Badge variant="outline" className="text-xs">{displayAiFeature(l.feature, locale)}</Badge></td>
                       <td className="px-3 py-2 text-xs text-muted-foreground">{l.provider}</td>
-                      <td className="px-3 py-2"><Badge variant={l.status === "SUCCESS" ? "default" : l.status === "FAILED" ? "destructive" : "secondary"} className={l.status === "SUCCESS" ? "bg-brand-success text-white border-transparent text-[10px]" : "text-[10px]"}>{l.status}</Badge></td>
+                      <td className="px-3 py-2"><Badge variant={l.status === "SUCCESS" ? "default" : l.status === "FAILED" ? "destructive" : "secondary"} className={l.status === "SUCCESS" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{l.status}</Badge></td>
                     </tr>
                   ))}
                 </tbody>
@@ -136,7 +139,7 @@ export default async function AdminAiPage() {
               {Object.entries(stats.byFeature).map(([k, v]) => (
                 <div key={k} className="rounded-md border border-border bg-card p-3 text-center">
                   <p className="text-2xl font-bold text-foreground">{v}</p>
-                  <p className="text-xs text-muted-foreground">{k.replace(/_/g, " ")}</p>
+                  <p className="text-xs text-muted-foreground">{getStatusLabel(k, locale)}</p>
                 </div>
               ))}
             </div>

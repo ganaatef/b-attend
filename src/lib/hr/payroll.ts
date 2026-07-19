@@ -38,6 +38,7 @@ export interface PayrollCalcResult {
   lateDeduction: number;
   netAmount: number;
   notes: string;
+  summary: AttendanceSummary;
 }
 
 // ─────────────────────────────────────────────
@@ -274,6 +275,7 @@ export async function calculatePayrollLine(
       lateDeduction: 0,
       netAmount: 0,
       notes: notes.join("; "),
+      summary,
     };
   }
 
@@ -298,6 +300,7 @@ export async function calculatePayrollLine(
     lateDeduction,
     netAmount,
     notes: notes.join("; "),
+    summary,
   };
 }
 
@@ -378,7 +381,7 @@ export async function generatePayrollRun(options: GenerateRunOptions): Promise<G
 
   for (const emp of activeEmployees) {
     const calc = await calculatePayrollLine(emp.id, companyId, year, month);
-    const summary = await summarizeAttendanceForPayroll(emp.id, companyId, year, month);
+    const summary = calc.summary;
 
     if (!calc.notes.includes("WARNING: No active payroll profile")) {
       missingProfileEmployeeIds.push(emp.id);

@@ -10,6 +10,9 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { canUseHrFeature } from "@/lib/hr/feature-gates";
 import { hasHrPermission } from "@/lib/hr/permissions";
 import { FileText, Download, Lock, Plus, AlertTriangle, Eye } from "lucide-react";
+import { getStatusLabel } from "@/lib/status-labels";
+import { displayContractType } from "@/lib/locale-display";
+import { getLocaleCode } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +22,7 @@ export default async function HrContractsPage() {
   if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const tid = session.tenantId;
   const t = await getTranslations("hrContracts");
+  const locale = await getLocaleCode();
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
@@ -120,17 +124,17 @@ export default async function HrContractsPage() {
                     <div>
                       <p className="font-medium text-foreground">{c.contractNumber}</p>
                       <p className="text-xs text-muted-foreground">
-                        {c.employee.fullName} ({c.employee.employeeCode}) · {c.contractType.replace(/_/g, " ")}
+                        {c.employee.fullName} ({c.employee.employeeCode}) · {displayContractType(c.contractType, locale)}
                         {c.employee.branch ? ` · ${c.employee.branch.name}` : ""}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right text-xs text-muted-foreground">
-                      <p>{new Date(c.startDate).toLocaleDateString()} — {c.endDate ? new Date(c.endDate).toLocaleDateString() : t("openLabel")}</p>
+                      <p><bdi dir="ltr">{new Date(c.startDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi> — {c.endDate ? <bdi dir="ltr">{new Date(c.endDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi> : t("openLabel")}</p>
                       {isExpiring && <p className="flex items-center gap-1 text-amber-600 font-medium"><AlertTriangle className="h-3 w-3" /> {t("expiringSoonBadge")}</p>}
                     </div>
-                    <Badge variant={c.status === "ACTIVE" ? "default" : "outline"} className={`text-[10px] ${statusColor(c.status)}`}>{c.status}</Badge>
+                    <Badge variant={c.status === "ACTIVE" ? "default" : "outline"} className={`text-xs ${statusColor(c.status)}`}>{getStatusLabel(c.status, locale)}</Badge>
                     <Eye className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </Link>

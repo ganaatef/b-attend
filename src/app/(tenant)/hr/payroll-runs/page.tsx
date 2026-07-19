@@ -189,7 +189,7 @@ export default async function PayrollRunsPage({
                       <p className="font-medium text-foreground">
                         {t(monthKeys[run.month])} {run.year}
                         {run.id === latestRun?.id && (
-                          <span className="ml-2 text-[10px] font-medium text-brand-accent">{t("latest")}</span>
+                          <span className="ml-2 text-xs font-medium text-brand-accent">{t("latest")}</span>
                         )}
                       </p>
                       <p className="text-xs text-muted-foreground">
@@ -209,7 +209,7 @@ export default async function PayrollRunsPage({
                         {t("lockedPrefix")} {new Date(run.lockedAt).toLocaleDateString()}
                       </p>
                     )}
-                    <Badge variant="outline" className={`text-[10px] ${cfg.cls}`}>
+                    <Badge variant="outline" className={`text-xs ${cfg.cls}`}>
                       {cfg.label}
                     </Badge>
                   </div>

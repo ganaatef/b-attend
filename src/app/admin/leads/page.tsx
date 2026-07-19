@@ -1,9 +1,10 @@
 /** /admin/leads */
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { LeadBadge } from "@/components/badges/StatusBadges";
+import { displayLeadSource } from "@/lib/locale-display";
 import { LeadRowActions } from "./LeadRowActions";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Users } from "lucide-react";
@@ -12,6 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function LeadsPage({ searchParams }: { searchParams: Promise<{ status?: string }> }) {
   const t = await getTranslations("adminLeads");
+  const locale = await getLocale();
   const params = await searchParams;
   const where: any = params.status ? { status: params.status } : {};
   const [leads, platformUsers] = await Promise.all([
@@ -60,7 +62,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                       {l.tenant && <Link href={`/admin/tenants/${l.tenantId}`} className="text-xs text-brand-accent hover:underline">{t("toTenant")}</Link>}
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{l.company ?? "—"}</td>
-                    <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{l.sourcePage.replace(/_/g, " ")}</td>
+                    <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{displayLeadSource(l.sourcePage, locale)}</td>
                     <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{l.employeesCount ?? "—"} {t("emp")} · {l.branchesCount ?? "—"} {t("br")}</td>
                     <td className="px-4 py-3"><LeadBadge status={l.status} /></td>
                     <td className="px-4 py-3"><LeadRowActions leadId={l.id} status={l.status} platformUsers={platformUsers} /></td>

@@ -8,12 +8,14 @@ import { ReplyForm } from "./ReplyForm";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { MessageSquare } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { displayTicketStatus, displayAuthorRole } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
 export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations("adminSupport");
+  const locale = await getLocale();
   const { id } = await params;
   const ticket = await db.supportTicket.findUnique({ where: { id }, include: { tenant: true, messages: { orderBy: { createdAt: "asc" } } } });
   if (!ticket) notFound();
@@ -24,7 +26,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
         <Link href="/admin/support" className="text-xs text-muted-foreground hover:text-foreground">← {t("back")}</Link>
         <h1 className="mt-1 text-lg font-bold text-foreground">{ticket.subject}</h1>
         <p className="text-sm text-muted-foreground">{ticket.tenant?.name ?? ticket.createdByEmail} · {ticket.category ?? "Uncategorized"} · {ticket.priority} priority</p>
-        <Badge variant="outline" className="mt-2 text-xs">{ticket.status.replace(/_/g, " ")}</Badge>
+        <Badge variant="outline" className="mt-2 text-xs">{displayTicketStatus(ticket.status, locale)}</Badge>
       </div>
 
       <Card>
@@ -35,7 +37,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
               {ticket.messages.map((m) => (
                 <div key={m.id} className={`rounded-md border px-3 py-2 text-sm ${m.isInternal ? "border-amber-300 bg-amber-50/40" : "border-border bg-card"}`}>
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-medium text-foreground">{m.authorEmail} <span className="text-muted-foreground">· {m.authorRole.replace(/_/g, " ")}</span></span>
+                    <span className="font-medium text-foreground">{m.authorEmail} <span className="text-muted-foreground">· {displayAuthorRole(m.authorRole, locale)}</span></span>
                     <span className="text-muted-foreground">{formatDateTime(m.createdAt)}</span>
                   </div>
                   <p className="mt-1 text-foreground/90 whitespace-pre-wrap">{m.body}</p>

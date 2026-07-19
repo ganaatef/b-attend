@@ -8,6 +8,8 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { TicketForm } from "./TicketForm";
 import { LifeBuoy } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { displayTicketStatus } from "@/lib/locale-display";
+import { getLocaleCode } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +17,7 @@ export default async function SupportPage() {
   const session = await getSession();
   if (!session?.tenantId) return null;
   const t = await getTranslations("support");
+  const locale = await getLocaleCode();
   const tickets = await db.supportTicket.findMany({
     where: { companyId: session.tenantId },
     orderBy: { createdAt: "desc" },
@@ -39,7 +42,7 @@ export default async function SupportPage() {
                     <p className="truncate font-medium text-foreground">{ticket.subject}</p>
                     <p className="text-xs text-muted-foreground">{ticket.category ?? t("uncategorized")} · {ticket._count.messages} {t("messagesCount")} · {new Date(ticket.createdAt).toLocaleDateString()}</p>
                   </div>
-                  <Badge variant="outline" className="text-xs">{ticket.status.replace(/_/g, " ")}</Badge>
+                  <Badge variant="outline" className="text-xs">{displayTicketStatus(ticket.status, locale)}</Badge>
                 </Link>
               ))}
             </div>

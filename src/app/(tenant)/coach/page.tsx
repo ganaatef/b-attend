@@ -28,7 +28,8 @@ import {
 import { generateEmployeeCoachSummary as generateSummaryFromLib } from "@/lib/coach/employee-summary";
 import { generateDailyMotivation } from "@/lib/ai/provider";
 import { canUseAiFeature } from "@/lib/ai/feature-gates";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { displayCoachTheme, displayScoreLevel } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,7 @@ function startOfMonth(d: Date): Date {
 
 export default async function CoachPage() {
   const t = await getTranslations("coach");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId) return null;
 
@@ -232,7 +234,7 @@ export default async function CoachPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm leading-relaxed text-foreground/90">{motivation.body}</p>
-            <p className="mt-3 text-xs text-muted-foreground">{t("todayTheme", { theme: motivation.theme.replace(/_/g, " ").toLowerCase() })}</p>
+            <p className="mt-3 text-xs text-muted-foreground">{t("todayTheme", { theme: displayCoachTheme(motivation.theme, locale).toLowerCase() })}</p>
           </CardContent>
         </Card>
       )}
@@ -256,7 +258,7 @@ export default async function CoachPage() {
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-sm font-semibold text-foreground">{t("consistencyScore")}</CardTitle>
-              <Badge className={`${levelColor[scoreResult.level]} text-xs`}>{scoreResult.level.replace(/_/g, " ")}</Badge>
+              <Badge className={`${levelColor[scoreResult.level]} text-xs`}>{displayScoreLevel(scoreResult.level, locale)}</Badge>
             </div>
           </CardHeader>
           <CardContent>
@@ -435,7 +437,7 @@ export default async function CoachPage() {
               {tips.map((t) => (
                 <div key={t.id} className="rounded-md border border-border bg-card/50 p-3">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[10px]">{t.theme.replace(/_/g, " ").toLowerCase()}</Badge>
+                    <Badge variant="outline" className="text-xs">{displayCoachTheme(t.theme, locale).toLowerCase()}</Badge>
                   </div>
                   <p className="mt-1.5 text-sm font-medium text-foreground">{t.title}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{t.body}</p>

@@ -165,7 +165,7 @@ export default async function OffboardingPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <p className="font-medium text-foreground">{emp.fullName} <span className="text-xs text-muted-foreground">({emp.employeeCode})</span></p>
-                          <Badge variant={emp.status === "LEFT" ? "default" : "outline"} className={`text-[10px] ${emp.status === "LEFT" ? "bg-brand-success text-white border-transparent" : ""}`}>{emp.status}</Badge>
+                          <Badge variant={emp.status === "LEFT" ? "default" : "outline"} className={`text-xs ${emp.status === "LEFT" ? "bg-brand-success text-white border-transparent" : ""}`}>{emp.status}</Badge>
                         </div>
                         <p className="text-xs text-muted-foreground">{emp.branch?.name ?? "—"} &middot; {emp.department?.name ?? "—"}</p>
                       </div>

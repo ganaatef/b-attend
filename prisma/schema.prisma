@@ -834,6 +834,7 @@ model Punch {
 
   @@index([companyId, employeeId])
   @@index([companyId, timestamp])
+  @@index([employeeId])
   @@index([branchId])
 }
 
@@ -900,6 +901,8 @@ model ApprovalRequest {
   @@index([status])
   @@index([type])
   @@index([employeeId])
+  @@index([companyId, status])
+  @@index([companyId, employeeId])
 }
 
 model Notification {
@@ -917,6 +920,7 @@ model Notification {
   @@index([companyId])
   @@index([userId])
   @@index([isRead])
+  @@index([companyId, userId, isRead])
 }
 
 model AuditLog {
@@ -1414,6 +1418,7 @@ model EmployeeContract {
   @@index([employeeId])
   @@index([status])
   @@index([endDate])
+  @@index([companyId, employeeId])
 }
 
 // ── Employee Document ──
@@ -1531,6 +1536,8 @@ model LeaveRequest {
   @@index([employeeId])
   @@index([status])
   @@index([leaveTypeId])
+  @@index([companyId, status])
+  @@index([employeeId, status])
 }
 
 // ── Employee Warning ──
@@ -1558,6 +1565,7 @@ model EmployeeWarning {
   @@index([employeeId])
   @@index([status])
   @@index([severity])
+  @@index([companyId, employeeId])
 }
 
 // ── Training Course ──
@@ -1603,6 +1611,7 @@ model TrainingAssignment {
   @@index([employeeId])
   @@index([courseId])
   @@index([status])
+  @@index([companyId, employeeId, status])
 }
 
 // ── Employee Skill ──
@@ -1794,6 +1803,7 @@ model PayrollRunLine {
   @@index([companyId])
   @@index([payrollRunId])
   @@index([employeeId])
+  @@index([companyId, employeeId])
 }
 
 // ── Payroll Adjustment ──

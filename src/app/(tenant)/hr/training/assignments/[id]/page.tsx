@@ -7,7 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { markTrainingInProgressAction, markTrainingCompletedAction, cancelTrainingAssignmentAction } from "../../../actions";
 import { GraduationCap } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
+import { displayTrainingCategory } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +24,7 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
   const { id } = await params;
   const tid = session.tenantId;
   const t = await getTranslations("hrTraining");
+  const locale = await getLocale();
 
   const assignment = await db.trainingAssignment.findFirst({
     where: { id, companyId: tid },
@@ -45,7 +48,6 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
     }
   };
 
-  const categoryLabel = (cat: string) => cat.replace(/_/g, " ");
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -56,7 +58,7 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
             <h1 className="text-lg font-bold text-foreground">{t("trainingAssignment")}</h1>
             <p className="text-sm text-muted-foreground">{assignment.employee.fullName} ({assignment.employee.employeeCode})</p>
           </div>
-          <Badge variant={assignment.status === "COMPLETED" ? "default" : "outline"} className={`text-[10px] ${statusColor(assignment.status)}`}>{assignment.status.replace(/_/g, " ")}</Badge>
+          <Badge variant={assignment.status === "COMPLETED" ? "default" : "outline"} className={`text-xs ${statusColor(assignment.status)}`}>{getStatusLabel(assignment.status, locale)}</Badge>
         </div>
       </div>
 
@@ -71,11 +73,11 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("course")}</p>
-          <p className="text-sm font-semibold text-foreground">{assignment.course.title} ({categoryLabel(assignment.course.category)})</p>
+          <p className="text-sm font-semibold text-foreground">{assignment.course.title} ({displayTrainingCategory(assignment.course.category, locale)})</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("category")}</p>
-          <p className="text-sm font-semibold text-foreground">{categoryLabel(assignment.course.category)}</p>
+          <p className="text-sm font-semibold text-foreground">{displayTrainingCategory(assignment.course.category, locale)}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("assignedDate")}</p>

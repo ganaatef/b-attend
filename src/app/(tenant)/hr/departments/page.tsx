@@ -88,7 +88,7 @@ export default async function HrDepartmentsPage() {
                     <p className="font-medium text-foreground">{d.name}</p>
                     <p className="text-xs text-muted-foreground">{t("employeesCount", { count: d._count.employees })}</p>
                   </div>
-                  {!d.active && <Badge variant="outline" className="text-[10px]">{t("inactive")}</Badge>}
+                  {!d.active && <Badge variant="outline" className="text-xs">{t("inactive")}</Badge>}
                 </div>
                 <form action={async () => {
                   "use server";

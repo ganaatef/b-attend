@@ -9,6 +9,8 @@ import { getRolePermissions, type HrPermission } from "@/lib/hr/permissions";
 import { canUseHrFeature } from "@/lib/hr/feature-gates";
 import { Wallet, Plus, Lock } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
+import { displayPaymentMethod } from "@/lib/locale-display";
+import { getLocaleCode } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +32,7 @@ export default async function PayrollProfilesListPage({
   const t = await getTranslations("hrPayrollProfiles");
   const tc = await getTranslations("common");
   const th = await getTranslations("hrDashboard");
+  const locale = await getLocaleCode();
 
   const canView = hasPerm(session.role, "VIEW_PAYROLL");
   const canManage = hasPerm(session.role, "MANAGE_PAYROLL");
@@ -91,13 +94,13 @@ export default async function PayrollProfilesListPage({
   const salaryTypeBadge = (type: string) => {
     switch (type) {
       case "MONTHLY":
-        return <Badge variant="default" className="text-[10px] bg-blue-50 text-blue-600 border-blue-200">{t("monthly")}</Badge>;
+        return <Badge variant="default" className="text-xs bg-blue-50 text-blue-600 border-blue-200">{t("monthly")}</Badge>;
       case "DAILY":
-        return <Badge variant="outline" className="text-[10px]">{t("daily")}</Badge>;
+        return <Badge variant="outline" className="text-xs">{t("daily")}</Badge>;
       case "HOURLY":
-        return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600">{t("hourly")}</Badge>;
+        return <Badge variant="outline" className="text-xs border-amber-300 text-amber-600">{t("hourly")}</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{type}</Badge>;
+        return <Badge variant="outline" className="text-xs">{type}</Badge>;
     }
   };
 
@@ -152,7 +155,7 @@ export default async function PayrollProfilesListPage({
           <form method="GET" action="/hr/payroll-profiles" className="flex flex-wrap items-end gap-2">
             <CardTitle className="text-sm font-semibold text-foreground mr-2 mb-1">{t("filtersLabel")}</CardTitle>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-muted-foreground">{t("branch")}</label>
+              <label className="text-xs text-muted-foreground">{t("branch")}</label>
               <select name="branch" defaultValue={sp.branch || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
                 <option value="">{t("allBranches")}</option>
                 {branches.map((b) => (
@@ -161,7 +164,7 @@ export default async function PayrollProfilesListPage({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-muted-foreground">{t("department")}</label>
+              <label className="text-xs text-muted-foreground">{t("department")}</label>
               <select name="department" defaultValue={sp.department || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
                 <option value="">{t("allDepartments")}</option>
                 {departments.map((d) => (
@@ -170,7 +173,7 @@ export default async function PayrollProfilesListPage({
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-muted-foreground">{t("salaryType")}</label>
+              <label className="text-xs text-muted-foreground">{t("salaryType")}</label>
               <select name="salaryType" defaultValue={sp.salaryType || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
                 <option value="">{t("allTypes")}</option>
                 <option value="MONTHLY">{t("monthly")}</option>
@@ -218,12 +221,12 @@ export default async function PayrollProfilesListPage({
                       <td className="py-3 pr-4 text-xs">{p.employee.department?.name ?? "—"}</td>
                       <td className="py-3 pr-4">{salaryTypeBadge(p.salaryType)}</td>
                       <td className="py-3 pr-4 text-xs font-medium">{formatNumber(p.baseSalary)} {p.currency}</td>
-                      <td className="py-3 pr-4 text-xs">{p.paymentMethod.replace(/_/g, " ")}</td>
+                      <td className="py-3 pr-4 text-xs">{displayPaymentMethod(p.paymentMethod, locale)}</td>
                       <td className="py-3">
                         {p.active ? (
-                          <Badge variant="default" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">{tc("active")}</Badge>
+                          <Badge variant="default" className="text-xs bg-emerald-50 text-emerald-600 border-emerald-200">{tc("active")}</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">{tc("inactive")}</Badge>
+                          <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">{tc("inactive")}</Badge>
                         )}
                       </td>
                     </tr>

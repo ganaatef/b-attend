@@ -157,20 +157,20 @@ export default async function HrLeavesPage({ searchParams }: { searchParams: Pro
                           <p className="text-xs text-muted-foreground">
                             {lr.leaveType.name} · {new Date(lr.startDate).toLocaleDateString()} — {new Date(lr.endDate).toLocaleDateString()} · {lr.daysCount} {lr.daysCount > 1 ? t("days") : t("day")}
                           </p>
-                          {lr.reason && <p className="text-[10px] text-muted-foreground truncate max-w-[300px]">{lr.reason}</p>}
+                          {lr.reason && <p className="text-xs text-muted-foreground truncate max-w-[300px]">{lr.reason}</p>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={lr.status === "APPROVED" ? "default" : "outline"} className={`text-[10px] ${requestStatusColor(lr.status)}`}>{lr.status}</Badge>
+                        <Badge variant={lr.status === "APPROVED" ? "default" : "outline"} className={`text-xs ${requestStatusColor(lr.status)}`}>{lr.status}</Badge>
                         {canApprove && lr.status === "PENDING" && (
                           <div className="flex gap-1">
                             <form action={async () => { "use server"; await approveLeaveRequestAction(lr.id); }}>
-                              <button type="submit" className="inline-flex items-center gap-1 rounded-md bg-brand-success px-2 py-1 text-[10px] font-medium text-white hover:bg-brand-success/90">
+                              <button type="submit" className="inline-flex items-center gap-1 rounded-md bg-brand-success px-2 py-1 text-xs font-medium text-white hover:bg-brand-success/90">
                                 <CheckCircle2 className="h-3 w-3" /> {t("approve")}
                               </button>
                             </form>
                             <form action={async () => { "use server"; await rejectLeaveRequestAction(lr.id); }}>
-                              <button type="submit" className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[10px] font-medium text-destructive hover:bg-destructive/5">
+                              <button type="submit" className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/5">
                                 <XCircle className="h-3 w-3" /> {t("reject")}
                               </button>
                             </form>
@@ -258,7 +258,7 @@ export default async function HrLeavesPage({ searchParams }: { searchParams: Pro
                           </p>
                         </div>
                         <div className="flex items-center gap-2">
-                          {!lt.active && <Badge variant="outline" className="text-[10px]">{t("inactive")}</Badge>}
+                          {!lt.active && <Badge variant="outline" className="text-xs">{t("inactive")}</Badge>}
                           {canManageTypes && (
                             <form action={async () => { "use server"; await deleteLeaveTypeAction(lt.id); }}>
                               <button type="submit" className="inline-flex items-center rounded-md p-1 text-destructive hover:bg-destructive/5">

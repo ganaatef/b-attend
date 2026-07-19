@@ -324,16 +324,116 @@ export async function generateTeamCoachSnapshot(companyId: string, branchId: str
     include: { branch: true, department: true },
   });
 
-  // Calculate score for each employee
+  if (employees.length === 0) {
+    const branch = branchId ? await db.branch.findUnique({ where: { id: branchId } }) : null;
+    const insights = await generateManagerTeamInsights(
+      { companyId, userId: ctx.userId, feature: "manager_ai_insights" },
+      { branchName: branch?.name, periodStart: range.start, periodEnd: range.end, totalEmployees: 0, employees: [] },
+    );
+    const snapshot = await db.teamCoachSnapshot.create({
+      data: {
+        companyId, branchId, periodStart: range.start, periodEnd: range.end,
+        summary: insights.summary, employeesNeedingSupport: JSON.stringify([]),
+        employeesImproving: JSON.stringify([]), topConsistencyEmployees: JSON.stringify([]),
+        suggestedManagerActions: JSON.stringify([]), dailyBriefingText: insights.dailyBriefingText,
+        generatedBy: "mock",
+      },
+    });
+    return { snapshot, insights, employees: [] };
+  }
+
+  const periodLength = range.end.getTime() - range.start.getTime();
+  const prevStart = new Date(range.start.getTime() - periodLength);
+  const prevEnd = new Date(range.start.getTime() - 86400000);
+  const employeeIds = employees.map((e) => e.id);
+
+  // Batch-load ALL attendance data for current + previous period in 6 parallel queries
+  const [currSchedules, currAttendanceDays, currApprovals, prevSchedules, prevAttendanceDays, prevApprovals] = await Promise.all([
+    db.schedule.findMany({ where: { employeeId: { in: employeeIds }, date: { gte: range.start, lte: range.end } } }),
+    db.attendanceDay.findMany({ where: { employeeId: { in: employeeIds }, date: { gte: range.start, lte: range.end } } }),
+    db.approvalRequest.findMany({ where: { employeeId: { in: employeeIds }, createdAt: { gte: range.start, lte: range.end } } }),
+    db.schedule.findMany({ where: { employeeId: { in: employeeIds }, date: { gte: prevStart, lte: prevEnd } } }),
+    db.attendanceDay.findMany({ where: { employeeId: { in: employeeIds }, date: { gte: prevStart, lte: prevEnd } } }),
+    db.approvalRequest.findMany({ where: { employeeId: { in: employeeIds }, createdAt: { gte: prevStart, lte: prevEnd } } }),
+  ]);
+
+  // Group by employee for O(1) lookup
+  const groupByEmp = <T extends { employeeId: string }>(arr: T[]): Map<string, T[]> => {
+    const map = new Map<string, T[]>();
+    for (const item of arr) {
+      const list = map.get(item.employeeId) ?? [];
+      list.push(item);
+      map.set(item.employeeId, list);
+    }
+    return map;
+  };
+
+  const currSchedulesByEmp = groupByEmp(currSchedules);
+  const currAttendByEmp = groupByEmp(currAttendanceDays);
+  const currApprovalsByEmp = groupByEmp(currApprovals);
+  const prevSchedulesByEmp = groupByEmp(prevSchedules);
+  const prevAttendByEmp = groupByEmp(prevAttendanceDays);
+  const prevApprovalsByEmp = groupByEmp(prevApprovals);
+
+  // Pre-compute stats for each employee from batch data (no DB queries)
+  const computeStats = (empId: string, schedules: typeof currSchedules, attendanceDays: typeof currAttendanceDays, approvals: typeof currApprovals): EmployeeAttendanceStats => {
+    const scheduledDays = schedules.filter((s) => s.status === "SCHEDULED" || s.status === "ABSENT" || s.status === "LEAVE").length;
+    const presentStatuses = ["ON_TIME", "LATE", "OVERTIME", "EARLY_LEAVE", "LATE_AND_EARLY_LEAVE"];
+    return {
+      scheduledDays,
+      presentDays: attendanceDays.filter((a) => presentStatuses.includes(a.status)).length,
+      absentDays: attendanceDays.filter((a) => a.status === "ABSENT").length,
+      lateDays: attendanceDays.filter((a) => a.status === "LATE" || a.status === "LATE_AND_EARLY_LEAVE" || (a.exceptionFlags?.includes("LATE") ?? false)).length,
+      totalLateMinutes: attendanceDays.reduce((s, a) => s + a.lateMinutes, 0),
+      earlyLeaveCount: attendanceDays.filter((a) => a.status === "EARLY_LEAVE" || a.status === "LATE_AND_EARLY_LEAVE").length,
+      missingClockOutCount: attendanceDays.filter((a) => a.status === "MISSING_CLOCK_OUT").length,
+      outsideGeofenceCount: attendanceDays.filter((a) => a.status === "OUTSIDE_GEOFENCE").length,
+      noSchedulePunchCount: attendanceDays.filter((a) => a.status === "NO_SCHEDULE").length,
+      overtimeMinutes: attendanceDays.reduce((s, a) => s + a.overtimeMinutes, 0),
+      approvedRequests: approvals.filter((a) => a.status === "APPROVED").length,
+      rejectedRequests: approvals.filter((a) => a.status === "REJECTED").length,
+    };
+  };
+
+  // Calculate score from pre-computed stats (no DB calls)
+  const computeScore = (stats: EmployeeAttendanceStats, prevStats: EmployeeAttendanceStats): ConsistencyScoreResult => {
+    let score = 100;
+    const positiveSignals: string[] = [];
+    const improvementSignals: string[] = [];
+
+    if (stats.scheduledDays > 0 || stats.presentDays > 0) {
+      score -= stats.absentDays * 12;
+      if (stats.absentDays > 0) improvementSignals.push(`${stats.absentDays} absent days (-${stats.absentDays * 12})`);
+      score -= stats.lateDays * 4;
+      if (stats.lateDays > 0) improvementSignals.push(`${stats.lateDays} late days (-${stats.lateDays * 4})`);
+      score -= Math.floor(stats.totalLateMinutes / 15);
+      score -= stats.missingClockOutCount * 5;
+      score -= stats.outsideGeofenceCount * 5;
+      score -= stats.rejectedRequests * 3;
+      score -= stats.noSchedulePunchCount * 3;
+    }
+
+    if (stats.scheduledDays >= 7 && stats.absentDays === 0) { score += 5; positiveSignals.push("Full week attendance"); }
+    if (stats.scheduledDays > 0 && stats.lateDays === 0 && stats.presentDays > 0) { score += 5; positiveSignals.push("No late arrivals"); }
+    const improving = stats.lateDays < prevStats.lateDays || stats.absentDays < prevStats.absentDays;
+    if (improving && (prevStats.lateDays > 0 || prevStats.absentDays > 0)) { score += 5; positiveSignals.push("Improving trend"); }
+
+    score = Math.max(0, Math.min(100, score));
+    let level: ConsistencyScoreResult["level"];
+    if (score >= 90) level = "EXCELLENT";
+    else if (score >= 75) level = "GOOD";
+    else if (score >= 55) level = "NEEDS_ATTENTION";
+    else level = "NEEDS_SUPPORT";
+
+    return { score, level, explanation: `Score ${score}/100`, positiveSignals, improvementSignals };
+  };
+
+  // Calculate everything from batch data
   const employeeInputs: ManagerTeamInsightsInput["employees"] = [];
   for (const e of employees) {
-    const score = await calculateConsistencyScore(e.id, range);
-    const stats = await getEmployeeAttendanceStats(e.id, range);
-    // Previous period for trend
-    const periodLength = range.end.getTime() - range.start.getTime();
-    const prevStart = new Date(range.start.getTime() - periodLength);
-    const prevEnd = new Date(range.start.getTime() - 86400000);
-    const prevStats = await getEmployeeAttendanceStats(e.id, { start: prevStart, end: prevEnd });
+    const stats = computeStats(e.id, currSchedulesByEmp.get(e.id) ?? [], currAttendByEmp.get(e.id) ?? [], currApprovalsByEmp.get(e.id) ?? []);
+    const prevStats = computeStats(e.id, prevSchedulesByEmp.get(e.id) ?? [], prevAttendByEmp.get(e.id) ?? [], prevApprovalsByEmp.get(e.id) ?? []);
+    const scoreResult = computeScore(stats, prevStats);
     const improving = stats.lateDays < prevStats.lateDays || stats.absentDays < prevStats.absentDays;
 
     let riskLevel = "LOW";
@@ -344,8 +444,8 @@ export async function generateTeamCoachSnapshot(companyId: string, branchId: str
     employeeInputs.push({
       name: e.fullName,
       code: e.employeeCode,
-      score: score.score,
-      level: score.level,
+      score: scoreResult.score,
+      level: scoreResult.level,
       riskLevel,
       lateDays: stats.lateDays,
       absentDays: stats.absentDays,
@@ -367,13 +467,9 @@ export async function generateTeamCoachSnapshot(companyId: string, branchId: str
     },
   );
 
-  // Persist snapshot
   const snapshot = await db.teamCoachSnapshot.create({
     data: {
-      companyId,
-      branchId,
-      periodStart: range.start,
-      periodEnd: range.end,
+      companyId, branchId, periodStart: range.start, periodEnd: range.end,
       summary: insights.summary,
       employeesNeedingSupport: JSON.stringify(insights.employeesNeedingSupport),
       employeesImproving: JSON.stringify(insights.employeesImproving),

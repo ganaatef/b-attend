@@ -214,7 +214,8 @@
     "ctaTitle": "مستعد للتحكم في الحضور؟",
     "ctaSubtitle": "ابدأ تجربتك المجانية اليوم. لا حاجة لبطاقة ائتمان.",
     "ctaButton": "ابدأ التجربة المجانية",
-    "footer": "مصمم للفرق التشغيلية في كل مكان"
+    "footer": "مصمم للفرق التشغيلية في كل مكان",
+    "liveAttendance": "الحضور المباشر"
   },
   "pricing": {
     "title": "أسعار بسيطة وشفافة",
@@ -269,7 +270,9 @@
     "advancedReports": "تقارير متقدمة",
     "advancedGeofence": "سياج جغرافي متقدم",
     "apiAccess": "الوصول إلى API (placeholder)",
-    "orAnnual": "أو {price}/سنوياً"
+    "orAnnual": "أو {price}/سنوياً",
+    "branches": "الفروع",
+    "trialDays": "تجربة مجانية لمدة {days} أيام"
   },
   "public": {
     "features": "الميزات",
@@ -340,7 +343,8 @@
     "accountReview": "حسابك قيد المراجعة",
     "accountReviewDesc": "فريقنا يراجع طلب التسجيل الخاص بك. ستتلقى رسالة بريد إلكتروني على {email} بمجرد تفعيل حسابك.",
     "status": "الحالة",
-    "loading": "جاري التحميل..."
+    "loading": "جاري التحميل...",
+    "signOut": "تسجيل الخروج"
   },
   "employees": {
     "title": "الموظفون",
@@ -467,7 +471,8 @@
     "employeeAdded": "تمت إضافة الموظف.",
     "saving": "جاري الحفظ...",
     "addEmployeeBtn": "إضافة موظف",
-    "employeeDetails": "تفاصيل الموظف"
+    "employeeDetails": "تفاصيل الموظف",
+    "inactive": "غير نشط"
   },
   "branches": {
     "title": "الفروع",
@@ -503,7 +508,13 @@
     "employeesLabel": "الموظفون",
     "scheduledToday": "مجدولون اليوم",
     "employeesAtBranch": "الموظفون في هذا الفرع",
-    "noEmployees": "لا يوجد موظفون"
+    "noEmployees": "لا يوجد موظفون",
+    "cityLabel": "المدينة",
+    "addressLabel": "العنوان",
+    "geofenceRadiusLabel": "نصف قطر النطاق الجغرافي (متر)",
+    "latitudeLabel": "خط العرض",
+    "longitudeLabel": "خط الطول",
+    "areaLabel": "المنطقة"
   },
   "departments": {
     "title": "الأقسام",
@@ -559,7 +570,7 @@
     "branchRequired": "الفرع *",
     "dateRequired": "التاريخ *",
     "policyRequired": "السياسة *",
-    "durationLabel": "المدة:",
+    "durationLabel": "{h} ساعة {m} دقيقة",
     "scheduleAdded": "تمت إضافة الجدول.",
     "addScheduleBtn": "إضافة جدول",
     "weekendDaysLabel": "أيام عطلة نهاية الأسبوع (مفصولة بفواصل)",
@@ -570,7 +581,12 @@
     "generating": "جاري الإنشاء...",
     "generateSchedulesBtn": "إنشاء الجداول",
     "bulkDescription": "إنشاء جداول لأكثر من موظف في نطاق تاريخ. يتم تخطي weekends افتراضياً. الجداول المكررة يتم تخطيها.",
-    "generateCard": "إنشاء"
+    "generateCard": "إنشاء",
+    "selectPlaceholder": "اختر...",
+    "shiftPolicyLabelFull": "سياسة الوردية",
+    "dateFrom": "من تاريخ",
+    "dateTo": "إلى تاريخ",
+    "saving": "جاري الحفظ..."
   },
   "shiftPolicies": {
     "title": "سياسات الورديات",
@@ -631,7 +647,8 @@
     "decisionCard": "القرار",
     "notesOptional": "ملاحظات (اختياري)",
     "notesPlaceholder": "ملاحظات مرئية للموظف...",
-    "decisionRecorded": "تم تسجيل القرار."
+    "decisionRecorded": "تم تسجيل القرار.",
+    "status": "الحالة"
   },
   "attendance": {
     "title": "الحضور",
@@ -934,7 +951,12 @@
     "userInvited": "تمت دعوة المستخدم. كلمة المرور المؤقتة:",
     "sendToUser": "أرسلها للمستخدم. سيُجبر على تغييرها عند تسجيل الدخول الأول.",
     "inviting": "جاري الدعوة...",
-    "inviteUser": "دعوة مستخدم"
+    "inviteUser": "دعوة مستخدم",
+    "nameRequired": "الاسم مطلوب",
+    "emailRequired": "البريد الإلكتروني مطلوب",
+    "roleRequired": "الدور مطلوب",
+    "branchForManagers": "الفرع (مطلوب للمديرين)",
+    "saving": "جاري الحفظ..."
   },
   "profile": {
     "title": "ملفي الشخصي",
@@ -958,7 +980,8 @@
     "department": "القسم",
     "phone": "الهاتف",
     "employmentType": "نوع التوظيف",
-    "startDate": "تاريخ البداية"
+    "startDate": "تاريخ البداية",
+    "branch": "الفرع"
   },
   "kiosk": {
     "title": "وضع الكشك",
@@ -1138,7 +1161,36 @@
     "employees": "الموظفون",
     "policyAdded": "تمت إضافة السياسة.",
     "saving": "جاري الحفظ...",
-    "addPolicyBtn": "إضافة سياسة"
+    "addPolicyBtn": "إضافة سياسة",
+    "nameRequired": "اسم السياسة مطلوب",
+    "startRequired": "وقت بداية الوردية مطلوب",
+    "endRequired": "وقت نهاية الوردية مطلوب",
+    "breakLabel": "مدة الاستراحة (دقيقة)",
+    "lateGraceLabel": "فترة السماح بالتأخير (دقيقة)",
+    "earlyLeaveGraceLabel": "فترة السماح بالانصراف المبكر (دقيقة)",
+    "overtimeAfterLabel": "يبدأ احتساب العمل الإضافي بعد (دقيقة)",
+    "weekendDaysLabel": "أيام العطلة الأسبوعية",
+    "otApproval": "يتطلب موافقة على العمل الإضافي",
+    "mobileLabel": "السماح بالتسجيل من الهاتف",
+    "kioskLabel": "السماح بالتسجيل من جهاز الحضور",
+    "placeholderName": "مثال: وردية صباحية",
+    "countEmployees": "{count} موظف",
+    "countSchedules": "{count} جدول",
+    "overnightShift": "وردية ليلية",
+    "weekdays": {
+      "MONDAY": "الإثنين",
+      "TUESDAY": "الثلاثاء",
+      "WEDNESDAY": "الأربعاء",
+      "THURSDAY": "الخميس",
+      "FRIDAY": "الجمعة",
+      "SATURDAY": "السبت",
+      "SUNDAY": "الأحد"
+    },
+    "validation": {
+      "nameRequired": "اسم السياسة مطلوب",
+      "startRequired": "وقت بداية الوردية مطلوب",
+      "endRequired": "وقت نهاية الوردية مطلوب"
+    }
   },
   "requests": {
     "title": "طلباتي",
@@ -1214,7 +1266,8 @@
     "submittingLabel": "جاري الإرسال...",
     "submitBtn": "إرسال طلب الإجازة",
     "pendingStatus": "قيد الانتظار",
-    "myLeaveTitle": "إجازاتي"
+    "myLeaveTitle": "إجازاتي",
+    "myLeaveSubtitle": "عرض وطلب الإجازات"
   },
   "myTraining": {
     "title": "تدريباتي",
@@ -1235,7 +1288,8 @@
     "due": "الموعد النهائي",
     "scoreLabel": "النتيجة",
     "completedOn": "تاريخ الإتمام",
-    "myTrainingTitle": "تدريباتي"
+    "myTrainingTitle": "تدريباتي",
+    "myTrainingSubtitle": "تكليفات التدريب الخاصة بك"
   },
   "myAssets": {
     "title": "أصولي",
@@ -1254,7 +1308,8 @@
     "damaged": "تالف",
     "assignedOn": "تاريخ الإسناد",
     "returnedOn": "تاريخ الإرجاع",
-    "myAssetsTitle": "أصولي"
+    "myAssetsTitle": "أصولي",
+    "myAssetsSubtitle": "الأصول المعينة لك"
   },
   "myWarnings": {
     "title": "إنذاراتي",
@@ -1278,7 +1333,8 @@
     "acknowledgedOn": "تاريخ الاعتراف",
     "acknowledgeNote": "ملاحظة الاعتراف",
     "acknowledge": "اعتراف",
-    "myWarningsTitle": "تحذيراتي"
+    "myWarningsTitle": "تحذيراتي",
+    "myWarningsSubtitle": "تحذيراتك وإشعاراتك"
   },
   "audit": {
     "title": "سجل التدقيق",
@@ -1483,7 +1539,8 @@
     "createFirst": "أنشئ أول عقد موظف",
     "openLabel": "مفتوح",
     "expiringSoonBadge": "ينتهي قريباً",
-    "upgradeMessage": "قم بالترقية للوصول لميزات الموارد البشرية."
+    "upgradeMessage": "قم بالترقية للوصول لميزات الموارد البشرية.",
+    "cancel": "إلغاء"
   },
   "hrDocuments": {
     "title": "مستندات الموظفين",
@@ -1535,7 +1592,12 @@
     "docNumberLabel": "رقم المستند",
     "optionalPlaceholder": "اختياري",
     "adding": "جاري الإضافة...",
-    "addDocumentBtn": "إضافة مستند"
+    "addDocumentBtn": "إضافة مستند",
+    "foodSafetyCertificate": "شهادة سلامة غذائية",
+    "insuranceForm": "استمارة التأمين",
+    "medicalCertificate": "شهادة طبية",
+    "notesLabel": "ملاحظات",
+    "optionalNotes": "ملاحظات اختيارية"
   },
   "hrLeaves": {
     "title": "إدارة الإجازات",
@@ -1691,7 +1753,8 @@
     "reasonPlaceholder": "اشرح سبب هذا التحذير",
     "actionTakenLabel": "الإجراء المتخذ",
     "optionalPlaceholder": "اختياري",
-    "notesLabel": "ملاحظات"
+    "notesLabel": "ملاحظات",
+    "cancel": "إلغاء"
   },
   "hrTraining": {
     "title": "التدريب",
@@ -1747,7 +1810,40 @@
     "noDueDate": "بدون تاريخ استحقاق",
     "newCourse": "دورة جديدة",
     "assignTraining": "إسناد تدريب",
-    "overdueCount": "{count} متأخرة"
+    "overdueCount": "{count} متأخرة",
+    "newTrainingAssignment": "تكليف تدريب جديد",
+    "assignmentDetails": "تفاصيل التكليف",
+    "employeeRequired": "الموظف مطلوب",
+    "selectEmployee": "اختر موظف",
+    "courseRequired": "المقرر مطلوب",
+    "selectCourse": "اختر مقرر",
+    "notes": "ملاحظات",
+    "cancel": "إلغاء",
+    "assigning": "جاري التكليف...",
+    "trainingAssignment": "تكليف تدريب",
+    "branch": "الفرع",
+    "assignedDate": "تاريخ التكليف",
+    "actions": "الإجراءات",
+    "markInProgress": "بدء التنفيذ",
+    "scorePercent": "الدرجة (%)",
+    "optional": "اختياري",
+    "markCompleted": "إكمال",
+    "newTrainingCourse": "مقرر تدريب جديد",
+    "courseDetails": "تفاصيل المقرر",
+    "titleRequired": "العنوان مطلوب",
+    "courseDescription": "الوصف",
+    "categoryRequired": "الفئة مطلوبة",
+    "requiredForJobTitle": "مطلوب لوظيفة",
+    "creating": "جاري الإنشاء...",
+    "createCourse": "إنشاء مقرر",
+    "validity": "الصلاحية",
+    "months": "أشهر",
+    "noExpiry": "بدون انتهاء",
+    "deactivate": "إلغاء التنشيط",
+    "activate": "تنشيط",
+    "total": "المجموع",
+    "all": "الكل",
+    "monthsValidity": "صلاحية {n} أشهر"
   },
   "hrAssets": {
     "title": "الأصول",
@@ -1827,7 +1923,8 @@
     "assignmentDetails": "تفاصيل التخصيص",
     "actions": "الإجراءات",
     "employeeIdLabel": "رقم الموظف",
-    "employeeIdPlaceholder": "رقم الموظف"
+    "employeeIdPlaceholder": "رقم الموظف",
+    "adding": "جاري الإضافة..."
   },
   "hrPayrollProfiles": {
     "title": "ملفات الرواتب",
@@ -1904,7 +2001,9 @@
     "creating": "جاري الإنشاء...",
     "createProfileBtn": "إنشاء الملف",
     "saving": "جاري الحفظ...",
-    "saveChanges": "حفظ التغييرات"
+    "saveChanges": "حفظ التغييرات",
+    "noBranch": "لم يتم تعيين فرع",
+    "cancel": "إلغاء"
   },
   "hrPayrollRuns": {
     "title": "تشغيل الرواتب",
@@ -2019,7 +2118,9 @@
     "optionalNotes": "ملاحظات اختيارية عن دورة الرواتب هذه",
     "creating": "جاري الإنشاء...",
     "createRun": "إنشاء دورة الرواتب",
-    "createdWarnings": "تم الإنشاء مع تحذيرات:\n{warnings}"
+    "createdWarnings": "تم الإنشاء مع تحذيرات:\n{warnings}",
+    "notes": "ملاحظات",
+    "all": "الكل"
   },
   "hrOnboarding": {
     "title": "العنوان",
@@ -2099,7 +2200,11 @@
     "tasksLabel": "مهام",
     "disableAccessNote": "سيؤدي ذلك فوراً لتعطيل وصول الموظف للنظام والبوابة.",
     "featureGateTitle": "وحدة الإنهاء تتطلب باقة Starter أو أعلى",
-    "upgradeMessage": "قم بالترقية للوصول لميزات الإنهاء."
+    "upgradeMessage": "قم بالترقية للوصول لميزات الإنهاء.",
+    "progress": "التقدم",
+    "dueLabel": "الموعد",
+    "complete": "إكمال",
+    "cancel": "إلغاء"
   },
   "hrReports": {
     "title": "تقارير الموارد البشرية",
@@ -2157,25 +2262,25 @@
     "activeCompanies": "الشركات النشطة",
     "pendingActivation": "بانتظار التفعيل",
     "suspendedCompanies": "الشركات الموقوفة",
-    "actionRequired": "تحتاج إلى إجراء",
-    "mrr": "الإيراد الشهري المتكرر",
-    "arr": "الإيراد السنوي المتكرر",
-    "pendingInvoices": "الفواتير المعلقة",
-    "overdue": "متأخرة السداد",
+    "actionRequired": "يتطلب إجراء",
+    "mrr": "الإيراد الشهري",
+    "arr": "الإيراد السنوي",
+    "pendingInvoices": "فواتير معلقة",
+    "overdue": "متأخرة",
     "activeEmployees": "الموظفون النشطون",
-    "acrossAllTenants": "على مستوى جميع الشركات",
-    "clockActionsToday": "إجراءات الحضور اليوم",
-    "openTickets": "تذاكر الدعم المفتوحة",
-    "supportQueue": "قائمة انتظار الدعم",
-    "recentTenants": "أحدث الشركات",
-    "recentLeads": "أحدث العملاء المحتملين",
-    "recentInvoices": "أحدث الفواتير",
-    "viewAll": "عرض الكل",
+    "acrossAllTenants": "عبر جميع الشركات",
+    "clockActionsToday": "تسجيلات الحضور اليوم",
+    "openTickets": "تذاكر مفتوحة",
+    "supportQueue": "قائمة الدعم",
+    "recentTenants": "الشركات الأخيرة",
+    "recentLeads": "العملاء المحتملون ({count} جديد)",
+    "recentInvoices": "الفواتير الأخيرة",
+    "viewAll": "عرض الكل →",
     "subtitle": "مؤشرات المنصة وإدارة الشركات والاشتراكات والفوترة",
     "awaitingReview": "بانتظار المراجعة",
     "quickActions": "إجراءات سريعة",
     "manageTenants": "إدارة الشركات",
-    "manageTenantsDesc": "تفعيل، إيقاف، إلغاء",
+    "manageTenantsDesc": "تفعيل، تعليق، إلغاء",
     "billingAndInvoices": "الفواتير والفوترة",
     "billingAndInvoicesDesc": "إنشاء فواتير، تسجيل كمدفوعة",
     "leadsTitle": "العملاء المحتملون",
@@ -2185,7 +2290,23 @@
     "activeAndTrial": "{active} نشطة · {trial} تجريبية",
     "overdueCount": "{count} متأخرة",
     "branchesCount": "{count} فروع",
-    "arrLabel": "الإيراد السنوي: {amount}"
+    "arrLabel": "الإيراد السنوي: {amount}",
+    "active": "نشط",
+    "trial": "تجريبي",
+    "suspended": "موقوف",
+    "superAdminTitle": "مركز التحكم للمسؤول العام",
+    "superAdminSubtitle": "بيانات شاملة للمنصة، وإدارة الشركات، والفواتير، والدعم الفني.",
+    "noTenants": "لا توجد شركات بعد",
+    "noLeads": "لا يوجد عملاء محتملون بعد",
+    "noInvoices": "لا توجد فواتير بعد",
+    "supportTickets": "تذاكر الدعم",
+    "noTickets": "لا توجد تذاكر بعد",
+    "billingInvoices": "الفواتير والسداد",
+    "billingInvoicesDesc": "إنشاء فواتير، تحديد مدفوعة",
+    "leadsAction": "العملاء المحتملون",
+    "leadsActionDesc": "طلبات العروض والتواصل",
+    "plansFeatures": "الباقات والميزات",
+    "plansFeaturesDesc": "{count} باقة نشطة"
   },
   "adminTenants": {
     "title": "الشركات",
@@ -2283,7 +2404,9 @@
     "all": "الكل",
     "toTenant": "→ شركة",
     "emp": "موظف",
-    "br": "فرع"
+    "br": "فرع",
+    "assignPlaceholder": "اختر المسؤول",
+    "unassigned": "غير مسؤول"
   },
   "adminPlans": {
     "title": "الباقات",
@@ -2363,7 +2486,12 @@
     "invoiceCount": "{count} فاتورة · {paid} مدفوعة · {outstanding} معلقة",
     "all": "الكل",
     "countTitle": "الفواتير ({count})",
-    "due": "مستحقة"
+    "due": "مستحقة",
+    "bankTransfer": "تحويل بنكي",
+    "cash": "نقدي",
+    "manual": "يدوي",
+    "markPaid": "تحديد كمدفوعة",
+    "voidConfirm": "هل أنت متأكد من إلغاء هذه الفاتورة؟"
   },
   "adminPayments": {
     "title": "المدفوعات",

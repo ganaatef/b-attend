@@ -78,7 +78,7 @@ function CancelButton({ requestId }: { requestId: string }) {
   }
 
   return (
-    <button onClick={handleCancel} disabled={pending} className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[10px] font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50">
+    <button onClick={handleCancel} disabled={pending} className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/5 disabled:opacity-50">
       {pending ? <Loader2 className="h-3 w-3 animate-spin" /> : <XCircle className="h-3 w-3" />} Cancel
     </button>
   );
@@ -121,10 +121,10 @@ export function MyLeaveClient({
                     <p className="text-xs text-muted-foreground">
                       {new Date(lr.startDate).toLocaleDateString()} — {new Date(lr.endDate).toLocaleDateString()} · {lr.daysCount} {lr.daysCount === 1 ? t("day") : t("daysPlural")}
                     </p>
-                    {lr.reason && <p className="text-[10px] text-muted-foreground truncate max-w-[300px]">{lr.reason}</p>}
+                    {lr.reason && <p className="text-xs text-muted-foreground truncate max-w-[300px]">{lr.reason}</p>}
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${requestStatusColor(lr.status)}`}>{t("pendingStatus")}</span>
+                    <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium ${requestStatusColor(lr.status)}`}>{t("pendingStatus")}</span>
                     <CancelButton requestId={lr.id} />
                   </div>
                 </div>

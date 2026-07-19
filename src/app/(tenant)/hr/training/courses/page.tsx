@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { GraduationCap, Plus, Eye } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { displayTrainingCategory } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
   const t = await getTranslations("hrTraining");
+  const locale = await getLocale();
   const params = await searchParams;
   const canManage = hasPerm(session.role, "MANAGE_TRAINING");
 
@@ -33,7 +35,6 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   const activeCourses = await db.trainingCourse.count({ where: { companyId: tid, active: true } });
   const inactiveCourses = totalCourses - activeCourses;
 
-  const categoryLabel = (cat: string) => cat.replace(/_/g, " ");
 
   const categories = ["FOOD_SAFETY", "CUSTOMER_SERVICE", "CASHIER", "KITCHEN", "CLEANLINESS", "SAFETY", "ONBOARDING", "MANAGEMENT", "OTHER"];
 
@@ -72,7 +73,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
         </Link>
         {categories.map((cat) => (
           <Link key={cat} href={`/hr/training/courses?category=${cat}`} className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${params.category === cat ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
-            {categoryLabel(cat)}
+            {displayTrainingCategory(cat, locale)}
           </Link>
         ))}
         <Link href="/hr/training/courses?active=true" className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${params.active === "true" ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
@@ -97,14 +98,14 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
                   <div>
                     <p className="font-medium text-foreground">{c.title}</p>
                     <p className="text-xs text-muted-foreground">
-                      {categoryLabel(c.category)}
+                      {displayTrainingCategory(c.category, locale)}
                       {c.requiredForJobTitle ? ` · ${t("requiredFor")} ${c.requiredForJobTitle}` : ""}
                       {c.validityMonths ? ` · ${c.validityMonths} ${t("monthsValidity")}` : ""}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={c.active ? "default" : "outline"} className="text-[10px]">{c.active ? t("active") : t("inactive")}</Badge>
+                  <Badge variant={c.active ? "default" : "outline"} className="text-xs">{c.active ? t("active") : t("inactive")}</Badge>
                   <Eye className="h-4 w-4 text-muted-foreground" />
                 </div>
               </Link>

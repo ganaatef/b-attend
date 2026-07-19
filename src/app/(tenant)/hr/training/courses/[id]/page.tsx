@@ -7,7 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { updateTrainingCourseAction } from "../../../actions";
 import { GraduationCap, BookOpen } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { displayTrainingCategory } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const tid = session.tenantId;
   const t = await getTranslations("hrTraining");
+  const locale = await getLocale();
 
   const course = await db.trainingCourse.findFirst({ where: { id, companyId: tid } });
   if (!course) notFound();
@@ -32,7 +34,6 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
   const completedCount = await db.trainingAssignment.count({ where: { courseId: course.id, companyId: tid, status: "COMPLETED" } });
   const overdueCount = await db.trainingAssignment.count({ where: { courseId: course.id, companyId: tid, status: "OVERDUE" } });
 
-  const categoryLabel = (cat: string) => cat.replace(/_/g, " ");
 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
@@ -41,9 +42,9 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
         <div className="mt-1 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold text-foreground">{course.title}</h1>
-            <p className="text-sm text-muted-foreground">{categoryLabel(course.category)}</p>
+            <p className="text-sm text-muted-foreground">{displayTrainingCategory(course.category, locale)}</p>
           </div>
-          <Badge variant={course.active ? "default" : "outline"} className="text-[10px]">{course.active ? t("active") : t("inactive")}</Badge>
+          <Badge variant={course.active ? "default" : "outline"} className="text-xs">{course.active ? t("active") : t("inactive")}</Badge>
         </div>
       </div>
 
@@ -57,7 +58,7 @@ export default async function CourseDetailPage({ params }: { params: Promise<{ i
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("category")}</p>
-          <p className="text-sm font-semibold text-foreground">{categoryLabel(course.category)}</p>
+          <p className="text-sm font-semibold text-foreground">{displayTrainingCategory(course.category, locale)}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("requiredForJobTitle")}</p>

@@ -7,6 +7,7 @@ import { User as UserIcon } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
+import { displayEmploymentType } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,7 @@ export default async function ProfilePage() {
         <CardContent className="space-y-2 text-sm">
           <div><span className="text-muted-foreground">{t("name")}:</span> <span className="font-medium text-foreground">{user.name}</span></div>
           <div><span className="text-muted-foreground">{t("email")}:</span> <span className="font-medium text-foreground">{user.email}</span></div>
-          <div><span className="text-muted-foreground">{t("role")}:</span> <Badge variant="outline" className="text-xs">{user.role.replace(/_/g, " ")}</Badge></div>
+          <div><span className="text-muted-foreground">{t("role")}:</span> <Badge variant="outline" className="text-xs">{getStatusLabel(user.role, locale)}</Badge></div>
           <div><span className="text-muted-foreground">{t("status")}:</span> <Badge variant={user.status === "ACTIVE" ? "default" : "destructive"} className={user.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{getStatusLabel(user.status, locale)}</Badge></div>
           <div><span className="text-muted-foreground">{t("company")}:</span> <span className="font-medium text-foreground">{locale === "ar" ? (tenant?.nameAr || tenant?.name) : tenant?.name}</span></div>
           <div><span className="text-muted-foreground">{t("lastLogin")}:</span> <span className="text-foreground">{user.lastLoginAt ? formatDateTime(user.lastLoginAt) : "—"}</span></div>
@@ -42,8 +43,8 @@ export default async function ProfilePage() {
             <div><span className="text-muted-foreground">{t("branch")}:</span> <span className="font-medium text-foreground">{user.employee.branch?.name ?? "—"}</span></div>
             <div><span className="text-muted-foreground">{t("department")}:</span> <span className="font-medium text-foreground">{user.employee.department?.name ?? "—"}</span></div>
             <div><span className="text-muted-foreground">{t("phone")}:</span> <span className="font-medium text-foreground">{user.employee.phone ?? "—"}</span></div>
-            <div><span className="text-muted-foreground">{t("employmentType")}:</span> <span className="font-medium text-foreground">{user.employee.employmentType.replace(/_/g, " ")}</span></div>
-            <div><span className="text-muted-foreground">{t("startDate")}:</span> <span className="font-medium text-foreground">{user.employee.startDate ? new Date(user.employee.startDate).toLocaleDateString() : "—"}</span></div>
+            <div><span className="text-muted-foreground">{t("employmentType")}:</span> <span className="font-medium text-foreground">{displayEmploymentType(user.employee.employmentType, locale)}</span></div>
+            <div><span className="text-muted-foreground">{t("startDate")}:</span> <span className="font-medium text-foreground">{user.employee.startDate ? <bdi dir="ltr">{new Date(user.employee.startDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi> : "—"}</span></div>
           </CardContent>
         </Card>
       )}

@@ -7,7 +7,8 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { AppShell, type AppShellSession } from "@/components/layout/AppShell";
 import { Suspense } from "react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function TenantLayout({ children }: { children: React.React
   }
 
   const t = await getTranslations("tenant");
+  const locale = await getLocale();
 
   const tenant = await db.tenant.findUnique({
     where: { id: session.tenantId },
@@ -35,7 +37,7 @@ export default async function TenantLayout({ children }: { children: React.React
           <p className="mt-2 text-sm text-muted-foreground">
             {t("accountReviewDesc", { email: tenant.ownerEmail })}
           </p>
-          <p className="mt-4 text-xs text-muted-foreground">{t("status")}: {tenant.status.replace(/_/g, " ")}</p>
+          <p className="mt-4 text-xs text-muted-foreground">{t("status")}: {getStatusLabel(tenant.status, locale)}</p>
           <form action="/api/auth/logout" method="post" className="mt-4">
             <button type="submit" className="rounded-md border border-border bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-muted">{t("signOut")}</button>
           </form>

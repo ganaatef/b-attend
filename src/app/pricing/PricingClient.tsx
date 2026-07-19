@@ -5,7 +5,8 @@ import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Check, X, ArrowRight } from "lucide-react";
 import type { Plan, PlanFeature } from "@prisma/client";
 import { formatNumber } from "@/lib/utils";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { displaySupportLevel } from "@/lib/locale-display";
 
 type PlanWithFeatures = Plan & { features: PlanFeature[] };
 
@@ -29,6 +30,7 @@ const featureOrder = [
 export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
   const [annual, setAnnual] = useState(false);
   const t = useTranslations("pricing");
+  const locale = useLocale();
 
   const featureLabels: Record<string, string> = {
     mobile_clock: t("mobileClockInOut"),
@@ -94,7 +96,7 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
                   }`}
                 >
                   {p.slug === "growth" && (
-                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-accent px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-accent px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-white">
                       {t("mostPopular")}
                     </span>
                   )}
@@ -122,7 +124,7 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
                     <p>{p.maxKiosks === 200 ? t("custom") : p.maxKiosks} {t("kiosksPlural")}</p>
                     <p>{p.reportsLevel.toLowerCase()} {t("reportsLevel")}</p>
                     <p>{p.auditRetentionDays}-{t("auditRetention")}</p>
-                    <p className="capitalize">{p.supportLevel.toLowerCase().replace(/_/g, " ")} {t("supportLevelLabel")}</p>
+                    <p className="capitalize">{displaySupportLevel(p.supportLevel, locale)} {t("supportLevelLabel")}</p>
                   </div>
 
                   <div className="mt-5">

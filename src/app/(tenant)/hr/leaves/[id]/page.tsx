@@ -69,7 +69,7 @@ export default async function LeaveRequestDetailPage({ params }: { params: Promi
             <h1 className="text-lg font-bold text-foreground">{t("leaveRequest")}</h1>
             <p className="text-sm text-muted-foreground">{lr.employee.fullName} ({lr.employee.employeeCode})</p>
           </div>
-          <Badge variant={lr.status === "APPROVED" ? "default" : "outline"} className={`text-[10px] ${statusColor(lr.status)}`}>{lr.status}</Badge>
+          <Badge variant={lr.status === "APPROVED" ? "default" : "outline"} className={`text-xs ${statusColor(lr.status)}`}>{lr.status}</Badge>
         </div>
       </div>
 

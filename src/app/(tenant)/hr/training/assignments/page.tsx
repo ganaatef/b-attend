@@ -6,7 +6,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { GraduationCap, Plus, Eye } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
   const t = await getTranslations("hrTraining");
+  const locale = await getLocale();
   const params = await searchParams;
   const canManage = hasPerm(session.role, "MANAGE_TRAINING");
 
@@ -101,7 +103,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
         </Link>
         {["ASSIGNED", "IN_PROGRESS", "COMPLETED", "OVERDUE", "CANCELLED"].map((s) => (
           <Link key={s} href={`/hr/training/assignments?status=${s}`} className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${params.status === s ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
-            {s.replace(/_/g, " ")}
+            {getStatusLabel(s, locale)}
           </Link>
         ))}
       </div>
@@ -126,7 +128,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={a.status === "COMPLETED" ? "default" : "outline"} className={`text-[10px] ${statusColor(a.status)}`}>{a.status.replace(/_/g, " ")}</Badge>
+                  <Badge variant={a.status === "COMPLETED" ? "default" : "outline"} className={`text-xs ${statusColor(a.status)}`}>{getStatusLabel(a.status, locale)}</Badge>
                   <Eye className="h-4 w-4 text-muted-foreground" />
                 </div>
               </Link>

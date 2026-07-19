@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Clock, LogIn, LogOut, ClipboardList, CheckSquare, CalendarClock, MapPin, CalendarDays } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
+import { displayPunchType } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -79,9 +80,9 @@ export default async function TodayPage() {
               <p className="text-sm font-medium text-foreground">{t("todaysShift", { shift: schedule.shiftPolicy?.name ?? "" })}</p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                <span>{formatTime(schedule.expectedStart)} → {formatTime(schedule.expectedEnd)}</span>
+                <span><bdi dir="ltr">{formatTime(schedule.expectedStart)} – {formatTime(schedule.expectedEnd)}</bdi></span>
                 {calcDuration(schedule.expectedStart, schedule.expectedEnd) && (
-                  <span className="text-xs">({calcDuration(schedule.expectedStart, schedule.expectedEnd)})</span>
+                  <span className="text-xs">(<bdi dir="ltr">{calcDuration(schedule.expectedStart, schedule.expectedEnd)}</bdi>)</span>
                 )}
               </div>
               {schedule.branch && (
@@ -96,11 +97,11 @@ export default async function TodayPage() {
           {nextSchedule && (
             <div className="mt-2 rounded-md bg-muted/30 px-3 py-2">
               <p className="text-xs font-medium text-foreground">{t("nextShift")}: {nextSchedule.shiftPolicy?.name ?? "—"}</p>
-              <p className="text-xs text-muted-foreground">{new Date(nextSchedule.date).toLocaleDateString()} · {formatTime(nextSchedule.expectedStart)} → {formatTime(nextSchedule.expectedEnd)}</p>
+              <p className="text-xs text-muted-foreground">{new Date(nextSchedule.date).toLocaleDateString()} · <bdi dir="ltr">{formatTime(nextSchedule.expectedStart)} – {formatTime(nextSchedule.expectedEnd)}</bdi></p>
             </div>
           )}
           {lastPunch && (
-            <p className="mt-2 text-xs text-muted-foreground">{t("lastActionAt", { action: lastPunch.type.replace(/_/g, " "), time: new Date(lastPunch.timestamp).toLocaleTimeString() })}</p>
+            <p className="mt-2 text-xs text-muted-foreground">{t("lastActionAt", { action: displayPunchType(lastPunch.type, locale), time: new Date(lastPunch.timestamp).toLocaleTimeString() })}</p>
           )}
           <Link href="/clock" className="mt-4 block">
             <Button size="lg" className="w-full">

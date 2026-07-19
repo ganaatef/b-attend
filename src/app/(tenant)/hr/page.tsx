@@ -181,56 +181,56 @@ export default async function HrDashboardPage() {
             <Link href="/hr/departments" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <FolderTree className="h-4 w-4 text-brand-accent" />
               <p className="mt-1 font-medium text-foreground">{t("qlDepartments")}</p>
-              <p className="text-[10px] text-muted-foreground">{t("qlDepartmentsSub", { count: departments })}</p>
+              <p className="text-xs text-muted-foreground">{t("qlDepartmentsSub", { count: departments })}</p>
             </Link>
             <Link href="/hr/job-titles" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <Award className="h-4 w-4 text-brand-accent" />
               <p className="mt-1 font-medium text-foreground">{t("qlJobTitles")}</p>
-              <p className="text-[10px] text-muted-foreground">{t("qlJobTitlesSub", { count: jobTitles })}</p>
+              <p className="text-xs text-muted-foreground">{t("qlJobTitlesSub", { count: jobTitles })}</p>
             </Link>
             {canViewSensitive && (
               <>
                 <Link href="/hr/contracts" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                   <FileText className="h-4 w-4 text-brand-accent" />
                   <p className="mt-1 font-medium text-foreground">{t("qlContracts")}</p>
-                  <p className="text-[10px] text-muted-foreground">{t("qlContractsSub", { count: contractsExpiring })}</p>
+                  <p className="text-xs text-muted-foreground">{t("qlContractsSub", { count: contractsExpiring })}</p>
                 </Link>
                 <Link href="/hr/documents" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                   <FileText className="h-4 w-4 text-brand-accent" />
                   <p className="mt-1 font-medium text-foreground">{t("qlDocuments")}</p>
-                  <p className="text-[10px] text-muted-foreground">{t("qlDocumentsSub", { count: documentsExpiring })}</p>
+                  <p className="text-xs text-muted-foreground">{t("qlDocumentsSub", { count: documentsExpiring })}</p>
                 </Link>
               </>
             )}
             <Link href="/hr/leaves" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <CalendarDays className="h-4 w-4 text-brand-accent" />
               <p className="mt-1 font-medium text-foreground">{t("qlLeaveManagement")}</p>
-              <p className="text-[10px] text-muted-foreground">{t("qlLeaveManagementSub", { count: pendingLeaveRequests })}</p>
+              <p className="text-xs text-muted-foreground">{t("qlLeaveManagementSub", { count: pendingLeaveRequests })}</p>
             </Link>
             <Link href="/employees" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
               <Users className="h-4 w-4 text-brand-accent" />
               <p className="mt-1 font-medium text-foreground">{t("qlEmployees")}</p>
-              <p className="text-[10px] text-muted-foreground">{t("qlEmployeesSub", { count: activeEmployees })}</p>
+              <p className="text-xs text-muted-foreground">{t("qlEmployeesSub", { count: activeEmployees })}</p>
             </Link>
             {canViewSensitive && (
               <Link href="/hr/warnings" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                 <AlertTriangle className="h-4 w-4 text-brand-accent" />
                 <p className="mt-1 font-medium text-foreground">{t("qlWarnings")}</p>
-                <p className="text-[10px] text-muted-foreground">{t("qlWarningsSub", { count: openWarnings })}</p>
+                <p className="text-xs text-muted-foreground">{t("qlWarningsSub", { count: openWarnings })}</p>
               </Link>
             )}
             {canManageTraining && (
               <Link href="/hr/training" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                 <GraduationCap className="h-4 w-4 text-brand-accent" />
                 <p className="mt-1 font-medium text-foreground">{t("qlTraining")}</p>
-                <p className="text-[10px] text-muted-foreground">{t("qlTrainingSub", { count: trainingOverdue })}</p>
+                <p className="text-xs text-muted-foreground">{t("qlTrainingSub", { count: trainingOverdue })}</p>
               </Link>
             )}
             {canManageAssets && (
               <Link href="/hr/assets" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                 <Package className="h-4 w-4 text-brand-accent" />
                 <p className="mt-1 font-medium text-foreground">{t("qlAssets")}</p>
-                <p className="text-[10px] text-muted-foreground">{t("qlAssetsSub", { count: assetsAssigned })}</p>
+                <p className="text-xs text-muted-foreground">{t("qlAssetsSub", { count: assetsAssigned })}</p>
               </Link>
             )}
             {canViewSensitive && (
@@ -238,12 +238,12 @@ export default async function HrDashboardPage() {
                 <Link href="/hr/onboarding" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                   <UserPlus className="h-4 w-4 text-brand-accent" />
                   <p className="mt-1 font-medium text-foreground">{t("qlOnboarding")}</p>
-                  <p className="text-[10px] text-muted-foreground">{t("qlOnboardingSub", { count: onboardingPending })}</p>
+                  <p className="text-xs text-muted-foreground">{t("qlOnboardingSub", { count: onboardingPending })}</p>
                 </Link>
                 <Link href="/hr/offboarding" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                   <UserMinus className="h-4 w-4 text-brand-accent" />
                   <p className="mt-1 font-medium text-foreground">{t("qlOffboarding")}</p>
-                  <p className="text-[10px] text-muted-foreground">{t("qlOffboardingSub", { count: offboardingInProgress })}</p>
+                  <p className="text-xs text-muted-foreground">{t("qlOffboardingSub", { count: offboardingInProgress })}</p>
                 </Link>
               </>
             )}
@@ -252,12 +252,12 @@ export default async function HrDashboardPage() {
                 <Link href="/hr/payroll-profiles" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                   <Wallet className="h-4 w-4 text-brand-accent" />
                   <p className="mt-1 font-medium text-foreground">{t("qlPayrollProfiles")}</p>
-                  <p className="text-[10px] text-muted-foreground">{t("qlPayrollProfilesSub")}</p>
+                  <p className="text-xs text-muted-foreground">{t("qlPayrollProfilesSub")}</p>
                 </Link>
                 <Link href="/hr/payroll-runs" className="rounded-md border border-border bg-card p-3 text-sm hover:bg-muted/40">
                   <CreditCard className="h-4 w-4 text-brand-accent" />
                   <p className="mt-1 font-medium text-foreground">{t("qlPayrollRuns")}</p>
-                  <p className="text-[10px] text-muted-foreground">{t("qlPayrollRunsSub")}</p>
+                  <p className="text-xs text-muted-foreground">{t("qlPayrollRunsSub")}</p>
                 </Link>
               </>
             )}

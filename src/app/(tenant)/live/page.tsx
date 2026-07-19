@@ -8,6 +8,7 @@ import { Activity } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
+import { displayPunchType } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -99,7 +100,7 @@ export default async function LivePage() {
                     <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(p.timestamp).toLocaleTimeString()}</td>
                     <td className="px-4 py-2.5"><p className="font-medium text-foreground">{employeeDisplayName(p.employee, locale)}</p><p className="text-xs text-muted-foreground">{p.employee?.employeeCode}</p></td>
                     <td className="hidden px-4 py-2.5 text-muted-foreground sm:table-cell">{p.branch?.name ?? "—"}</td>
-                    <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{p.type.replace(/_/g, " ")}</Badge></td>
+                    <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{displayPunchType(p.type, locale)}</Badge></td>
                     <td className="hidden px-4 py-2.5 text-xs text-muted-foreground sm:table-cell">{p.source}</td>
                     <td className="px-4 py-2.5">
                       {p.insideGeofence ? (

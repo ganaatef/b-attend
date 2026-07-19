@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { createSystemTipAction } from "./actions";
 import { Loader2 } from "lucide-react";
+import { useLocale } from "next-intl";
+import { displayCoachTheme, displayCoachAudience } from "@/lib/locale-display";
 
 const THEMES = ["PUNCTUALITY", "TEAMWORK", "CUSTOMER_SERVICE", "CLEANLINESS", "FOOD_SAFETY", "COMMUNICATION", "PRESSURE_HANDLING", "PERSONAL_DISCIPLINE", "SHIFT_READINESS", "LEARNING", "CONSISTENCY", "RESPONSIBILITY", "MOTIVATION", "GENERAL"];
 const AUDIENCES = ["ALL_EMPLOYEES", "KITCHEN", "SERVICE", "CASHIER", "DELIVERY", "MANAGERS"];
@@ -16,17 +18,18 @@ const AUDIENCES = ["ALL_EMPLOYEES", "KITCHEN", "SERVICE", "CASHIER", "DELIVERY",
 export function SystemTipForm() {
   const [state, formAction] = useActionState(createSystemTipAction, { ok: false });
   const { pending } = useFormStatus();
+  const locale = useLocale();
   return (
     <form action={formAction} className="grid gap-3 sm:grid-cols-2">
       <div className="sm:col-span-2"><Label htmlFor="title">Title *</Label><Input id="title" name="title" required placeholder="Arrive 10 minutes early" /></div>
       <div className="sm:col-span-2"><Label htmlFor="body">Body *</Label><Textarea id="body" name="body" rows={3} required /></div>
       <div>
         <Label htmlFor="theme">Theme</Label>
-        <Select name="theme" defaultValue="PUNCTUALITY"><SelectTrigger id="theme"><SelectValue /></SelectTrigger><SelectContent>{THEMES.map((t) => <SelectItem key={t} value={t}>{t.replace(/_/g, " ").toLowerCase()}</SelectItem>)}</SelectContent></Select>
+        <Select name="theme" defaultValue="PUNCTUALITY"><SelectTrigger id="theme"><SelectValue /></SelectTrigger><SelectContent>{THEMES.map((t) => <SelectItem key={t} value={t}>{displayCoachTheme(t, locale)}</SelectItem>)}</SelectContent></Select>
       </div>
       <div>
         <Label htmlFor="roleTarget">Target audience</Label>
-        <Select name="roleTarget" defaultValue="ALL_EMPLOYEES"><SelectTrigger id="roleTarget"><SelectValue /></SelectTrigger><SelectContent>{AUDIENCES.map((a) => <SelectItem key={a} value={a}>{a.replace(/_/g, " ").toLowerCase()}</SelectItem>)}</SelectContent></Select>
+        <Select name="roleTarget" defaultValue="ALL_EMPLOYEES"><SelectTrigger id="roleTarget"><SelectValue /></SelectTrigger><SelectContent>{AUDIENCES.map((a) => <SelectItem key={a} value={a}>{displayCoachAudience(a, locale)}</SelectItem>)}</SelectContent></Select>
       </div>
       <div>
         <Label htmlFor="language">Language</Label>

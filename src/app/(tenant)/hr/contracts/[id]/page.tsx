@@ -9,6 +9,9 @@ import { Badge } from "@/components/ui/badge";
 import { getRolePermissions, type HrPermission } from "@/lib/hr/permissions";
 import { FileText, CheckCircle2, RefreshCw, Ban } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
+import { getStatusLabel } from "@/lib/status-labels";
+import { displayContractType } from "@/lib/locale-display";
+import { getLocaleCode } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +26,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
   if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const { id } = await params;
   const tid = session.tenantId;
+  const locale = await getLocaleCode();
 
   const contract = await db.employeeContract.findFirst({
     where: { id, companyId: tid },
@@ -57,7 +61,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
             <h1 className="text-lg font-bold text-foreground">{contract.contractNumber}</h1>
             <p className="text-sm text-muted-foreground">{contract.employee.fullName} ({contract.employee.employeeCode})</p>
           </div>
-          <Badge variant={contract.status === "ACTIVE" ? "default" : "outline"} className={`text-[10px] ${statusColor(contract.status)}`}>{contract.status}</Badge>
+          <Badge variant={contract.status === "ACTIVE" ? "default" : "outline"} className={`text-xs ${statusColor(contract.status)}`}>{getStatusLabel(contract.status, locale)}</Badge>
         </div>
       </div>
 
@@ -72,7 +76,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("contractTypeLabelDetail")}</p>
-          <p className="text-sm font-semibold text-foreground">{contract.contractType.replace(/_/g, " ")}</p>
+           <p className="text-sm font-semibold text-foreground">{displayContractType(contract.contractType, locale)}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("branchLabel")}</p>
@@ -80,15 +84,15 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("startDateLabelDetail")}</p>
-          <p className="text-sm font-semibold text-foreground">{new Date(contract.startDate).toLocaleDateString()}</p>
+           <p className="text-sm font-semibold text-foreground"><bdi dir="ltr">{new Date(contract.startDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi></p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("endDateLabelDetail")}</p>
-          <p className="text-sm font-semibold text-foreground">{contract.endDate ? new Date(contract.endDate).toLocaleDateString() : t("openEnded")}</p>
+          <p className="text-sm font-semibold text-foreground">{contract.endDate ? <bdi dir="ltr">{new Date(contract.endDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi> : t("openEnded")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("probationEndLabelDetail")}</p>
-          <p className="text-sm font-semibold text-foreground">{contract.probationEndDate ? new Date(contract.probationEndDate).toLocaleDateString() : "—"}</p>
+          <p className="text-sm font-semibold text-foreground">{contract.probationEndDate ? <bdi dir="ltr">{new Date(contract.probationEndDate).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi> : "—"}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("salaryRefLabel")}</p>
@@ -126,7 +130,7 @@ export default async function ContractDetailPage({ params }: { params: Promise<{
                 await renewContractAction(contract.id, newEndDate);
               }} className="flex items-end gap-2">
                 <div>
-                  <label className="text-[10px] text-muted-foreground">{t("newEndDate")}</label>
+                  <label className="text-xs text-muted-foreground">{t("newEndDate")}</label>
                   <input type="date" name="newEndDate" required className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs" />
                 </div>
                 <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-700">

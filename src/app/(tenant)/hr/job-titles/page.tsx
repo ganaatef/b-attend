@@ -106,7 +106,7 @@ export default async function HrJobTitlesPage() {
                       {jt.department?.name ?? t("noDepartment")} · {jt.grade ?? "—"} · {t("employeesCount", { count: jt._count.employees })}
                     </p>
                   </div>
-                  {!jt.active && <Badge variant="outline" className="text-[10px]">{t("inactive")}</Badge>}
+                  {!jt.active && <Badge variant="outline" className="text-xs">{t("inactive")}</Badge>}
                 </div>
                 <form action={async () => {
                   "use server";

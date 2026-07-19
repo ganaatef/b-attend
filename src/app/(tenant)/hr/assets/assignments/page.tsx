@@ -136,7 +136,7 @@ export default async function AssetAssignmentsPage({ searchParams }: { searchPar
                     </p>
                   </div>
                 </div>
-                <Badge variant={aa.status === "ASSIGNED" ? "default" : "outline"} className={`text-[10px] ${statusColor(aa.status)}`}>{aa.status}</Badge>
+                <Badge variant={aa.status === "ASSIGNED" ? "default" : "outline"} className={`text-xs ${statusColor(aa.status)}`}>{aa.status}</Badge>
               </Link>
             ))}
           </div>

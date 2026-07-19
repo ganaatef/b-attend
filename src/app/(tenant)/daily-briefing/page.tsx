@@ -2,7 +2,8 @@
  * /daily-briefing — Manager daily briefing to read to staff before shift.
  */
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { displayBriefingTheme } from "@/lib/locale-display";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 export default async function DailyBriefingPage() {
   const t = await getTranslations("dailyBriefing");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId) return null;
   if (session.role === "EMPLOYEE") {
@@ -73,7 +75,7 @@ export default async function DailyBriefingPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <Badge variant="outline" className="bg-brand-accent/10 text-brand-navy border-transparent">{briefing.theme.replace(/_/g, " ").toLowerCase()}</Badge>
+          <Badge variant="outline" className="bg-brand-accent/10 text-brand-navy border-transparent">{displayBriefingTheme(briefing.theme, locale).toLowerCase()}</Badge>
         </CardContent>
       </Card>
 

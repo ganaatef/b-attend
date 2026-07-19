@@ -6,6 +6,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { AlertTriangle } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
+import { displayWarningType } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -98,19 +99,19 @@ export default async function MyWarningsPage() {
                 <div key={w.id} className="rounded-md border border-border/60 bg-card px-4 py-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">{w.type.replace(/_/g, " ")}</span>
+                      <span className="text-sm font-medium text-foreground">{displayWarningType(w.type, locale)}</span>
                       {severityBadge(w.severity)}
                       {statusBadge(w.status)}
                     </div>
-                    <span className="text-xs text-muted-foreground">{new Date(w.date).toLocaleDateString()}</span>
+                    <span className="text-xs text-muted-foreground"><bdi dir="ltr">{new Date(w.date).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi></span>
                   </div>
                   {w.reason && <p className="mt-1 text-xs text-muted-foreground">{w.reason}</p>}
                   {w.acknowledgedByEmployee && w.acknowledgedAt && (
-                    <p className="mt-1 text-[10px] text-muted-foreground">{t("acknowledgedOn", { date: new Date(w.acknowledgedAt).toLocaleDateString() })}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{t("acknowledgedOn", { date: <bdi dir="ltr">{new Date(w.acknowledgedAt).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi> as any })}</p>
                   )}
                   {w.status === "OPEN" && !w.acknowledgedByEmployee && (
                     <div className="mt-2 space-y-1">
-                      <p className="text-[10px] text-muted-foreground">{t("acknowledgeNote")}</p>
+                      <p className="text-xs text-muted-foreground">{t("acknowledgeNote")}</p>
                       <form action={async (formData: FormData) => {
                         "use server";
                         const warningId = formData.get("warningId") as string;

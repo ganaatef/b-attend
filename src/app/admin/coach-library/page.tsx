@@ -1,7 +1,7 @@
 /**
  * /admin/coach-library — Super Admin manages system default tips.
  */
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +9,13 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { BookOpen } from "lucide-react";
 import { SystemTipForm } from "./SystemTipForm";
 import { toggleSystemTipAction, deleteSystemTipAction } from "./actions";
+import { displayCoachTheme, displayCoachAudience } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminCoachLibraryPage() {
   const t = await getTranslations("adminCoachLibrary");
+  const locale = await getLocale();
   const tips = await db.coachTip.findMany({
     where: { isSystemDefault: true },
     orderBy: { theme: "asc" },
@@ -42,9 +44,9 @@ export default async function AdminCoachLibraryPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground">{tip.title}</p>
-                        <Badge variant="outline" className="text-[10px]">{tip.theme.replace(/_/g, " ").toLowerCase()}</Badge>
-                        <Badge variant="outline" className="text-[10px]">{tip.roleTarget.replace(/_/g, " ").toLowerCase()}</Badge>
-                        {!tip.active && <Badge variant="secondary" className="text-[10px]">inactive</Badge>}
+                        <Badge variant="outline" className="text-xs">{displayCoachTheme(tip.theme, locale)}</Badge>
+                        <Badge variant="outline" className="text-xs">{displayCoachAudience(tip.roleTarget, locale)}</Badge>
+                        {!tip.active && <Badge variant="secondary" className="text-xs">inactive</Badge>}
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">{tip.body}</p>
                     </div>

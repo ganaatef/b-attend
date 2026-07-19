@@ -194,7 +194,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
                   <Icon className="h-4 w-4 shrink-0" />
                   <span className="flex-1">{t(item.labelKey as any)}</span>
                   {item.badge ? (
-                    <span className="rounded bg-sidebar-foreground/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-sidebar-foreground/60">
+                    <span className="rounded bg-sidebar-foreground/10 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wider text-sidebar-foreground/60">
                       {item.badge}
                     </span>
                   ) : null}
@@ -211,7 +211,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
           </div>
           <div className="min-w-0 flex-1">
             <p className="truncate text-xs font-semibold text-sidebar-foreground">{user.name}</p>
-            <p className="truncate text-[10px] uppercase tracking-wider text-sidebar-foreground/60">{roleLabels[user.role] || user.role.replace(/_/g, " ")}</p>
+            <p className="truncate text-xs uppercase tracking-wider text-sidebar-foreground/60">{roleLabels[user.role] || user.role.replace(/_/g, " ")}</p>
           </div>
         </div>
       </div>

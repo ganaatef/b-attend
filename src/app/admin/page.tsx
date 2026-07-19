@@ -9,6 +9,8 @@ import { Badge } from "@/components/ui/badge";
 import { Building2, Users, Layers, FileBarChart, Hourglass, CreditCard, AlertCircle, CheckCircle2, TrendingUp, Activity } from "lucide-react";
 import { TenantStatusBadge, LeadBadge, InvoiceBadge } from "@/components/badges/StatusBadges";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +19,8 @@ function money(amount: number, currency = "EGP") {
 }
 
 export default async function AdminDashboard() {
+  const t = await getTranslations("admin");
+  const locale = await getLocale();
   const [
     totalTenants, activeTenants, trialTenants, pendingTenants, suspendedTenants,
     totalEmployees, totalBranches, pendingInvoices, overdueInvoices, openTickets,
@@ -48,21 +52,21 @@ export default async function AdminDashboard() {
   const arr = mrr * 12;
 
   const stats = [
-    { label: "Total companies", value: totalTenants, icon: Building2, sub: `${activeTenants} active · ${trialTenants} trial` },
-    { label: "Pending activation", value: pendingTenants, icon: Hourglass, sub: "Awaiting review", highlight: pendingTenants > 0 },
-    { label: "Suspended", value: suspendedTenants, icon: AlertCircle, sub: "Action required", highlight: suspendedTenants > 0 },
-    { label: "MRR", value: money(mrr), icon: TrendingUp, sub: `ARR: ${money(arr)}` },
-    { label: "Pending invoices", value: pendingInvoices, icon: CreditCard, sub: `${overdueInvoices} overdue`, highlight: overdueInvoices > 0 },
-    { label: "Open tickets", value: openTickets, icon: FileBarChart, sub: "Support queue" },
-    { label: "Active employees", value: totalEmployees, icon: Users, sub: `${totalBranches} branches` },
-    { label: "Clock actions today", value: punchesToday, icon: Activity, sub: "Across all tenants" },
+    { label: t("totalCompanies"), value: totalTenants, icon: Building2, sub: `${activeTenants} ${t("active")} · ${trialTenants} ${t("trial")}` },
+    { label: t("pendingActivation"), value: pendingTenants, icon: Hourglass, sub: t("awaitingReview"), highlight: pendingTenants > 0 },
+    { label: t("suspended"), value: suspendedTenants, icon: AlertCircle, sub: t("actionRequired"), highlight: suspendedTenants > 0 },
+    { label: t("mrr"), value: money(mrr), icon: TrendingUp, sub: `${t("arr")}: ${money(arr)}` },
+    { label: t("pendingInvoices"), value: pendingInvoices, icon: CreditCard, sub: `${overdueInvoices} ${t("overdue")}`, highlight: overdueInvoices > 0 },
+    { label: t("openTickets"), value: openTickets, icon: FileBarChart, sub: t("supportQueue") },
+    { label: t("activeEmployees"), value: totalEmployees, icon: Users, sub: `${totalBranches} ${t("branchesCount")}` },
+    { label: t("clockActionsToday"), value: punchesToday, icon: Activity, sub: t("acrossAllTenants") },
   ];
 
   return (
     <div className="mx-auto max-w-7xl space-y-6">
       <div>
-        <h1 className="text-lg font-bold text-foreground">Super Admin Control Center</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Platform-wide metrics, tenant management, and billing operations.</p>
+        <h1 className="text-lg font-bold text-foreground">{t("superAdminTitle")}</h1>
+        <p className="mt-1 text-sm text-muted-foreground">{t("superAdminSubtitle")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -89,13 +93,13 @@ export default async function AdminDashboard() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-foreground">Recent tenants</CardTitle>
-              <Link href="/admin/tenants" className="text-xs font-medium text-brand-accent hover:underline">View all →</Link>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("recentTenants")}</CardTitle>
+              <Link href="/admin/tenants" className="text-xs font-medium text-brand-accent hover:underline">{t("viewAll")}</Link>
             </div>
           </CardHeader>
           <CardContent>
             {recentTenants.length === 0 ? (
-              <EmptyState title="No tenants yet" icon={Building2} />
+              <EmptyState title={t("noTenants")} icon={Building2} />
             ) : (
               <div className="space-y-2">
                 {recentTenants.map((t) => (
@@ -115,13 +119,13 @@ export default async function AdminDashboard() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-foreground">Recent leads ({newLeads} new)</CardTitle>
-              <Link href="/admin/leads" className="text-xs font-medium text-brand-accent hover:underline">View all →</Link>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("recentLeads", { count: newLeads })}</CardTitle>
+              <Link href="/admin/leads" className="text-xs font-medium text-brand-accent hover:underline">{t("viewAll")}</Link>
             </div>
           </CardHeader>
           <CardContent>
             {recentLeads.length === 0 ? (
-              <EmptyState title="No leads yet" icon={Users} />
+              <EmptyState title={t("noLeads")} icon={Users} />
             ) : (
               <div className="space-y-2">
                 {recentLeads.map((l) => (
@@ -141,13 +145,13 @@ export default async function AdminDashboard() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-foreground">Recent invoices</CardTitle>
-              <Link href="/admin/invoices" className="text-xs font-medium text-brand-accent hover:underline">View all →</Link>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("recentInvoices")}</CardTitle>
+              <Link href="/admin/invoices" className="text-xs font-medium text-brand-accent hover:underline">{t("viewAll")}</Link>
             </div>
           </CardHeader>
           <CardContent>
             {recentInvoices.length === 0 ? (
-              <EmptyState title="No invoices yet" icon={CreditCard} />
+              <EmptyState title={t("noInvoices")} icon={CreditCard} />
             ) : (
               <div className="space-y-2">
                 {recentInvoices.map((inv) => (
@@ -170,20 +174,20 @@ export default async function AdminDashboard() {
         <Card>
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-sm font-semibold text-foreground">Support tickets</CardTitle>
-              <Link href="/admin/support" className="text-xs font-medium text-brand-accent hover:underline">View all →</Link>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("supportTickets")}</CardTitle>
+              <Link href="/admin/support" className="text-xs font-medium text-brand-accent hover:underline">{t("viewAll")}</Link>
             </div>
           </CardHeader>
           <CardContent>
             {recentTickets.length === 0 ? (
-              <EmptyState title="No tickets yet" icon={FileBarChart} />
+              <EmptyState title={t("noTickets")} icon={FileBarChart} />
             ) : (
               <div className="space-y-2">
                 {recentTickets.map((t) => (
                   <Link key={t.id} href={`/admin/support/${t.id}`} className="block rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-muted/40">
                     <div className="flex items-center justify-between">
                       <p className="truncate font-medium text-foreground">{t.subject}</p>
-                      <Badge variant="outline" className="text-xs">{t.status.replace(/_/g, " ")}</Badge>
+                       <Badge variant="outline" className="text-xs">{getStatusLabel(t.status, locale)}</Badge>
                     </div>
                     <p className="truncate text-xs text-muted-foreground">{t.tenant?.name ?? t.createdByEmail}</p>
                   </Link>
@@ -196,28 +200,28 @@ export default async function AdminDashboard() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-foreground">Quick actions</CardTitle>
+          <CardTitle className="text-sm font-semibold text-foreground">{t("quickActions")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Link href="/admin/tenants" className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40">
             <Building2 className="h-5 w-5 text-brand-accent" />
-            <p className="mt-2 text-sm font-medium text-foreground">Manage tenants</p>
-            <p className="text-xs text-muted-foreground">Activate, suspend, cancel</p>
+            <p className="mt-2 text-sm font-medium text-foreground">{t("manageTenants")}</p>
+            <p className="text-xs text-muted-foreground">{t("manageTenantsDesc")}</p>
           </Link>
           <Link href="/admin/invoices" className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40">
             <CreditCard className="h-5 w-5 text-brand-accent" />
-            <p className="mt-2 text-sm font-medium text-foreground">Billing & invoices</p>
-            <p className="text-xs text-muted-foreground">Create invoices, mark paid</p>
+            <p className="mt-2 text-sm font-medium text-foreground">{t("billingInvoices")}</p>
+            <p className="text-xs text-muted-foreground">{t("billingInvoicesDesc")}</p>
           </Link>
           <Link href="/admin/leads" className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40">
             <Users className="h-5 w-5 text-brand-accent" />
-            <p className="mt-2 text-sm font-medium text-foreground">Leads</p>
-            <p className="text-xs text-muted-foreground">Demo requests & contacts</p>
+            <p className="mt-2 text-sm font-medium text-foreground">{t("leadsAction")}</p>
+            <p className="text-xs text-muted-foreground">{t("leadsActionDesc")}</p>
           </Link>
           <Link href="/admin/plans" className="rounded-lg border border-border bg-card p-4 hover:bg-muted/40">
             <Layers className="h-5 w-5 text-brand-accent" />
-            <p className="mt-2 text-sm font-medium text-foreground">Plans & features</p>
-            <p className="text-xs text-muted-foreground">{plans.length} plans active</p>
+            <p className="mt-2 text-sm font-medium text-foreground">{t("plansFeatures")}</p>
+            <p className="text-xs text-muted-foreground">{t("plansFeaturesDesc", { count: plans.length })}</p>
           </Link>
         </CardContent>
       </Card>

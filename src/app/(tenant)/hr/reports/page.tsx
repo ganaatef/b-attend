@@ -314,7 +314,7 @@ export default async function HRReportsPage({
                     <div>
                       <CardTitle className="text-sm font-semibold text-foreground">{report.title}</CardTitle>
                       {report.permission && (
-                        <Badge variant="outline" className="text-[9px] mt-0.5">
+                         <Badge variant="outline" className="text-xs mt-0.5">
                           {report.permission}
                         </Badge>
                       )}
@@ -324,12 +324,12 @@ export default async function HRReportsPage({
                 </div>
               </CardHeader>
               <CardContent className="pt-0">
-                <p className="text-[11px] text-muted-foreground mb-3">{report.description}</p>
+                <p className="text-xs text-muted-foreground mb-3">{report.description}</p>
                 <div className="flex items-center gap-2">
                   {canExportExcel && (
                     <Link
                       href={report.href}
-                      className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-[10px] font-medium text-foreground hover:bg-muted/40"
+                      className="inline-flex items-center gap-1 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted/40"
                     >
                       <Download className="h-3 w-3" /> Excel
                     </Link>

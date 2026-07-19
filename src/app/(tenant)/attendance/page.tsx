@@ -6,6 +6,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { ClipboardList } from "lucide-react";
 import { getTranslations } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
+import { getLocaleCode } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +15,7 @@ export default async function AttendancePage() {
   const session = await getSession();
   if (!session?.tenantId) return null;
   const t = await getTranslations("attendance");
+  const locale = await getLocaleCode();
   const user = await db.user.findUnique({ where: { id: session.sub }, include: { employee: true } });
   const employee = user?.employee;
   if (!employee) return <EmptyState title={t("noEmployeeTitle")} icon={ClipboardList} />;
@@ -33,7 +36,7 @@ export default async function AttendancePage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
-      <div><h1 className="text-lg font-bold text-foreground">{t("myAttendance")}</h1><p className="text-sm text-muted-foreground">{employee.fullName} · {new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" })}</p></div>
+      <div><h1 className="text-lg font-bold text-foreground">{t("myAttendance")}</h1><p className="text-sm text-muted-foreground">{employee.fullName} · <bdi dir="ltr">{new Date().toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", { month: "long", year: "numeric" })}</bdi></p></div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <Card className="border-border p-3"><p className="text-2xl font-bold text-foreground">{stats.present}</p><p className="text-xs text-muted-foreground">{t("present")}</p></Card>
         <Card className="border-border p-3"><p className="text-2xl font-bold text-foreground">{stats.absent}</p><p className="text-xs text-muted-foreground">{t("absent")}</p></Card>
@@ -46,13 +49,13 @@ export default async function AttendancePage() {
             {days.map((d) => (
               <div key={d.id} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div>
-                  <p className="font-medium text-foreground">{new Date(d.date).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}</p>
+                  <p className="font-medium text-foreground"><bdi dir="ltr">{new Date(d.date).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", { weekday: "short", month: "short", day: "numeric" })}</bdi></p>
                   <p className="text-xs text-muted-foreground">
-                    {d.actualClockIn ? new Date(d.actualClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} → {d.actualClockOut ? new Date(d.actualClockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
-                    {" · "}{Math.floor(d.workedMinutes / 60)}h {d.workedMinutes % 60}m
+                    <bdi dir="ltr">{d.actualClockIn ? new Date(d.actualClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} – {d.actualClockOut ? new Date(d.actualClockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</bdi>
+                    {" · "}<bdi dir="ltr">{Math.floor(d.workedMinutes / 60)}{locale === "ar" ? "س" : "h"} {d.workedMinutes % 60}{locale === "ar" ? "د" : "m"}</bdi>
                   </p>
                 </div>
-                <Badge variant="outline" className="text-xs">{d.status.replace(/_/g, " ")}</Badge>
+                <Badge variant="outline" className="text-xs">{getStatusLabel(d.status, locale)}</Badge>
               </div>
             ))}
           </div>

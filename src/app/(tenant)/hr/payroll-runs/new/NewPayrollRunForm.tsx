@@ -61,7 +61,7 @@ export function NewPayrollRunForm() {
               <p className="text-xs text-blue-700">
                 {t("linesInfo")}
               </p>
-              <p className="text-[10px] text-blue-500 mt-1">
+              <p className="text-xs text-blue-500 mt-1">
                 {t("taxNoteShort")}
               </p>
             </div>

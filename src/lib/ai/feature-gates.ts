@@ -71,14 +71,50 @@ export async function getTenantAiSettings(tenantId: string) {
   return settings;
 }
 
-export async function canUseAiFeature(tenantId: string, feature: AiFeatureKey): Promise<{ allowed: boolean; reason?: string }> {
-  // 1. Global AI switch
-  const globalEnabled = await isAiGloballyEnabled();
-  if (!globalEnabled) return { allowed: false, reason: "AI module is disabled globally by the platform admin." };
+// In-memory cache for feature gate results (60s TTL to reduce DB load)
+const featureGateCache = new Map<string, { result: { allowed: boolean; reason?: string }; ts: number }>();
+const FEATURE_GATE_TTL = 60_000;
 
-  // 2. Tenant AI settings
-  const tenantSettings = await getTenantAiSettings(tenantId);
-  if (!tenantSettings.aiEnabled) return { allowed: false, reason: "AI module is disabled for your company." };
+function getCachedFeatureGate(key: string): { allowed: boolean; reason?: string } | null {
+  const entry = featureGateCache.get(key);
+  if (entry && Date.now() - entry.ts < FEATURE_GATE_TTL) return entry.result;
+  featureGateCache.delete(key);
+  return null;
+}
+
+function setCachedFeatureGate(key: string, result: { allowed: boolean; reason?: string }) {
+  featureGateCache.set(key, { result, ts: Date.now() });
+  // Evict stale entries periodically
+  if (featureGateCache.size > 200) {
+    const now = Date.now();
+    for (const [k, v] of featureGateCache) {
+      if (now - v.ts > FEATURE_GATE_TTL) featureGateCache.delete(k);
+    }
+  }
+}
+
+export async function canUseAiFeature(tenantId: string, feature: AiFeatureKey): Promise<{ allowed: boolean; reason?: string }> {
+  const cacheKey = `${tenantId}:${feature}`;
+  const cached = getCachedFeatureGate(cacheKey);
+  if (cached) return cached;
+
+  // 1+2. Global AI switch + Tenant AI settings in parallel
+  const [globalEnabled, tenantSettings] = await Promise.all([
+    isAiGloballyEnabled(),
+    getTenantAiSettings(tenantId),
+  ]);
+
+  if (!globalEnabled) {
+    const r = { allowed: false, reason: "AI module is disabled globally by the platform admin." };
+    setCachedFeatureGate(cacheKey, r);
+    return r;
+  }
+  if (!tenantSettings.aiEnabled) {
+    const r = { allowed: false, reason: "AI module is disabled for your company." };
+    setCachedFeatureGate(cacheKey, r);
+    return r;
+  }
+
   const featureToggleMap: Record<AiFeatureKey, boolean> = {
     ai_coach: tenantSettings.employeeCoach,
     daily_motivation: tenantSettings.dailyMotivation,
@@ -89,27 +125,43 @@ export async function canUseAiFeature(tenantId: string, feature: AiFeatureKey): 
     ai_usage_logs: tenantSettings.aiUsageLogs,
     custom_coach_templates: tenantSettings.customCoachTemplates,
   };
-  if (!featureToggleMap[feature]) return { allowed: false, reason: `The ${feature.replace(/_/g, " ")} feature is disabled for your company.` };
+  if (!featureToggleMap[feature]) {
+    const r = { allowed: false, reason: `The ${feature.replace(/_/g, " ")} feature is disabled for your company.` };
+    setCachedFeatureGate(cacheKey, r);
+    return r;
+  }
 
-  // 3. Plan feature gate
-  const planSlug = await getTenantPlanSlug(tenantId);
-  if (!planSlug) return { allowed: false, reason: "No active subscription." };
+  // 3+4. Plan + subscription in parallel (single query with includes)
+  const tenant = await db.tenant.findUnique({
+    where: { id: tenantId },
+    include: { subscription: { include: { plan: true } } },
+  });
+  const planSlug = tenant?.subscription?.plan?.slug ?? null;
+  if (!planSlug) {
+    const r = { allowed: false, reason: "No active subscription." };
+    setCachedFeatureGate(cacheKey, r);
+    return r;
+  }
+
   let allowedFeatures = PLAN_FEATURES[planSlug] ?? [];
-
-  // 4. B-Coach add-on unlocks more features
-  const subscription = await getTenantSubscription(tenantId);
-  if (subscription?.bcoachAddOnEnabled && planSlug !== "trial") {
+  if (tenant?.subscription?.bcoachAddOnEnabled && planSlug !== "trial") {
     allowedFeatures = [...new Set([...allowedFeatures, ...ADDON_FEATURES])];
   }
 
   if (!allowedFeatures.includes(feature)) {
     if (planSlug === "trial") {
-      return { allowed: false, reason: "B-Coach is available on Growth, Pro, and Enterprise plans. Upgrade to unlock AI staff coaching and team insights." };
+      const r = { allowed: false, reason: "B-Coach is available on Growth, Pro, and Enterprise plans. Upgrade to unlock AI staff coaching and team insights." };
+      setCachedFeatureGate(cacheKey, r);
+      return r;
     }
-    return { allowed: false, reason: `Your current plan (${planSlug}) does not include this AI feature. Upgrade to unlock it.` };
+    const r = { allowed: false, reason: `Your current plan (${planSlug}) does not include this AI feature. Upgrade to unlock it.` };
+    setCachedFeatureGate(cacheKey, r);
+    return r;
   }
 
-  return { allowed: true };
+  const r = { allowed: true };
+  setCachedFeatureGate(cacheKey, r);
+  return r;
 }
 
 export async function requireAiFeature(tenantId: string, feature: AiFeatureKey): Promise<void> {

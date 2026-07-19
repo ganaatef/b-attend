@@ -5,12 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Users } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminUsersPage() {
   const t = await getTranslations("adminUsers");
+  const locale = await getLocale();
   const [platformUsers, tenantUsers] = await Promise.all([
     db.platformUser.findMany({ orderBy: { createdAt: "desc" } }),
     db.user.findMany({ include: { tenant: true }, orderBy: { createdAt: "desc" }, take: 100 }),
@@ -41,7 +43,7 @@ export default async function AdminUsersPage() {
                 <tr key={u.id} className="border-b border-border/60 last:border-0">
                   <td className="px-4 py-2.5 font-medium text-foreground">{u.name}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{u.email}</td>
-                  <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{u.role.replace(/_/g, " ")}</Badge></td>
+                  <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{getStatusLabel(u.role, locale)}</Badge></td>
                   <td className="px-4 py-2.5"><Badge variant={u.status === "ACTIVE" ? "default" : "destructive"} className={u.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{u.status}</Badge></td>
                   <td className="px-4 py-2.5 text-xs text-muted-foreground">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
                 </tr>
@@ -71,7 +73,7 @@ export default async function AdminUsersPage() {
                     <td className="px-4 py-2.5 font-medium text-foreground">{u.name}</td>
                     <td className="px-4 py-2.5 text-muted-foreground">{u.email}</td>
                     <td className="px-4 py-2.5 text-muted-foreground">{u.tenant?.name ?? "—"}</td>
-                    <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{u.role.replace(/_/g, " ")}</Badge></td>
+                    <td className="px-4 py-2.5"><Badge variant="outline" className="text-xs">{getStatusLabel(u.role, locale)}</Badge></td>
                     <td className="px-4 py-2.5"><Badge variant={u.status === "ACTIVE" ? "default" : "destructive"} className={u.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{u.status}</Badge></td>
                   </tr>
                 ))}

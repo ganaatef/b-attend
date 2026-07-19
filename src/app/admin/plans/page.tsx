@@ -5,12 +5,14 @@ import { Card } from "@/components/ui/card";
 import { PlanBadge } from "@/components/badges/StatusBadges";
 import { Check, X } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { displaySupportLevel } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
 export default async function PlansPage() {
   const t = await getTranslations("adminPlans");
+  const locale = await getLocale();
   const plans = await db.plan.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
@@ -37,13 +39,13 @@ export default async function PlansPage() {
             <div className="mt-3 space-y-0.5 text-xs text-muted-foreground">
               <p>{p.maxBranches} {t("maxBranches")} · {p.maxEmployees} {t("maxEmployees")}</p>
               <p>{p.reportsLevel.toLowerCase()} reports · {p.auditRetentionDays}d audit</p>
-              <p>{p.supportLevel.toLowerCase().replace(/_/g, " ")} support</p>
+              <p>{displaySupportLevel(p.supportLevel, locale)} support</p>
             </div>
             <div className="mt-3 flex flex-wrap gap-1">
               {p.features.filter((f) => f.enabled).slice(0, 5).map((f) => (
-                <span key={f.key} className="rounded bg-brand-accent/10 px-1.5 py-0.5 text-[10px] font-medium text-brand-accent">{f.key}</span>
+                <span key={f.key} className="rounded bg-brand-accent/10 px-1.5 py-0.5 text-xs font-medium text-brand-accent">{f.key}</span>
               ))}
-              {p.features.filter((f) => f.enabled).length > 5 && <span className="text-[10px] text-muted-foreground">{t("more", { count: p.features.filter((f) => f.enabled).length - 5 })}</span>}
+              {p.features.filter((f) => f.enabled).length > 5 && <span className="text-xs text-muted-foreground">{t("more", { count: p.features.filter((f) => f.enabled).length - 5 })}</span>}
             </div>
             <Link href={`/admin/plans/${p.id}`} className="mt-3 block rounded-md bg-primary px-3 py-1.5 text-center text-xs font-semibold text-primary-foreground hover:bg-primary/90">{t("editPlan")}</Link>
           </Card>

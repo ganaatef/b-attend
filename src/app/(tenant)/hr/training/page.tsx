@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GraduationCap, BookOpen, Plus, AlertTriangle, CheckCircle2, Clock, Eye, Lock } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
+import { displayTrainingCategory } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -78,7 +79,6 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
     }
   };
 
-  const categoryLabel = (cat: string) => cat.replace(/_/g, " ");
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
@@ -153,11 +153,11 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
                         </div>
                         <div>
                           <p className="font-medium text-foreground">{c.title}</p>
-                          <p className="text-xs text-muted-foreground">{categoryLabel(c.category)}{c.requiredForJobTitle ? ` · ${t("requiredFor")} ${c.requiredForJobTitle}` : ""}</p>
+                          <p className="text-xs text-muted-foreground">{displayTrainingCategory(c.category, locale)}{c.requiredForJobTitle ? ` · ${t("requiredFor")} ${c.requiredForJobTitle}` : ""}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={c.active ? "default" : "outline"} className="text-[10px]">{c.active ? t("active") : t("inactive")}</Badge>
+                        <Badge variant={c.active ? "default" : "outline"} className="text-xs">{c.active ? t("active") : t("inactive")}</Badge>
                         <Eye className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </Link>
@@ -197,7 +197,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={a.status === "COMPLETED" ? "default" : "outline"} className={`text-[10px] ${statusColor(a.status)}`}>{getStatusLabel(a.status, locale)}</Badge>
+                        <Badge variant={a.status === "COMPLETED" ? "default" : "outline"} className={`text-xs ${statusColor(a.status)}`}>{getStatusLabel(a.status, locale)}</Badge>
                         <Eye className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </Link>

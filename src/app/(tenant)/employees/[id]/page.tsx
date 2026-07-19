@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
+import { displayEmploymentType, displayPunchType, displayDocumentType, displayContractType, displayWarningType, displayPaymentMethod, displayAuditAction } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -105,7 +106,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <p className="text-sm text-muted-foreground">{employee.employeeCode} · {employee.jobTitleRef?.title ?? employee.jobTitle ?? "—"}</p>
         <div className="mt-2 flex items-center gap-2">
           <Badge variant={employee.status === "ACTIVE" ? "default" : "destructive"} className={employee.status === "ACTIVE" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(employee.status, locale)}</Badge>
-          <Badge variant="outline">{employee.employmentType.replace(/_/g, " ")}</Badge>
+          <Badge variant="outline">{displayEmploymentType(employee.employmentType, locale)}</Badge>
         </div>
       </div>
 
@@ -147,7 +148,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                 <div><span className="text-muted-foreground">{t("branch")}</span> <span className="font-medium">{employee.branch?.name ?? "—"}</span></div>
                 <div><span className="text-muted-foreground">{t("department")}</span> <span className="font-medium">{employee.department?.name ?? "—"}</span></div>
                 <div><span className="text-muted-foreground">{t("jobTitleLabel")}</span> <span className="font-medium">{employee.jobTitleRef?.title ?? employee.jobTitle ?? "—"}</span></div>
-                <div><span className="text-muted-foreground">{t("employmentTypeLabel")}</span> <span className="font-medium">{employee.employmentType.replace(/_/g, " ")}</span></div>
+                <div><span className="text-muted-foreground">{t("employmentTypeLabel")}</span> <span className="font-medium">{displayEmploymentType(employee.employmentType, locale)}</span></div>
                 <div><span className="text-muted-foreground">{t("startDateLabel")}</span> <span className="font-medium">{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : "—"}</span></div>
                 <div><span className="text-muted-foreground">{t("statusLabel")}</span> <span className="font-medium">{getStatusLabel(employee.status, locale)}</span></div>
               </div>
@@ -171,7 +172,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                 <div className="max-h-72 space-y-1.5 overflow-y-auto battend-scroll">
                   {punches.map((p) => (
                     <div key={p.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                      <div><p className="font-medium text-foreground">{p.type.replace(/_/g, " ")}</p><p className="text-muted-foreground">{formatDateTime(p.timestamp)}</p></div>
+                       <div><p className="font-medium text-foreground">{displayPunchType(p.type, locale)}</p><p className="text-muted-foreground">{formatDateTime(p.timestamp)}</p></div>
                       <div className="text-right"><p className="text-muted-foreground">{p.source}</p><p className="text-muted-foreground">{p.insideGeofence ? t("inGeofence") : t("outsideGeofence")}</p></div>
                     </div>
                   ))}
@@ -198,7 +199,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                   {documents.map((d) => (
                     <div key={d.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                       <div>
-                        <p className="font-medium text-foreground">{d.documentType.replace(/_/g, " ")}</p>
+                         <p className="font-medium text-foreground">{displayDocumentType(d.documentType, locale)}</p>
                         <p className="text-muted-foreground">{d.documentNumber ?? "—"} {d.expiryDate ? `· Expires ${new Date(d.expiryDate).toLocaleDateString()}` : ""}</p>
                       </div>
                       <Badge variant={d.status === "VALID" ? "default" : d.status === "EXPIRED" ? "destructive" : "outline"} className={d.status === "VALID" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(d.status, locale)}</Badge>
@@ -228,7 +229,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                     <Link key={c.id} href={`/hr/contracts/${c.id}`} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs hover:bg-muted/20 transition-colors">
                       <div>
                         <p className="font-medium text-foreground">{c.contractNumber}</p>
-                        <p className="text-muted-foreground">{c.contractType.replace(/_/g, " ")} · {new Date(c.startDate).toLocaleDateString()} — {c.endDate ? new Date(c.endDate).toLocaleDateString() : "Open"}</p>
+                         <p className="text-muted-foreground">{displayContractType(c.contractType, locale)} · <bdi dir="ltr">{new Date(c.startDate).toLocaleDateString(locale)} — {c.endDate ? new Date(c.endDate).toLocaleDateString(locale) : (locale === "ar" ? "مفتوح" : "Open")}</bdi></p>
                       </div>
                       <Badge variant={c.status === "ACTIVE" ? "default" : "outline"} className={c.status === "ACTIVE" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(c.status, locale)}</Badge>
                     </Link>
@@ -281,10 +282,10 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                           {canApproveLeave && lr.status === "PENDING" && (
                             <div className="flex gap-1">
                               <form action={async () => { "use server"; await approveLeaveRequestAction(lr.id); }}>
-                                <button type="submit" className="rounded bg-brand-success px-1.5 py-0.5 text-[10px] text-white hover:bg-brand-success/90">{tA("approve")}</button>
+                                <button type="submit" className="rounded bg-brand-success px-1.5 py-0.5 text-xs text-white hover:bg-brand-success/90">{tA("approve")}</button>
                               </form>
                               <form action={async () => { "use server"; await rejectLeaveRequestAction(lr.id); }}>
-                                <button type="submit" className="rounded border border-destructive/30 px-1.5 py-0.5 text-[10px] text-destructive hover:bg-destructive/5">{tA("reject")}</button>
+                                <button type="submit" className="rounded border border-destructive/30 px-1.5 py-0.5 text-xs text-destructive hover:bg-destructive/5">{tA("reject")}</button>
                               </form>
                             </div>
                           )}
@@ -352,7 +353,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                   {warnings.map((w) => (
                     <div key={w.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                       <div>
-                        <p className="font-medium text-foreground">{w.type.replace(/_/g, " ")}</p>
+                         <p className="font-medium text-foreground">{displayWarningType(w.type, locale)}</p>
                         <p className="text-muted-foreground">{w.reason} · {new Date(w.date).toLocaleDateString()}</p>
                       </div>
                       <div className="flex items-center gap-1">
@@ -382,7 +383,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div><span className="text-muted-foreground">{t("baseSalary")}</span> <span className="font-medium">{payrollProfile.baseSalary ? formatNumber(payrollProfile.baseSalary) : ""} {payrollProfile.currency}</span></div>
                     <div><span className="text-muted-foreground">{t("salaryType")}</span> <span className="font-medium">{payrollProfile.salaryType}</span></div>
-                    <div><span className="text-muted-foreground">{t("paymentMethod")}</span> <span className="font-medium">{payrollProfile.paymentMethod?.replace(/_/g, " ") ?? "—"}</span></div>
+                     <div><span className="text-muted-foreground">{t("paymentMethod")}</span> <span className="font-medium">{payrollProfile.paymentMethod ? displayPaymentMethod(payrollProfile.paymentMethod, locale) : "—"}</span></div>
                     <div><span className="text-muted-foreground">{t("overtimeRate")}</span> <span className="font-medium">{payrollProfile.overtimeRateMultiplier}x</span></div>
                     {payrollProfile.dailyRate && <div><span className="text-muted-foreground">{t("dailyRate")}</span> <span className="font-medium">{formatNumber(payrollProfile.dailyRate)} {payrollProfile.currency}</span></div>}
                     {payrollProfile.hourlyRate && <div><span className="text-muted-foreground">{t("hourlyRate")}</span> <span className="font-medium">{formatNumber(payrollProfile.hourlyRate)} {payrollProfile.currency}</span></div>}
@@ -403,7 +404,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                           <p className="font-medium text-foreground">{line.payrollRun.month}/{line.payrollRun.year}</p>
                           <p className="text-muted-foreground">Base: {formatNumber(line.baseSalary)} {t("currencyLabel")} · Net: {formatNumber(line.netAmount)} {t("currencyLabel")}</p>
                         </div>
-                        <Badge variant="outline" className="text-[10px]">{line.payrollRun.status}</Badge>
+                        <Badge variant="outline" className="text-xs">{line.payrollRun.status}</Badge>
                       </div>
                     ))}
                   </div>
@@ -419,7 +420,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                     {recentAdjustments.map((adj) => (
                       <div key={adj.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                         <div>
-                          <p className="font-medium text-foreground">{adj.type.replace(/_/g, " ")} — {formatNumber(adj.amount)} {t("currencyLabel")}</p>
+                           <p className="font-medium text-foreground">{getStatusLabel(adj.type, locale)} — {formatNumber(adj.amount)} {t("currencyLabel")}</p>
                           <p className="text-muted-foreground truncate max-w-[300px]">{adj.reason ?? t("noReason")}</p>
                         </div>
                         <Badge variant={adj.status === "APPROVED" ? "default" : adj.status === "REJECTED" ? "destructive" : "outline"} className={adj.status === "APPROVED" ? "bg-brand-success text-white border-transparent" : ""}>{adj.status}</Badge>
@@ -496,7 +497,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                   {auditLogs.map((al) => (
                     <div key={al.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                       <div>
-                        <p className="font-medium text-foreground">{al.action.replace(/_/g, " ")}</p>
+                         <p className="font-medium text-foreground">{displayAuditAction(al.action, locale)}</p>
                         <p className="text-muted-foreground">{al.actorEmail} · {formatDateTime(al.createdAt)}</p>
                       </div>
                       {al.reason && <span className="text-muted-foreground truncate max-w-[200px]">{al.reason}</span>}

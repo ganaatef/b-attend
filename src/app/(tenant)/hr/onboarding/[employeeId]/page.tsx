@@ -53,11 +53,11 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
 
   const taskStatusBadge = (status: string) => {
     switch (status) {
-      case "PENDING": return <Badge variant="outline" className="text-[10px]">{getStatusLabel(status, locale)}</Badge>;
-      case "IN_PROGRESS": return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600 bg-amber-50">{getStatusLabel(status, locale)}</Badge>;
-      case "COMPLETED": return <Badge variant="default" className="text-[10px] bg-emerald-600 text-white border-transparent">{getStatusLabel(status, locale)}</Badge>;
-      case "CANCELLED": return <Badge variant="outline" className="text-[10px] text-muted-foreground">{getStatusLabel(status, locale)}</Badge>;
-      default: return <Badge variant="outline" className="text-[10px]">{getStatusLabel(status, locale)}</Badge>;
+      case "PENDING": return <Badge variant="outline" className="text-xs">{getStatusLabel(status, locale)}</Badge>;
+      case "IN_PROGRESS": return <Badge variant="outline" className="text-xs border-amber-300 text-amber-600 bg-amber-50">{getStatusLabel(status, locale)}</Badge>;
+      case "COMPLETED": return <Badge variant="default" className="text-xs bg-emerald-600 text-white border-transparent">{getStatusLabel(status, locale)}</Badge>;
+      case "CANCELLED": return <Badge variant="outline" className="text-xs text-muted-foreground">{getStatusLabel(status, locale)}</Badge>;
+      default: return <Badge variant="outline" className="text-xs">{getStatusLabel(status, locale)}</Badge>;
     }
   };
 
@@ -150,18 +150,18 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
                       {taskStatusBadge(task.status)}
                     </div>
                     {task.description && <p className="text-xs text-muted-foreground truncate mt-0.5">{task.description}</p>}
-                    {task.dueDate && <p className="text-[10px] text-muted-foreground mt-0.5">{t("dueLabel")} {new Date(task.dueDate).toLocaleDateString()}</p>}
+                    {task.dueDate && <p className="text-xs text-muted-foreground mt-0.5">{t("dueLabel")} {new Date(task.dueDate).toLocaleDateString()}</p>}
                   </div>
                   {canManage && (task.status === "PENDING" || task.status === "IN_PROGRESS") && (
                     <div className="flex items-center gap-1 ml-3">
                       <form action={async () => { "use server"; await completeOnboardingTaskAction(task.id); }}>
-                        <button type="submit" className="inline-flex items-center gap-1 rounded-md bg-brand-success px-2 py-1 text-[10px] font-medium text-white hover:bg-brand-success/90">
+                        <button type="submit" className="inline-flex items-center gap-1 rounded-md bg-brand-success px-2 py-1 text-xs font-medium text-white hover:bg-brand-success/90">
                           <CheckCircle2 className="h-3 w-3" /> {t("complete")}
                         </button>
                       </form>
                       {task.status === "PENDING" && (
                         <form action={async () => { "use server"; await cancelOnboardingTaskAction(task.id); }}>
-                          <button type="submit" className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[10px] font-medium text-destructive hover:bg-destructive/5">
+                          <button type="submit" className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-xs font-medium text-destructive hover:bg-destructive/5">
                             <XCircle className="h-3 w-3" /> {t("cancel")}
                           </button>
                         </form>

@@ -57,7 +57,7 @@ export function BrandLogo({
             B-Attend
           </span>
           <span
-            className="text-[10px] font-medium tracking-wide"
+            className="text-xs font-medium tracking-wide"
             style={{ color: taglineColor }}
           >
             Be present. Be verified.

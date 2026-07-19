@@ -166,7 +166,7 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
                         </div>
                       </div>
                       <div className="flex items-center gap-3">
-                        <Badge variant={a.status === "AVAILABLE" ? "default" : "outline"} className={`text-[10px] ${statusColor(a.status)}`}>{t(a.status.toLowerCase() as any)}</Badge>
+                        <Badge variant={a.status === "AVAILABLE" ? "default" : "outline"} className={`text-xs ${statusColor(a.status)}`}>{t(a.status.toLowerCase() as any)}</Badge>
                         <Eye className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </Link>
@@ -208,7 +208,7 @@ export default async function HrAssetsPage({ searchParams }: { searchParams: Pro
                           </p>
                         </div>
                       </div>
-                      <Badge variant={aa.status === "ASSIGNED" ? "default" : "outline"} className={`text-[10px] ${statusColor(aa.status)}`}>{aa.status}</Badge>
+                      <Badge variant={aa.status === "ASSIGNED" ? "default" : "outline"} className={`text-xs ${statusColor(aa.status)}`}>{aa.status}</Badge>
                     </div>
                   ))}
                 </div>

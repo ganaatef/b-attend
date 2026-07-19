@@ -8,7 +8,9 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { canUseHrFeature } from "@/lib/hr/feature-gates";
 import { hasHrPermission } from "@/lib/hr/permissions";
 import { FileText, Download, Lock, Plus, AlertTriangle, Eye } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
+import { displayDocumentType } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +21,7 @@ export default async function HrDocumentsPage() {
   const tid = session.tenantId;
 
   const t = await getTranslations("hrDocuments");
+  const locale = await getLocale();
 
   const featureCheck = await canUseHrFeature(tid, "hr_documents");
   if (!featureCheck.allowed) {
@@ -112,7 +115,7 @@ export default async function HrDocumentsPage() {
                       <FileText className={`h-4 w-4 ${isExpiring ? "text-amber-600" : "text-muted-foreground"}`} />
                     </div>
                     <div>
-                      <p className="font-medium text-foreground">{d.documentType.replace(/_/g, " ")}</p>
+                      <p className="font-medium text-foreground">{displayDocumentType(d.documentType, locale)}</p>
                       <p className="text-xs text-muted-foreground">
                         {d.employee.fullName} ({d.employee.employeeCode}) · {d.documentNumber ?? "—"}
                         {d.employee.branch ? ` · ${d.employee.branch.name}` : ""}
@@ -124,7 +127,7 @@ export default async function HrDocumentsPage() {
                       {d.expiryDate && <p>{t("expiresLabel", { date: new Date(d.expiryDate).toLocaleDateString() })}</p>}
                       {isExpiring && <p className="flex items-center gap-1 text-amber-600 font-medium"><AlertTriangle className="h-3 w-3" /> {t("expiringSoon")}</p>}
                     </div>
-                    <Badge variant={d.status === "VALID" ? "default" : "outline"} className={`text-[10px] ${statusColor(d.status)}`}>{d.status.replace(/_/g, " ")}</Badge>
+                    <Badge variant={d.status === "VALID" ? "default" : "outline"} className={`text-xs ${statusColor(d.status)}`}>{getStatusLabel(d.status, locale)}</Badge>
                     <Eye className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </Link>

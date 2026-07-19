@@ -15,6 +15,7 @@ import { Loader2, MapPin, LogIn, LogOut, AlertTriangle, CheckCircle2 } from "luc
 import { formatDateTime } from "@/lib/utils";
 import { useTranslations, useLocale } from "next-intl";
 import { employeeDisplayName } from "@/lib/employee-display";
+import { displayPunchType } from "@/lib/locale-display";
 
 type EmployeeWithRelations = Employee & { branch: Branch | null; defaultShiftPolicy: ShiftPolicy | null };
 
@@ -108,7 +109,7 @@ export function ClockPage({ employee, schedule, lastPunch }: ClockPageProps) {
 
           {lastPunch && (
             <div className="mt-3 text-xs text-muted-foreground">
-              {t("lastAction")}: <span className="font-medium text-foreground">{lastPunch.type.replace(/_/g, " ")}</span> at {new Date(lastPunch.timestamp).toLocaleTimeString()}
+              {t("lastAction")}: <span className="font-medium text-foreground">{displayPunchType(lastPunch.type, locale)}</span> {locale === "ar" ? "الساعة" : "at"} {new Date(lastPunch.timestamp).toLocaleTimeString()}
             </div>
           )}
         </CardContent>

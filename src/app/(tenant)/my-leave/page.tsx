@@ -117,10 +117,10 @@ export default async function MyLeavePage() {
                       <p className="text-xs text-muted-foreground">
                         {new Date(lr.startDate).toLocaleDateString()} — {new Date(lr.endDate).toLocaleDateString()} · {lr.daysCount} {lr.daysCount > 1 ? t("daysPlural") : t("day")}
                       </p>
-                      {lr.reason && <p className="text-[10px] text-muted-foreground truncate max-w-[300px]">{lr.reason}</p>}
+                      {lr.reason && <p className="text-xs text-muted-foreground truncate max-w-[300px]">{lr.reason}</p>}
                     </div>
                   </div>
-                  <Badge variant={lr.status === "APPROVED" ? "default" : "outline"} className={`text-[10px] ${requestStatusColor(lr.status)}`}>{getStatusLabel(lr.status, locale)}</Badge>
+                  <Badge variant={lr.status === "APPROVED" ? "default" : "outline"} className={`text-xs ${requestStatusColor(lr.status)}`}>{getStatusLabel(lr.status, locale)}</Badge>
                 </div>
               ))}
             </div>

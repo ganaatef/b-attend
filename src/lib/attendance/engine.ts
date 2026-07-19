@@ -7,6 +7,7 @@
  */
 
 import { db } from "@/lib/db";
+import type { AttendanceDayStatus } from "@prisma/client";
 
 export function haversineMeters(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371000; // meters
@@ -156,30 +157,76 @@ export async function markAbsentForPastScheduledDays(opts: { companyId?: string;
   if (companyId) where.companyId = companyId;
 
   const schedules = await db.schedule.findMany({ where, include: { employee: true } });
-  let marked = 0;
-  for (const s of schedules) {
-    const existing = await db.attendanceDay.findUnique({
-      where: { companyId_employeeId_date: { companyId: s.companyId, employeeId: s.employeeId, date: s.date } },
-    });
-    if (existing) continue;
-    const dayEnd = new Date(s.date); dayEnd.setDate(dayEnd.getDate() + 1);
-    const punch = await db.punch.findFirst({ where: { employeeId: s.employeeId, timestamp: { gte: s.date, lt: dayEnd } } });
-    if (punch) continue;
-    await db.attendanceDay.create({
-      data: {
-        companyId: s.companyId,
-        employeeId: s.employeeId,
-        branchId: s.branchId,
-        scheduleId: s.id,
-        date: s.date,
-        scheduledStart: s.expectedStart,
-        scheduledEnd: s.expectedEnd,
-        status: "ABSENT",
-        exceptionFlags: JSON.stringify(["ABSENT"]),
+  if (schedules.length === 0) return { marked: 0 };
+
+  // Batch-load all existing attendance days and punches for this date range
+  const scheduleEmployeeIds = [...new Set(schedules.map(s => s.employeeId))];
+  const [existingAttendanceDays, punches] = await Promise.all([
+    db.attendanceDay.findMany({
+      where: {
+        companyId: companyId ?? undefined,
+        employeeId: { in: scheduleEmployeeIds },
+        date: { gte: cutoff, lt: today },
       },
+      select: { employeeId: true, date: true },
+    }),
+    db.punch.findMany({
+      where: {
+        employeeId: { in: scheduleEmployeeIds },
+        timestamp: { gte: cutoff, lt: today },
+      },
+      select: { employeeId: true, timestamp: true },
+    }),
+  ]);
+
+  // Build lookup sets for O(1) checks
+  const attendanceKeySet = new Set(
+    existingAttendanceDays.map((a) => `${a.employeeId}:${a.date.toISOString()}`)
+  );
+  const punchEmployeeDates = new Set(
+    punches.map((p) => {
+      const d = new Date(p.timestamp); d.setHours(0, 0, 0, 0);
+      return `${p.employeeId}:${d.toISOString()}`;
+    })
+  );
+
+  let marked = 0;
+  const toCreate: Array<{
+    companyId: string; employeeId: string; branchId?: string | null; scheduleId: string;
+    date: Date; scheduledStart?: Date | null; scheduledEnd?: Date | null;
+    status: AttendanceDayStatus; exceptionFlags: string;
+  }> = [];
+  const scheduleUpdates: Array<{ id: string }> = [];
+
+  for (const s of schedules) {
+    const dateKey = `${s.employeeId}:${s.date.toISOString()}`;
+    if (attendanceKeySet.has(dateKey)) continue;
+    if (punchEmployeeDates.has(dateKey)) continue;
+
+    toCreate.push({
+      companyId: s.companyId,
+      employeeId: s.employeeId,
+      branchId: s.branchId,
+      scheduleId: s.id,
+      date: s.date,
+      scheduledStart: s.expectedStart,
+      scheduledEnd: s.expectedEnd,
+      status: "ABSENT" as AttendanceDayStatus,
+      exceptionFlags: JSON.stringify(["ABSENT"]),
     });
-    await db.schedule.update({ where: { id: s.id }, data: { status: "ABSENT" } });
+    scheduleUpdates.push({ id: s.id });
     marked++;
   }
+
+  // Batch insert and update
+  if (toCreate.length > 0) {
+    await db.attendanceDay.createMany({ data: toCreate });
+    await Promise.all(
+      scheduleUpdates.map((su) =>
+        db.schedule.update({ where: { id: su.id }, data: { status: "ABSENT" } })
+      )
+    );
+  }
+
   return { marked };
 }

@@ -2,7 +2,8 @@
  * /coach-library — Owner/HR manage coach tips + create custom.
  */
 import Link from "next/link";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { displayCoachTheme } from "@/lib/locale-display";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CoachLibraryPage() {
   const t = await getTranslations("coach");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId) return null;
   if (session.role !== "COMPANY_OWNER" && session.role !== "HR_ADMIN") {
@@ -72,8 +74,8 @@ export default async function CoachLibraryPage() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="font-medium text-foreground">{tip.title}</p>
-                        <Badge variant="outline" className="text-[10px]">{tip.theme.replace(/_/g, " ").toLowerCase()}</Badge>
-                        {!tip.active && <Badge variant="secondary" className="text-[10px]">{t("inactive")}</Badge>}
+                        <Badge variant="outline" className="text-xs">{displayCoachTheme(tip.theme, locale).toLowerCase()}</Badge>
+                        {!tip.active && <Badge variant="secondary" className="text-xs">{t("inactive")}</Badge>}
                       </div>
                       <p className="mt-1 text-sm text-muted-foreground">{tip.body}</p>
                     </div>
@@ -103,8 +105,8 @@ export default async function CoachLibraryPage() {
               {systemTips.map((tip) => (
                 <div key={tip.id} className="rounded-md border border-border bg-card/50 p-3">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-[10px]">{tip.theme.replace(/_/g, " ").toLowerCase()}</Badge>
-                    {!tip.active && <Badge variant="secondary" className="text-[10px]">{t("inactive")}</Badge>}
+                    <Badge variant="outline" className="text-xs">{displayCoachTheme(tip.theme, locale).toLowerCase()}</Badge>
+                    {!tip.active && <Badge variant="secondary" className="text-xs">{t("inactive")}</Badge>}
                   </div>
                   <p className="mt-1 text-sm font-medium text-foreground">{tip.title}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{tip.body}</p>

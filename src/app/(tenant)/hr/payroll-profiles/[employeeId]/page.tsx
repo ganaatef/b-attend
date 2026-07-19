@@ -10,6 +10,8 @@ import { deactivatePayrollProfileAction } from "../../actions";
 import { Wallet } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 import { getTranslations } from "next-intl/server";
+import { displayPaymentMethod } from "@/lib/locale-display";
+import { getLocaleCode } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +27,7 @@ export default async function PayrollProfileDetailPage({
   const t = await getTranslations("hrPayrollProfiles");
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
+  const locale = await getLocaleCode();
   if (session.role === "BRANCH_MANAGER" || session.role === "EMPLOYEE") return null;
   if (!hasPerm(session.role, "VIEW_PAYROLL")) return null;
   const tid = session.tenantId;
@@ -60,9 +63,9 @@ export default async function PayrollProfileDetailPage({
           </div>
           <div className="flex items-center gap-2">
             {profile.active ? (
-              <Badge variant="default" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">{t("activeBadge")}</Badge>
+              <Badge variant="default" className="text-xs bg-emerald-50 text-emerald-600 border-emerald-200">{t("activeBadge")}</Badge>
             ) : (
-              <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">{t("inactiveBadge")}</Badge>
+              <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">{t("inactiveBadge")}</Badge>
             )}
           </div>
         </div>
@@ -72,7 +75,7 @@ export default async function PayrollProfileDetailPage({
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("employeeLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{profile.employee.fullName}</p>
-          <p className="text-[10px] text-muted-foreground">{profile.employee.employeeCode}</p>
+          <p className="text-xs text-muted-foreground">{profile.employee.employeeCode}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("branchLabel")}</p>
@@ -92,7 +95,7 @@ export default async function PayrollProfileDetailPage({
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("paymentMethodLabel")}</p>
-          <p className="text-sm font-semibold text-foreground">{profile.paymentMethod.replace(/_/g, " ")}</p>
+           <p className="text-sm font-semibold text-foreground">{displayPaymentMethod(profile.paymentMethod, locale)}</p>
         </Card>
       </div>
 

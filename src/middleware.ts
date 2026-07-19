@@ -22,6 +22,11 @@ import { jwtVerify } from "jose";
 
 const COOKIE_NAME = "battend_session";
 
+// Memoize the encoded secret — avoid re-creating on every request
+const SECRET_KEY = new TextEncoder().encode(
+  process.env.SESSION_SECRET ?? "dev-secret-change-me-in-production-please-use-32+chars"
+);
+
 const PUBLIC_ROUTES = [
   "/",
   "/pricing",
@@ -38,10 +43,7 @@ const PUBLIC_PREFIXES = ["/api/public/", "/legal/", "/_next/", "/favicon.ico", "
 
 async function verifyToken(token: string): Promise<{ kind: string; role: string; tenantId?: string } | null> {
   try {
-    const secret = new TextEncoder().encode(
-      process.env.SESSION_SECRET ?? "dev-secret-change-me-in-production-please-use-32+chars"
-    );
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, SECRET_KEY);
     return {
       kind: (payload as { kind?: string }).kind ?? "platform",
       role: (payload as { role?: string }).role ?? "",

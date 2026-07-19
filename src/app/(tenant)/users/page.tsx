@@ -50,7 +50,7 @@ export default async function UsersPage() {
                   <tr key={u.id} className="border-b border-border/60 last:border-0 hover:bg-muted/30">
                     <td className="px-4 py-3 font-medium text-foreground">{u.name}{u.employee && <span className="ml-1 text-xs text-muted-foreground">({u.employee.employeeCode})</span>}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
-                    <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{u.role.replace(/_/g, " ")}</Badge></td>
+                    <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{getStatusLabel(u.role, locale)}</Badge></td>
                     <td className="px-4 py-3"><Badge variant={u.status === "ACTIVE" ? "default" : "secondary"} className={u.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{getStatusLabel(u.status, locale)}</Badge></td>
                     <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
                   </tr>

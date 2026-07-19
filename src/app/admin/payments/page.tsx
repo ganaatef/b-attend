@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Badge } from "@/components/ui/badge";
 import { Wallet } from "lucide-react";
+import { getLocale } from "next-intl/server";
+import { displayPaymentProvider } from "@/lib/locale-display";
 import { formatNumber } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -12,6 +14,7 @@ export const dynamic = "force-dynamic";
 function money(amount: number, currency = "EGP") { return `${formatNumber(amount)} ${currency}`; }
 
 export default async function PaymentsPage() {
+  const locale = await getLocale();
   const payments = await db.payment.findMany({ include: { tenant: true, invoice: true }, orderBy: { createdAt: "desc" } });
   const total = payments.filter((p) => p.status === "CONFIRMED").reduce((s, p) => s + p.amount, 0);
 
@@ -44,7 +47,7 @@ export default async function PaymentsPage() {
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{p.invoice?.number ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{money(p.amount, p.currency)}</td>
-                    <td className="px-4 py-3 text-muted-foreground">{p.provider.replace(/_/g, " ")}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{displayPaymentProvider(p.provider, locale)}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{p.reference ?? "—"}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{p.paidAt ? new Date(p.paidAt).toLocaleDateString() : "—"}</td>
                     <td className="px-4 py-3">

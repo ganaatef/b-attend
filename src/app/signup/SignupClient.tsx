@@ -12,7 +12,8 @@ import { Loader2, Hourglass } from "lucide-react";
 import Link from "next/link";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import type { Plan } from "@prisma/client";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { getStatusLabel } from "@/lib/status-labels";
 
 const initialState: SignupState = { ok: false };
 
@@ -36,6 +37,7 @@ export function SignupForm({ plans }: { plans: Plan[] }) {
   const [state, formAction] = useActionState<SignupState, FormData>(signupAction, initialState);
   const t = useTranslations("signup");
   const tBusiness = useTranslations("businessTypes");
+  const locale = useLocale();
 
   const businessTypes: { value: string; label: string }[] = [
     { value: "RESTAURANT", label: tBusiness("RESTAURANT") },
@@ -65,7 +67,7 @@ export function SignupForm({ plans }: { plans: Plan[] }) {
         <div className="mt-4 text-xs text-muted-foreground">
           {t("tenantId")}: <code className="rounded bg-muted px-1.5 py-0.5">{state.tenantId}</code>
           {" · "}
-          {t("statusLabel")}: <span className="font-medium text-foreground">{state.status.replace(/_/g, " ")}</span>
+          {t("statusLabel")}: <span className="font-medium text-foreground">{getStatusLabel(state.status, locale)}</span>
         </div>
         <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
           <Link href="/login" className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 sm:w-auto">

@@ -57,6 +57,11 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* Language-aware --font-sans override: English gets Inter, Arabic gets Cairo */
+html[lang="en"] {
+  --font-sans: var(--font-inter);
+}
+
 :root {
   --radius: 0.625rem;
 
@@ -167,7 +172,7 @@
 
   /* Table body — readable */
   table td { font-size: 0.875rem; line-height: 1.5; }
-  table th { font-size: 0.8125rem; font-weight: 600; line-height: 1.4; }
+  table th { font-size: 0.875rem; font-weight: 600; line-height: 1.4; }
 
   /* Form labels — clear */
   label { font-size: 0.875rem; font-weight: 600; }
@@ -178,7 +183,7 @@
   /* Input text — readable */
   input, select, textarea { font-size: 0.875rem; }
 
-  /* Status badges */
+  /* Status badges — minimum 12px */
   [role="badge"], .text-xs { font-size: 0.75rem; font-weight: 600; }
 
   /* Metric numbers */

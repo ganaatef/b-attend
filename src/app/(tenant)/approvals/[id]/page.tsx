@@ -10,6 +10,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { formatDateTime } from "@/lib/utils";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
+import { displayApprovalType, displayPunchType } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -35,7 +36,7 @@ export default async function ApprovalDetailPage({ params }: { params: Promise<{
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
         <Link href="/approvals" className="text-xs text-muted-foreground hover:text-foreground">← {t("backToApprovals")}</Link>
-        <h1 className="mt-1 text-lg font-bold text-foreground">{req.type.replace(/_/g, " ")}</h1>
+        <h1 className="mt-1 text-lg font-bold text-foreground">{displayApprovalType(req.type, locale)}</h1>
         <p className="text-sm text-muted-foreground">{req.employee?.fullName} · {req.employee?.employeeCode}</p>
         <div className="mt-2 flex items-center gap-2">
           <Badge variant={req.status === "PENDING" ? "secondary" : req.status === "APPROVED" ? "default" : req.status === "REJECTED" ? "destructive" : "outline"} className={req.status === "PENDING" ? "bg-amber-100 text-amber-800 border-transparent text-xs" : req.status === "APPROVED" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{getStatusLabel(req.status, locale)}</Badge>
@@ -63,7 +64,7 @@ export default async function ApprovalDetailPage({ params }: { params: Promise<{
             <div className="space-y-1.5">
               {punches.map((p) => (
                 <div key={p.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
-                  <span className="font-medium text-foreground">{p.type.replace(/_/g, " ")}</span>
+                   <span className="font-medium text-foreground">{displayPunchType(p.type, locale)}</span>
                   <span className="text-muted-foreground">{new Date(p.timestamp).toLocaleTimeString()} · {p.source} · {p.insideGeofence ? t("inLabel") : t("outLabel")}</span>
                 </div>
               ))}

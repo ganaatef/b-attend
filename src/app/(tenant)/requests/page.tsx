@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { RequestForm } from "./RequestForm";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
+import { displayApprovalType } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -48,11 +49,11 @@ export default async function RequestsPage() {
               {requests.map((r) => (
                 <div key={r.id} className="rounded-md border border-border bg-card px-3 py-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">{r.type.replace(/_/g, " ")}</span>
+                    <span className="font-medium text-foreground">{displayApprovalType(r.type, locale)}</span>
                     <Badge variant={r.status === "PENDING" ? "secondary" : r.status === "APPROVED" ? "default" : r.status === "REJECTED" ? "destructive" : "outline"} className={r.status === "PENDING" ? "bg-amber-100 text-amber-800 border-transparent text-xs" : r.status === "APPROVED" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{getStatusLabel(r.status, locale)}</Badge>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">{r.reason}</p>
-                  {r.date && <p className="text-xs text-muted-foreground">{t("for")} {new Date(r.date).toLocaleDateString()}</p>}
+                  {r.date && <p className="text-xs text-muted-foreground">{t("for")} <bdi dir="ltr">{new Date(r.date).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US")}</bdi></p>}
                   {r.managerNotes && <p className="mt-1 text-xs text-foreground">{t("manager")} {r.managerNotes}</p>}
                 </div>
               ))}

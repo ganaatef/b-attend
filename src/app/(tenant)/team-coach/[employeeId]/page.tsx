@@ -16,7 +16,8 @@ import { ArrowLeft, Brain, Lock } from "lucide-react";
 import { generateEmployeeCoachSummary } from "@/lib/coach/employee-summary";
 import { canUseAiFeature } from "@/lib/ai/feature-gates";
 import { RegenerateButton } from "./RegenerateButton";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { displayScoreLevel } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ const levelColor: Record<string, string> = {
 
 export default async function EmployeeCoachDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
   const t = await getTranslations("teamCoach");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId) return null;
   if (session.role === "EMPLOYEE") {
@@ -115,7 +117,7 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
                 <CardTitle className="text-sm font-semibold text-foreground">{t("consistencyScore")}</CardTitle>
-                <Badge className={`${levelColor[summary.level]} text-xs`}>{summary.level.replace(/_/g, " ")}</Badge>
+                <Badge className={`${levelColor[summary.level]} text-xs`}>{displayScoreLevel(summary.level, locale)}</Badge>
               </div>
             </CardHeader>
             <CardContent>

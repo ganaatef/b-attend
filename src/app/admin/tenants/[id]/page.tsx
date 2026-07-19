@@ -3,7 +3,7 @@
  */
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TenantStatusBadge, SubscriptionBadge, PlanBadge, InvoiceBadge } from "@/components/badges/StatusBadges";
@@ -13,6 +13,7 @@ import { CreateInvoiceForm } from "./CreateInvoiceForm";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Building2, Users, Clock, FileBarChart, ScrollText } from "lucide-react";
 import { formatNumber, formatDateTime } from "@/lib/utils";
+import { displayBusinessType, displayAuditAction } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +25,7 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
   const ts = await getTranslations("adminSubscriptions");
   const ti = await getTranslations("adminInvoices");
   const ta = await getTranslations("adminAudit");
+  const locale = await getLocale();
 
   const tenant = await db.tenant.findUnique({
     where: { id },
@@ -73,7 +75,7 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-xs font-medium text-muted-foreground">{tn("businessType")}</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-sm font-medium text-foreground">{tenant.businessType.replace(/_/g, " ")}</p>
+            <p className="text-sm font-medium text-foreground">{displayBusinessType(tenant.businessType, locale)}</p>
             <p className="text-xs text-muted-foreground">{tenant.city ?? tn("noCitySet")}</p>
             <p className="mt-2 text-xs text-muted-foreground">{tn("declaredAtSignup", { employees: tenant.employeesCount, branches: tenant.branchesCount })}</p>
           </CardContent>
@@ -208,7 +210,7 @@ export default async function TenantDetailPage({ params }: { params: Promise<{ i
                 <div key={l.id} className="flex items-start gap-3 rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                   <Clock className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
                   <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground">{l.action.replace(/_/g, " ")}</p>
+                    <p className="font-medium text-foreground">{displayAuditAction(l.action, locale)}</p>
                     <p className="text-muted-foreground">{l.actorEmail} · {l.entityType ?? "—"}</p>
                     {l.reason && <p className="text-muted-foreground">{ta("reason")}: {l.reason}</p>}
                   </div>

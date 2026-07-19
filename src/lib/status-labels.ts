@@ -118,6 +118,16 @@ export const statusLabelsAr: Record<string, string> = {
   OT_ADJUSTMENT: "تعديل العمل الإضافي",
   MANUAL_CORRECTION: "تصحيح يدوي",
   WALLET: "محفولة",
+
+  // User roles
+  COMPANY_OWNER: "صاحب الشركة",
+  HR_ADMIN: "مدير الموارد البشرية",
+  BRANCH_MANAGER: "مدير الفرع",
+  EMPLOYEE: "موظف",
+  SUPER_ADMIN: "مسؤول عام",
+  SALES: "مبيعات",
+  SUPPORT: "دعم فني",
+  BILLING: "فواتير",
 };
 
 export const statusLabelsEn: Record<string, string> = {
@@ -225,6 +235,16 @@ export const statusLabelsEn: Record<string, string> = {
   OT_ADJUSTMENT: "OT Adjustment",
   MANUAL_CORRECTION: "Manual Correction",
   WALLET: "Wallet",
+
+  // User roles
+  COMPANY_OWNER: "Company Owner",
+  HR_ADMIN: "HR Admin",
+  BRANCH_MANAGER: "Branch Manager",
+  EMPLOYEE: "Employee",
+  SUPER_ADMIN: "Super Admin",
+  SALES: "Sales",
+  SUPPORT: "Support",
+  BILLING: "Billing",
 };
 
 export function getStatusLabel(status: string, locale?: string): string {

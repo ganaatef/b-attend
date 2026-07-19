@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { getRolePermissions, type HrPermission } from "@/lib/hr/permissions";
 import { getTranslations } from "next-intl/server";
 import { CheckCircle2, XCircle, AlertTriangle, HelpCircle } from "lucide-react";
+import { getStatusLabel } from "@/lib/status-labels";
+import { displayDocumentType } from "@/lib/locale-display";
+import { getLocaleCode } from "@/lib/locale";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +26,7 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
   const tid = session.tenantId;
   const t = await getTranslations("hrDocuments");
   const tc = await getTranslations("common");
+  const locale = await getLocaleCode();
 
   const doc = await db.employeeDocument.findFirst({
     where: { id, companyId: tid },
@@ -54,10 +58,10 @@ export default async function DocumentDetailPage({ params }: { params: Promise<{
         <Link href="/hr/documents" className="text-xs text-muted-foreground hover:text-foreground">{t("backToDocuments")}</Link>
         <div className="mt-1 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-foreground">{doc.documentType.replace(/_/g, " ")}</h1>
+            <h1 className="text-lg font-bold text-foreground">{displayDocumentType(doc.documentType, locale)}</h1>
             <p className="text-sm text-muted-foreground">{doc.employee.fullName} ({doc.employee.employeeCode})</p>
           </div>
-          <Badge variant={doc.status === "VALID" ? "default" : "outline"} className={`text-[10px] ${statusColor(doc.status)}`}>{doc.status.replace(/_/g, " ")}</Badge>
+          <Badge variant={doc.status === "VALID" ? "default" : "outline"} className={`text-xs ${statusColor(doc.status)}`}>{getStatusLabel(doc.status, locale)}</Badge>
         </div>
       </div>
 

@@ -6,34 +6,27 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { LifeBuoy } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
+import { displayTicketStatus } from "@/lib/locale-display";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminSupportPage() {
   const t = await getTranslations("adminSupport");
   const locale = await getLocale();
-  const isArabic = locale === "ar";
 
   const tickets = await db.supportTicket.findMany({ include: { tenant: true, _count: { select: { messages: true } } }, orderBy: { createdAt: "desc" } });
   const statusFilters = ["ALL", "OPEN", "IN_PROGRESS", "WAITING_CUSTOMER", "RESOLVED", "CLOSED"];
 
   const statusLabels: Record<string, string> = {
     ALL: "ALL",
-    OPEN: isArabic ? "مفتوح" : "Open",
-    IN_PROGRESS: isArabic ? "قيد التنفيذ" : "In Progress",
-    WAITING_CUSTOMER: isArabic ? "بانتظار العميل" : "Waiting",
-    RESOLVED: isArabic ? "محلول" : "Resolved",
-    CLOSED: isArabic ? "مغلق" : "Closed",
+    OPEN: displayTicketStatus("OPEN", locale),
+    IN_PROGRESS: displayTicketStatus("IN_PROGRESS", locale),
+    WAITING_CUSTOMER: displayTicketStatus("WAITING_CUSTOMER", locale),
+    RESOLVED: displayTicketStatus("RESOLVED", locale),
+    CLOSED: displayTicketStatus("CLOSED", locale),
   };
 
-  const statusBadgeLabels: Record<string, string> = {
-    ALL: "ALL",
-    OPEN: isArabic ? "مفتوح" : "Open",
-    IN_PROGRESS: isArabic ? "قيد التنفيذ" : "In Progress",
-    WAITING_CUSTOMER: isArabic ? "بانتظار العميل" : "Waiting",
-    RESOLVED: isArabic ? "محلول" : "Resolved",
-    CLOSED: isArabic ? "مغلق" : "Closed",
-  };
+  const statusBadgeLabels: Record<string, string> = { ...statusLabels };
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">

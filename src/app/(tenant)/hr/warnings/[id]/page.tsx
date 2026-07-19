@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
+import { displayWarningType } from "@/lib/locale-display";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,28 +62,28 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
     switch (sev) {
       case "CRITICAL":
       case "HIGH":
-        return <Badge variant="destructive" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
+        return <Badge variant="destructive" className="text-xs">{getStatusLabel(sev, locale)}</Badge>;
       case "MEDIUM":
-        return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600">{getStatusLabel(sev, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs border-amber-300 text-amber-600">{getStatusLabel(sev, locale)}</Badge>;
       case "LOW":
-        return <Badge variant="default" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
+        return <Badge variant="default" className="text-xs">{getStatusLabel(sev, locale)}</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs">{getStatusLabel(sev, locale)}</Badge>;
     }
   };
 
   const statusBadge = (st: string) => {
     switch (st) {
       case "OPEN":
-        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs">{getStatusLabel(st, locale)}</Badge>;
       case "ACKNOWLEDGED":
-        return <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 border-blue-200">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600 border-blue-200">{getStatusLabel(st, locale)}</Badge>;
       case "RESOLVED":
-        return <Badge variant="default" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="default" className="text-xs bg-emerald-50 text-emerald-600 border-emerald-200">{getStatusLabel(st, locale)}</Badge>;
       case "CANCELLED":
-        return <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">{getStatusLabel(st, locale)}</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs">{getStatusLabel(st, locale)}</Badge>;
     }
   };
 
@@ -92,7 +93,7 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
         <Link href="/hr/warnings" className="text-xs text-muted-foreground hover:text-foreground">{t("backToList")}</Link>
         <div className="mt-1 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-foreground">{t("detailTitle", { type: warning.type.replace(/_/g, " ") })}</h1>
+            <h1 className="text-lg font-bold text-foreground">{t("detailTitle", { type: displayWarningType(warning.type, locale) })}</h1>
             <p className="text-sm text-muted-foreground">{warning.employee.fullName} ({warning.employee.employeeCode})</p>
           </div>
           <div className="flex items-center gap-2">
@@ -106,7 +107,7 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">Employee</p>
           <p className="text-sm font-semibold text-foreground">{warning.employee.fullName}</p>
-          <p className="text-[10px] text-muted-foreground">{warning.employee.employeeCode}</p>
+          <p className="text-xs text-muted-foreground">{warning.employee.employeeCode}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("branchLabel")}</p>
@@ -123,7 +124,7 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("issuedBy")}</p>
           <p className="text-sm font-semibold text-foreground">{issuedBy?.name ?? "—"}</p>
-          {issuedBy?.email && <p className="text-[10px] text-muted-foreground">{issuedBy.email}</p>}
+          {issuedBy?.email && <p className="text-xs text-muted-foreground">{issuedBy.email}</p>}
         </Card>
         <Card className="border-border p-4">
           <p className="text-xs text-muted-foreground">{t("createdLabel")}</p>

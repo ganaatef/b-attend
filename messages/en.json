@@ -214,7 +214,8 @@
     "ctaTitle": "Ready to take control of attendance?",
     "ctaSubtitle": "Start your free trial today. No credit card required.",
     "ctaButton": "Start Free Trial",
-    "footer": "Built for operational teams everywhere"
+    "footer": "Built for operational teams everywhere",
+    "liveAttendance": "Live Attendance"
   },
   "pricing": {
     "title": "Simple, transparent pricing",
@@ -269,7 +270,9 @@
     "advancedReports": "Advanced reports",
     "advancedGeofence": "Advanced geofence",
     "apiAccess": "API access (placeholder)",
-    "orAnnual": "or {price}/yr"
+    "orAnnual": "or {price}/yr",
+    "branches": "Branches",
+    "trialDays": "{days}-day free trial"
   },
   "public": {
     "features": "Features",
@@ -340,7 +343,8 @@
     "accountReview": "Your account is being reviewed",
     "accountReviewDesc": "Our team is reviewing your signup request. You will receive an email at {email} once your account is activated.",
     "status": "Status",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "signOut": "Sign out"
   },
   "employees": {
     "title": "Employees",
@@ -467,7 +471,8 @@
     "employeeAdded": "Employee added.",
     "saving": "Saving...",
     "addEmployeeBtn": "Add employee",
-    "employeeDetails": "Employee details"
+    "employeeDetails": "Employee details",
+    "inactive": "Inactive"
   },
   "branches": {
     "title": "Branches",
@@ -503,7 +508,13 @@
     "employeesLabel": "Employees",
     "scheduledToday": "Scheduled today",
     "employeesAtBranch": "Employees at this branch",
-    "noEmployees": "No employees"
+    "noEmployees": "No employees",
+    "cityLabel": "City",
+    "addressLabel": "Address",
+    "geofenceRadiusLabel": "Geofence radius (meters)",
+    "latitudeLabel": "Latitude",
+    "longitudeLabel": "Longitude",
+    "areaLabel": "Area"
   },
   "departments": {
     "title": "Departments",
@@ -559,7 +570,7 @@
     "branchRequired": "Branch *",
     "dateRequired": "Date *",
     "policyRequired": "Policy *",
-    "durationLabel": "Duration:",
+    "durationLabel": "{h}h {m}m",
     "scheduleAdded": "Schedule added.",
     "addScheduleBtn": "Add schedule",
     "weekendDaysLabel": "Weekend days (comma-separated)",
@@ -570,7 +581,12 @@
     "generating": "Generating...",
     "generateSchedulesBtn": "Generate schedules",
     "bulkDescription": "Generate schedules across a date range for multiple employees. Weekends are skipped by default. Duplicate employee/date schedules are skipped.",
-    "generateCard": "Generate"
+    "generateCard": "Generate",
+    "selectPlaceholder": "Select...",
+    "shiftPolicyLabelFull": "Shift policy",
+    "dateFrom": "From date",
+    "dateTo": "To date",
+    "saving": "Saving..."
   },
   "shiftPolicies": {
     "title": "Shift Policies",
@@ -631,7 +647,8 @@
     "decisionCard": "Decision",
     "notesOptional": "Notes (optional)",
     "notesPlaceholder": "Notes visible to the employee...",
-    "decisionRecorded": "Decision recorded."
+    "decisionRecorded": "Decision recorded.",
+    "status": "Status"
   },
   "attendance": {
     "title": "Attendance",
@@ -934,7 +951,12 @@
     "userInvited": "User invited. Temporary password:",
     "sendToUser": "Send this to the user. They will be forced to change it on first login.",
     "inviting": "Inviting...",
-    "inviteUser": "Invite user"
+    "inviteUser": "Invite user",
+    "nameRequired": "Name is required",
+    "emailRequired": "Email is required",
+    "roleRequired": "Role is required",
+    "branchForManagers": "Branch (required for managers)",
+    "saving": "Saving..."
   },
   "profile": {
     "title": "My Profile",
@@ -958,7 +980,8 @@
     "department": "Department",
     "phone": "Phone",
     "employmentType": "Employment type",
-    "startDate": "Start date"
+    "startDate": "Start date",
+    "branch": "Branch"
   },
   "kiosk": {
     "title": "Kiosk Mode",
@@ -1138,7 +1161,36 @@
     "employees": "Employees",
     "policyAdded": "Policy added.",
     "saving": "Saving...",
-    "addPolicyBtn": "Add policy"
+    "addPolicyBtn": "Add policy",
+    "nameRequired": "Policy name is required",
+    "startRequired": "Start time is required",
+    "endRequired": "End time is required",
+    "breakLabel": "Break (minutes)",
+    "lateGraceLabel": "Late grace (minutes)",
+    "earlyLeaveGraceLabel": "Early-leave grace (minutes)",
+    "overtimeAfterLabel": "Overtime starts after (minutes)",
+    "weekendDaysLabel": "Weekend days",
+    "otApproval": "Require overtime approval",
+    "mobileLabel": "Allow mobile clock-in",
+    "kioskLabel": "Allow kiosk clock-in",
+    "placeholderName": "e.g. Morning Shift",
+    "countEmployees": "{count} employees",
+    "countSchedules": "{count} schedules",
+    "overnightShift": "Overnight shift",
+    "weekdays": {
+      "MONDAY": "Monday",
+      "TUESDAY": "Tuesday",
+      "WEDNESDAY": "Wednesday",
+      "THURSDAY": "Thursday",
+      "FRIDAY": "Friday",
+      "SATURDAY": "Saturday",
+      "SUNDAY": "Sunday"
+    },
+    "validation": {
+      "nameRequired": "Policy name is required",
+      "startRequired": "Start time is required",
+      "endRequired": "End time is required"
+    }
   },
   "requests": {
     "title": "My Requests",
@@ -1214,7 +1266,8 @@
     "submittingLabel": "Submitting...",
     "submitBtn": "Submit leave request",
     "pendingStatus": "PENDING",
-    "myLeaveTitle": "My Leave"
+    "myLeaveTitle": "My Leave",
+    "myLeaveSubtitle": "View and request leaves"
   },
   "myTraining": {
     "title": "My Training",
@@ -1235,7 +1288,8 @@
     "due": "Due",
     "scoreLabel": "Score",
     "completedOn": "Completed",
-    "myTrainingTitle": "My Training"
+    "myTrainingTitle": "My Training",
+    "myTrainingSubtitle": "Your training assignments"
   },
   "myAssets": {
     "title": "My Assets",
@@ -1254,7 +1308,8 @@
     "damaged": "Damaged",
     "assignedOn": "Assigned",
     "returnedOn": "Returned",
-    "myAssetsTitle": "My Assets"
+    "myAssetsTitle": "My Assets",
+    "myAssetsSubtitle": "Assets assigned to you"
   },
   "myWarnings": {
     "title": "My Warnings",
@@ -1278,7 +1333,8 @@
     "acknowledgedOn": "Acknowledged on {date}",
     "acknowledgeNote": "Acknowledgment confirms the warning was viewed, not necessarily accepted.",
     "acknowledge": "Acknowledge",
-    "myWarningsTitle": "My Warnings"
+    "myWarningsTitle": "My Warnings",
+    "myWarningsSubtitle": "Your warnings and notices"
   },
   "audit": {
     "title": "Audit Log",
@@ -1483,7 +1539,8 @@
     "createFirst": "Create your first employee contract",
     "openLabel": "Open",
     "expiringSoonBadge": "Expiring soon",
-    "upgradeMessage": "Upgrade to access HR features."
+    "upgradeMessage": "Upgrade to access HR features.",
+    "cancel": "Cancel"
   },
   "hrDocuments": {
     "title": "Employee Documents",
@@ -1535,7 +1592,12 @@
     "docNumberLabel": "Document Number",
     "optionalPlaceholder": "Optional",
     "adding": "Adding...",
-    "addDocumentBtn": "Add Document"
+    "addDocumentBtn": "Add Document",
+    "foodSafetyCertificate": "Food Safety Certificate",
+    "insuranceForm": "Insurance Form",
+    "medicalCertificate": "Medical Certificate",
+    "notesLabel": "Notes",
+    "optionalNotes": "Optional notes"
   },
   "hrLeaves": {
     "title": "Leave Management",
@@ -1691,7 +1753,8 @@
     "reasonPlaceholder": "Describe the reason for this warning",
     "actionTakenLabel": "Action Taken",
     "optionalPlaceholder": "Optional",
-    "notesLabel": "Notes"
+    "notesLabel": "Notes",
+    "cancel": "Cancel"
   },
   "hrTraining": {
     "title": "Training",
@@ -1747,7 +1810,40 @@
     "noDueDate": "No due date",
     "newCourse": "New Course",
     "assignTraining": "Assign Training",
-    "overdueCount": "{count} overdue"
+    "overdueCount": "{count} overdue",
+    "newTrainingAssignment": "New Training Assignment",
+    "assignmentDetails": "Assignment Details",
+    "employeeRequired": "Employee is required",
+    "selectEmployee": "Select employee",
+    "courseRequired": "Course is required",
+    "selectCourse": "Select course",
+    "notes": "Notes",
+    "cancel": "Cancel",
+    "assigning": "Assigning...",
+    "trainingAssignment": "Training Assignment",
+    "branch": "Branch",
+    "assignedDate": "Assigned Date",
+    "actions": "Actions",
+    "markInProgress": "Mark In Progress",
+    "scorePercent": "Score (%)",
+    "optional": "Optional",
+    "markCompleted": "Mark Completed",
+    "newTrainingCourse": "New Training Course",
+    "courseDetails": "Course Details",
+    "titleRequired": "Title is required",
+    "courseDescription": "Description",
+    "categoryRequired": "Category is required",
+    "requiredForJobTitle": "Required for job title",
+    "creating": "Creating...",
+    "createCourse": "Create Course",
+    "validity": "Validity",
+    "months": "months",
+    "noExpiry": "No expiry",
+    "deactivate": "Deactivate",
+    "activate": "Activate",
+    "total": "Total",
+    "all": "All",
+    "monthsValidity": "{n} months validity"
   },
   "hrAssets": {
     "title": "Assets",
@@ -1827,7 +1923,8 @@
     "assignmentDetails": "Assignment Details",
     "actions": "Actions",
     "employeeIdLabel": "Employee ID *",
-    "employeeIdPlaceholder": "Employee ID"
+    "employeeIdPlaceholder": "Employee ID",
+    "adding": "Adding..."
   },
   "hrPayrollProfiles": {
     "title": "Payroll Profiles",
@@ -1904,7 +2001,9 @@
     "creating": "Creating...",
     "createProfileBtn": "Create Profile",
     "saving": "Saving...",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "noBranch": "No branch assigned",
+    "cancel": "Cancel"
   },
   "hrPayrollRuns": {
     "title": "Payroll Runs",
@@ -2019,7 +2118,9 @@
     "optionalNotes": "Optional notes about this payroll run",
     "creating": "Creating...",
     "createRun": "Create Payroll Run",
-    "createdWarnings": "Created with warnings:\n{warnings}"
+    "createdWarnings": "Created with warnings:\n{warnings}",
+    "notes": "Notes",
+    "all": "All"
   },
   "hrOnboarding": {
     "title": "Title",
@@ -2099,7 +2200,11 @@
     "tasksLabel": "tasks",
     "disableAccessNote": "This will immediately disable the employee's portal and system access.",
     "featureGateTitle": "HR Module requires Starter plan or higher",
-    "upgradeMessage": "Upgrade to access HR features."
+    "upgradeMessage": "Upgrade to access HR features.",
+    "progress": "Progress",
+    "dueLabel": "Due",
+    "complete": "Complete",
+    "cancel": "Cancel"
   },
   "hrReports": {
     "title": "HR Reports",
@@ -2153,27 +2258,27 @@
     "pendingLeads": "Pending Leads",
     "recentSignups": "Recent Signups",
     "noData": "No admin data available",
-    "totalCompanies": "Total companies",
+    "totalCompanies": "Total Companies",
     "activeCompanies": "Active companies",
-    "pendingActivation": "Pending activation",
+    "pendingActivation": "Pending Activation",
     "suspendedCompanies": "Suspended",
-    "actionRequired": "Action required",
+    "actionRequired": "Action Required",
     "mrr": "MRR",
     "arr": "ARR",
-    "pendingInvoices": "Pending invoices",
-    "overdue": "Overdue",
-    "activeEmployees": "Active employees",
+    "pendingInvoices": "Pending Invoices",
+    "overdue": "overdue",
+    "activeEmployees": "Active Employees",
     "acrossAllTenants": "Across all tenants",
-    "clockActionsToday": "Clock actions today",
-    "openTickets": "Open tickets",
-    "supportQueue": "Support queue",
-    "recentTenants": "Recent tenants",
-    "recentLeads": "Recent leads",
-    "recentInvoices": "Recent invoices",
-    "viewAll": "View all",
+    "clockActionsToday": "Clock Actions Today",
+    "openTickets": "Open Tickets",
+    "supportQueue": "Support Queue",
+    "recentTenants": "Recent Tenants",
+    "recentLeads": "Recent Leads ({count} new)",
+    "recentInvoices": "Recent Invoices",
+    "viewAll": "View all →",
     "subtitle": "Platform-wide metrics, tenant management, and billing operations",
-    "awaitingReview": "Awaiting review",
-    "quickActions": "Quick actions",
+    "awaitingReview": "Awaiting Review",
+    "quickActions": "Quick Actions",
     "manageTenants": "Manage tenants",
     "manageTenantsDesc": "Activate, suspend, cancel",
     "billingAndInvoices": "Billing & invoices",
@@ -2185,7 +2290,23 @@
     "activeAndTrial": "{active} active · {trial} trial",
     "overdueCount": "{count} overdue",
     "branchesCount": "{count} branches",
-    "arrLabel": "ARR: {amount}"
+    "arrLabel": "ARR: {amount}",
+    "active": "active",
+    "trial": "trial",
+    "suspended": "Suspended",
+    "superAdminTitle": "Super Admin Control Center",
+    "superAdminSubtitle": "Platform-wide metrics, tenant management, billing, and support controls.",
+    "noTenants": "No tenants yet",
+    "noLeads": "No leads yet",
+    "noInvoices": "No invoices yet",
+    "supportTickets": "Support Tickets",
+    "noTickets": "No tickets yet",
+    "billingInvoices": "Billing & invoices",
+    "billingInvoicesDesc": "Create invoices, mark paid",
+    "leadsAction": "Leads",
+    "leadsActionDesc": "Demo requests & contacts",
+    "plansFeatures": "Plans & features",
+    "plansFeaturesDesc": "{count} plans active"
   },
   "adminTenants": {
     "title": "Companies",
@@ -2283,7 +2404,9 @@
     "all": "All",
     "toTenant": "→ Tenant",
     "emp": "emp",
-    "br": "br"
+    "br": "br",
+    "assignPlaceholder": "Select assignee",
+    "unassigned": "Unassigned"
   },
   "adminPlans": {
     "title": "Plans",
@@ -2363,7 +2486,12 @@
     "invoiceCount": "{count} invoices · {paid} paid · {outstanding} outstanding",
     "all": "ALL",
     "countTitle": "Invoices ({count})",
-    "due": "Due"
+    "due": "Due",
+    "bankTransfer": "Bank Transfer",
+    "cash": "Cash",
+    "manual": "Manual",
+    "markPaid": "Mark Paid",
+    "voidConfirm": "Are you sure you want to void this invoice?"
   },
   "adminPayments": {
     "title": "Payments",

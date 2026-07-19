@@ -7,6 +7,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { CalendarClock, Clock, MapPin } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -85,12 +86,12 @@ export default async function MySchedulePage() {
             <div className="space-y-2">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground">{todaySchedule.shiftPolicy?.name ?? "—"}</span>
-                <Badge variant="outline" className="text-xs">{todaySchedule.status}</Badge>
+                <Badge variant="outline" className="text-xs">{getStatusLabel(todaySchedule.status, locale)}</Badge>
               </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> {formatTime(todaySchedule.expectedStart)} → {formatTime(todaySchedule.expectedEnd)}</span>
+                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> <bdi dir="ltr">{formatTime(todaySchedule.expectedStart)} – {formatTime(todaySchedule.expectedEnd)}</bdi></span>
                 {calcDuration(todaySchedule.expectedStart, todaySchedule.expectedEnd) && (
-                  <span className="text-xs">({calcDuration(todaySchedule.expectedStart, todaySchedule.expectedEnd)})</span>
+                  <span className="text-xs">(<bdi dir="ltr">{calcDuration(todaySchedule.expectedStart, todaySchedule.expectedEnd)}</bdi>)</span>
                 )}
               </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -119,9 +120,9 @@ export default async function MySchedulePage() {
                     <p className="text-xs text-muted-foreground">{s.shiftPolicy?.name ?? "—"}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground">{formatTime(s.expectedStart)} → {formatTime(s.expectedEnd)}</p>
+                    <p className="text-xs text-muted-foreground"><bdi dir="ltr">{formatTime(s.expectedStart)} – {formatTime(s.expectedEnd)}</bdi></p>
                     {calcDuration(s.expectedStart, s.expectedEnd) && (
-                      <p className="text-xs text-muted-foreground">({calcDuration(s.expectedStart, s.expectedEnd)})</p>
+                      <p className="text-xs text-muted-foreground">(<bdi dir="ltr">{calcDuration(s.expectedStart, s.expectedEnd)}</bdi>)</p>
                     )}
                   </div>
                 </div>

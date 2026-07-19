@@ -60,7 +60,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
             <h1 className="text-lg font-bold text-foreground">{asset.name}</h1>
             <p className="text-sm text-muted-foreground">{asset.code ?? t("noCode")} · {asset.type}</p>
           </div>
-          <Badge variant={asset.status === "AVAILABLE" ? "default" : "outline"} className={`text-[10px] ${statusColor(asset.status)}`}>{asset.status}</Badge>
+          <Badge variant={asset.status === "AVAILABLE" ? "default" : "outline"} className={`text-xs ${statusColor(asset.status)}`}>{asset.status}</Badge>
         </div>
       </div>
 
@@ -107,7 +107,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
                   {latestAssignment.conditionOnAssign && ` · ${t("conditionLabel")} ${latestAssignment.conditionOnAssign}`}
                 </p>
               </div>
-              <Badge variant="default" className="text-[10px] bg-blue-50 text-blue-600 border-blue-200">{t("assignedBadge")}</Badge>
+              <Badge variant="default" className="text-xs bg-blue-50 text-blue-600 border-blue-200">{t("assignedBadge")}</Badge>
             </div>
             <div className="flex flex-wrap gap-2">
               <form action={async () => { "use server"; await returnAssetAction(latestAssignment.id); }}>
@@ -166,7 +166,7 @@ export default async function AssetDetailPage({ params }: { params: Promise<{ id
                       </p>
                     </div>
                   </div>
-                  <Badge variant={aa.status === "ASSIGNED" ? "default" : "outline"} className={`text-[10px] ${statusColor(aa.status)}`}>{aa.status}</Badge>
+                  <Badge variant={aa.status === "ASSIGNED" ? "default" : "outline"} className={`text-xs ${statusColor(aa.status)}`}>{aa.status}</Badge>
                 </div>
               ))}
             </div>

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { getTranslations, getLocale } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
+import { displayWarningType } from "@/lib/locale-display";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
@@ -85,28 +86,28 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
     switch (sev) {
       case "CRITICAL":
       case "HIGH":
-        return <Badge variant="destructive" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
+        return <Badge variant="destructive" className="text-xs">{getStatusLabel(sev, locale)}</Badge>;
       case "MEDIUM":
-        return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600">{getStatusLabel(sev, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs border-amber-300 text-amber-600">{getStatusLabel(sev, locale)}</Badge>;
       case "LOW":
-        return <Badge variant="default" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
+        return <Badge variant="default" className="text-xs">{getStatusLabel(sev, locale)}</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs">{getStatusLabel(sev, locale)}</Badge>;
     }
   };
 
   const statusBadge = (st: string) => {
     switch (st) {
       case "OPEN":
-        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs">{getStatusLabel(st, locale)}</Badge>;
       case "ACKNOWLEDGED":
-        return <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 border-blue-200">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs bg-blue-50 text-blue-600 border-blue-200">{getStatusLabel(st, locale)}</Badge>;
       case "RESOLVED":
-        return <Badge variant="default" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="default" className="text-xs bg-emerald-50 text-emerald-600 border-emerald-200">{getStatusLabel(st, locale)}</Badge>;
       case "CANCELLED":
-        return <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs bg-muted text-muted-foreground">{getStatusLabel(st, locale)}</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(st, locale)}</Badge>;
+        return <Badge variant="outline" className="text-xs">{getStatusLabel(st, locale)}</Badge>;
     }
   };
 
@@ -152,7 +153,7 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
           <form method="GET" action="/hr/warnings" className="flex flex-wrap items-end gap-2">
             <CardTitle className="text-sm font-semibold text-foreground mr-2 mb-1">{t("filters")}</CardTitle>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-muted-foreground">Branch</label>
+              <label className="text-xs text-muted-foreground">Branch</label>
               <select name="branch" defaultValue={sp.branch || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
                 <option value="">{t("allBranches")}</option>
                 {branches.map((b) => (
@@ -161,7 +162,7 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-muted-foreground">Severity</label>
+              <label className="text-xs text-muted-foreground">Severity</label>
               <select name="severity" defaultValue={sp.severity || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
                 <option value="">{t("allSeverity")}</option>
                 <option value="LOW">{getStatusLabel("LOW", locale)}</option>
@@ -171,7 +172,7 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
               </select>
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[10px] text-muted-foreground">Status</label>
+              <label className="text-xs text-muted-foreground">Status</label>
               <select name="status" defaultValue={sp.status || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
                 <option value="">{t("allStatus")}</option>
                 <option value="OPEN">{getStatusLabel("OPEN", locale)}</option>
@@ -210,14 +211,14 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
                     <tr key={w.id} className="text-foreground">
                       <td className="py-3 pr-4">
                         <p className="font-medium">{w.employee.fullName}</p>
-                        <p className="text-[10px] text-muted-foreground">{w.employee.employeeCode} · {w.employee.branch?.name ?? "—"}</p>
+                        <p className="text-xs text-muted-foreground">{w.employee.employeeCode} · {w.employee.branch?.name ?? "—"}</p>
                       </td>
-                      <td className="py-3 pr-4 text-xs">{w.type.replace(/_/g, " ")}</td>
+                      <td className="py-3 pr-4 text-xs">{displayWarningType(w.type, locale)}</td>
                       <td className="py-3 pr-4">{severityBadge(w.severity)}</td>
                       <td className="py-3 pr-4 text-xs">{new Date(w.date).toLocaleDateString()}</td>
                       <td className="py-3 pr-4">{statusBadge(w.status)}</td>
                       <td className="py-3 text-right">
-                        <Link href={`/hr/warnings/${w.id}`} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-foreground hover:bg-muted/40">
+                        <Link href={`/hr/warnings/${w.id}`} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-xs font-medium text-foreground hover:bg-muted/40">
                           <Eye className="h-3 w-3" /> {t("view")}
                         </Link>
                       </td>
