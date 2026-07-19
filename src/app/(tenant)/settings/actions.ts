@@ -45,39 +45,44 @@ const SettingsSchema = z.object({
 });
 
 export async function updateCustomerSettingsAction(prev: any, formData: FormData) {
-  const s = await requireTenantAdmin();
-  const parsed = SettingsSchema.safeParse({
-    industry: formData.get("industry") || undefined,
-    timezone: formData.get("timezone"),
-    currency: formData.get("currency"),
-    defaultLanguage: formData.get("defaultLanguage"),
-    defaultGeofenceRadius: formData.get("defaultGeofenceRadius"),
-    defaultGraceMinutes: formData.get("defaultGraceMinutes"),
-    defaultOvertimeThresholdMinutes: formData.get("defaultOvertimeThresholdMinutes"),
-    enableMobileClock: formData.get("enableMobileClock") ?? "true",
-    enableKioskClock: formData.get("enableKioskClock") ?? "true",
-    requireApprovalOutsideGeofence: formData.get("requireApprovalOutsideGeofence") ?? "true",
-    requireApprovalOvertime: formData.get("requireApprovalOvertime") ?? "true",
-    allowNoScheduleClockIn: formData.get("allowNoScheduleClockIn") ?? "false",
-    allowManualRequests: formData.get("allowManualRequests") ?? "true",
-    enableEmployeeSelfService: formData.get("enableEmployeeSelfService") ?? "true",
-    enableBranchManagerApprovals: formData.get("enableBranchManagerApprovals") ?? "true",
-    emailNotifications: formData.get("emailNotifications") ?? "true",
-    whatsappNotifications: formData.get("whatsappNotifications") ?? "false",
-  });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-  const d: any = parsed.data;
-  for (const k of ["enableMobileClock", "enableKioskClock", "requireApprovalOutsideGeofence", "requireApprovalOvertime", "allowNoScheduleClockIn", "allowManualRequests", "enableEmployeeSelfService", "enableBranchManagerApprovals", "emailNotifications", "whatsappNotifications"]) {
-    d[k] = d[k] === true || d[k] === "true";
+  try {
+    const s = await requireTenantAdmin();
+    const parsed = SettingsSchema.safeParse({
+      industry: formData.get("industry") || undefined,
+      timezone: formData.get("timezone"),
+      currency: formData.get("currency"),
+      defaultLanguage: formData.get("defaultLanguage"),
+      defaultGeofenceRadius: formData.get("defaultGeofenceRadius"),
+      defaultGraceMinutes: formData.get("defaultGraceMinutes"),
+      defaultOvertimeThresholdMinutes: formData.get("defaultOvertimeThresholdMinutes"),
+      enableMobileClock: formData.get("enableMobileClock") ?? "true",
+      enableKioskClock: formData.get("enableKioskClock") ?? "true",
+      requireApprovalOutsideGeofence: formData.get("requireApprovalOutsideGeofence") ?? "true",
+      requireApprovalOvertime: formData.get("requireApprovalOvertime") ?? "true",
+      allowNoScheduleClockIn: formData.get("allowNoScheduleClockIn") ?? "false",
+      allowManualRequests: formData.get("allowManualRequests") ?? "true",
+      enableEmployeeSelfService: formData.get("enableEmployeeSelfService") ?? "true",
+      enableBranchManagerApprovals: formData.get("enableBranchManagerApprovals") ?? "true",
+      emailNotifications: formData.get("emailNotifications") ?? "true",
+      whatsappNotifications: formData.get("whatsappNotifications") ?? "false",
+    });
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+    const d: any = parsed.data;
+    for (const k of ["enableMobileClock", "enableKioskClock", "requireApprovalOutsideGeofence", "requireApprovalOvertime", "allowNoScheduleClockIn", "allowManualRequests", "enableEmployeeSelfService", "enableBranchManagerApprovals", "emailNotifications", "whatsappNotifications"]) {
+      d[k] = d[k] === true || d[k] === "true";
+    }
+    await db.companySettings.upsert({
+      where: { companyId: s.tenantId! },
+      update: d,
+      create: { companyId: s.tenantId!, ...d },
+    });
+    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "SETTINGS_UPDATED", entityType: "CompanySettings" });
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (e) {
+    console.error("[actions] updateCustomerSettingsAction failed:", e);
+    return { ok: false, error: "An unexpected error occurred. Please try again." };
   }
-  await db.companySettings.upsert({
-    where: { companyId: s.tenantId! },
-    update: d,
-    create: { companyId: s.tenantId!, ...d },
-  });
-  await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "SETTINGS_UPDATED", entityType: "CompanySettings" });
-  revalidatePath("/settings");
-  return { ok: true };
 }
 
 const TicketSchema = z.object({
@@ -88,32 +93,37 @@ const TicketSchema = z.object({
 });
 
 export async function createTicketAction(prev: any, formData: FormData) {
-  const s = await requireTenant();
-  const parsed = TicketSchema.safeParse({
-    subject: formData.get("subject"),
-    category: formData.get("category") || undefined,
-    message: formData.get("message"),
-    priority: formData.get("priority") ?? "NORMAL",
-  });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-  const d = parsed.data;
-  const ticket = await db.supportTicket.create({
-    data: {
-      companyId: s.tenantId!,
-      subject: d.subject,
-      category: d.category,
-      message: d.message,
-      priority: d.priority,
-      status: "OPEN",
-      createdByEmail: s.email,
-      createdById: s.sub,
-    },
-  });
-  await db.supportMessage.create({
-    data: { ticketId: ticket.id, authorId: s.sub, authorEmail: s.email, authorRole: s.role, body: d.message, isInternal: false },
-  });
-  revalidatePath("/support");
-  return { ok: true };
+  try {
+    const s = await requireTenant();
+    const parsed = TicketSchema.safeParse({
+      subject: formData.get("subject"),
+      category: formData.get("category") || undefined,
+      message: formData.get("message"),
+      priority: formData.get("priority") ?? "NORMAL",
+    });
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+    const d = parsed.data;
+    const ticket = await db.supportTicket.create({
+      data: {
+        companyId: s.tenantId!,
+        subject: d.subject,
+        category: d.category,
+        message: d.message,
+        priority: d.priority,
+        status: "OPEN",
+        createdByEmail: s.email,
+        createdById: s.sub,
+      },
+    });
+    await db.supportMessage.create({
+      data: { ticketId: ticket.id, authorId: s.sub, authorEmail: s.email, authorRole: s.role, body: d.message, isInternal: false },
+    });
+    revalidatePath("/support");
+    return { ok: true };
+  } catch (e) {
+    console.error("[actions] createTicketAction failed:", e);
+    return { ok: false, error: "An unexpected error occurred. Please try again." };
+  }
 }
 
 const TicketReplySchema = z.object({
@@ -122,30 +132,40 @@ const TicketReplySchema = z.object({
 });
 
 export async function replyToTicketAction(prev: any, formData: FormData) {
-  const s = await requireTenant();
-  const parsed = TicketReplySchema.safeParse({
-    ticketId: formData.get("ticketId"),
-    body: formData.get("body"),
-  });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-  const ticket = await db.supportTicket.findFirst({ where: { id: parsed.data.ticketId, companyId: s.tenantId! } });
-  if (!ticket) return { ok: false, error: "Ticket not found" };
-  await db.supportMessage.create({
-    data: { ticketId: ticket.id, authorId: s.sub, authorEmail: s.email, authorRole: s.role, body: parsed.data.body, isInternal: false },
-  });
-  await db.supportTicket.update({ where: { id: ticket.id }, data: { status: "WAITING_CUSTOMER" } });
-  revalidatePath(`/support/${ticket.id}`);
-  revalidatePath("/support");
-  return { ok: true };
+  try {
+    const s = await requireTenant();
+    const parsed = TicketReplySchema.safeParse({
+      ticketId: formData.get("ticketId"),
+      body: formData.get("body"),
+    });
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+    const ticket = await db.supportTicket.findFirst({ where: { id: parsed.data.ticketId, companyId: s.tenantId! } });
+    if (!ticket) return { ok: false, error: "Ticket not found" };
+    await db.supportMessage.create({
+      data: { ticketId: ticket.id, authorId: s.sub, authorEmail: s.email, authorRole: s.role, body: parsed.data.body, isInternal: false },
+    });
+    await db.supportTicket.update({ where: { id: ticket.id }, data: { status: "WAITING_CUSTOMER" } });
+    revalidatePath(`/support/${ticket.id}`);
+    revalidatePath("/support");
+    return { ok: true };
+  } catch (e) {
+    console.error("[actions] replyToTicketAction failed:", e);
+    return { ok: false, error: "An unexpected error occurred. Please try again." };
+  }
 }
 
 export async function runMarkAbsentAction(daysBack: number) {
-  const s = await requireTenantAdmin();
-  const r = await markAbsentForPastScheduledDays({ companyId: s.tenantId!, daysBack });
-  await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "ATTENDANCE_RECALCULATED", reason: `Manual mark-absent daysBack=${daysBack} marked=${r.marked}` });
-  revalidatePath("/reports");
-  revalidatePath("/dashboard");
-  return r;
+  try {
+    const s = await requireTenantAdmin();
+    const r = await markAbsentForPastScheduledDays({ companyId: s.tenantId!, daysBack });
+    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "ATTENDANCE_RECALCULATED", reason: `Manual mark-absent daysBack=${daysBack} marked=${r.marked}` });
+    revalidatePath("/reports");
+    revalidatePath("/dashboard");
+    return r;
+  } catch (e) {
+    console.error("[actions] runMarkAbsentAction failed:", e);
+    return { ok: false, error: "An unexpected error occurred. Please try again." };
+  }
 }
 
 // ─────────────────────────────────────────────
@@ -160,38 +180,43 @@ const CreateUserSchema = z.object({
 });
 
 export async function createUserAction(prev: any, formData: FormData) {
-  const s = await requireTenantAdmin();
-  const parsed = CreateUserSchema.safeParse({
-    name: formData.get("name"),
-    email: formData.get("email"),
-    role: formData.get("role"),
-    branchId: formData.get("branchId") || undefined,
-  });
-  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-  const d = parsed.data;
-  // Check email unique within tenant
-  const existing = await db.user.findUnique({ where: { companyId_email: { companyId: s.tenantId!, email: d.email.toLowerCase() } } });
-  if (existing) return { ok: false, error: "User with this email already exists" };
-  // Generate temp password
-  const bcrypt = await import("bcryptjs");
-  const tempPassword = Math.random().toString(36).slice(-10);
-  const passwordHash = await bcrypt.hash(tempPassword, 10);
-  const u = await db.user.create({
-    data: {
-      companyId: s.tenantId!,
-      email: d.email.toLowerCase(),
-      name: d.name,
-      role: d.role,
-      passwordHash,
-      status: "INVITED",
-      forcePasswordChange: true,
-    },
-  });
-  // If branch manager, assign to branch
-  if (d.role === "BRANCH_MANAGER" && d.branchId) {
-    await db.branch.update({ where: { id: d.branchId }, data: { managerId: u.id } });
+  try {
+    const s = await requireTenantAdmin();
+    const parsed = CreateUserSchema.safeParse({
+      name: formData.get("name"),
+      email: formData.get("email"),
+      role: formData.get("role"),
+      branchId: formData.get("branchId") || undefined,
+    });
+    if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+    const d = parsed.data;
+    // Check email unique within tenant
+    const existing = await db.user.findUnique({ where: { companyId_email: { companyId: s.tenantId!, email: d.email.toLowerCase() } } });
+    if (existing) return { ok: false, error: "User with this email already exists" };
+    // Generate temp password
+    const bcrypt = await import("bcryptjs");
+    const tempPassword = Math.random().toString(36).slice(-10);
+    const passwordHash = await bcrypt.hash(tempPassword, 10);
+    const u = await db.user.create({
+      data: {
+        companyId: s.tenantId!,
+        email: d.email.toLowerCase(),
+        name: d.name,
+        role: d.role,
+        passwordHash,
+        status: "INVITED",
+        forcePasswordChange: true,
+      },
+    });
+    // If branch manager, assign to branch
+    if (d.role === "BRANCH_MANAGER" && d.branchId) {
+      await db.branch.update({ where: { id: d.branchId }, data: { managerId: u.id } });
+    }
+    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "USER_INVITED", entityType: "User", entityId: u.id, reason: `Role: ${d.role}` });
+    revalidatePath("/users");
+    return { ok: true, tempPassword };
+  } catch (e) {
+    console.error("[actions] createUserAction failed:", e);
+    return { ok: false, error: "An unexpected error occurred. Please try again." };
   }
-  await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "USER_INVITED", entityType: "User", entityId: u.id, reason: `Role: ${d.role}` });
-  revalidatePath("/users");
-  return { ok: true, tempPassword };
 }

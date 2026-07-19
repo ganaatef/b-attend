@@ -9,12 +9,12 @@ import autocannon from "autocannon";
 const BASE_URL = process.env.TEST_URL || "https://b-attend.vercel.app";
 
 const tests = [
-  { name: "Homepage (static)", url: `${BASE_URL}/`, connections: 20, duration: 10 },
-  { name: "Pricing (static)", url: `${BASE_URL}/pricing`, connections: 20, duration: 10 },
-  { name: "Features (static)", url: `${BASE_URL}/features`, connections: 20, duration: 10 },
-  { name: "Login page (static)", url: `${BASE_URL}/login`, connections: 20, duration: 10 },
-  { name: "API: Public Plans", url: `${BASE_URL}/api/public/plans`, connections: 30, duration: 10 },
-  { name: "Login redirect (protected)", url: `${BASE_URL}/dashboard`, connections: 20, duration: 10 },
+  { name: "Homepage (static)", url: `${BASE_URL}/`, connections: 50, duration: 15 },
+  { name: "Pricing (static)", url: `${BASE_URL}/pricing`, connections: 50, duration: 15 },
+  { name: "API: Public Plans", url: `${BASE_URL}/api/public/plans`, connections: 50, duration: 15 },
+  { name: "Login redirect (protected)", url: `${BASE_URL}/dashboard`, connections: 50, duration: 15 },
+  { name: "Signup page", url: `${BASE_URL}/signup`, connections: 50, duration: 15 },
+  { name: "Rate limit burst (100c)", url: `${BASE_URL}/api/public/plans`, connections: 100, duration: 10 },
 ];
 
 async function run() {
