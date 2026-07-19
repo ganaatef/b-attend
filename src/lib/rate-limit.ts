@@ -37,11 +37,10 @@ export function checkRateLimit(
 ): { allowed: boolean; remaining: number; retryAfterMs: number } {
   cleanup();
 
-  // Determine category from path
+  // Determine category — must match middleware's classification
   let category = "general";
-  if (path.startsWith("/api/coach/") || path.startsWith("/api/admin/")) category = "api";
-  else if (path.startsWith("/api/auth/")) category = "auth";
-  else if (path.startsWith("/api/public/")) category = "public";
+  if (path.startsWith("/api/auth/")) category = "auth";
+  else if (path.startsWith("/api/")) category = "api";
 
   const key = `${ip}:${category}`;
   const now = Date.now();
@@ -89,5 +88,4 @@ export const RATE_LIMITS = {
   general: 120,
   api: 60,
   auth: 10,
-  public: 30,
 } as const;
