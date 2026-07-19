@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ export default async function HrContractsPage() {
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrContracts");
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
@@ -25,8 +27,8 @@ export default async function HrContractsPage() {
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">HR Module requires Growth plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access HR features."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -70,18 +72,18 @@ export default async function HrContractsPage() {
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Contracts</h1>
-          <p className="text-sm text-muted-foreground">{contracts.length} total · {activeCount} active · {expiringCount} expiring within 30 days</p>
+          <h1 className="text-lg font-bold text-foreground">{t("contractsTitle")}</h1>
+          <p className="text-sm text-muted-foreground">{contracts.length} {t("totalLabel")} · {activeCount} {t("activeLabel")} · {expiringCount} {t("expiringWithin30")}</p>
         </div>
         <div className="flex items-center gap-2">
           {canExport && (
             <Link href="/api/tenant/hr/contracts/excel" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-              <Download className="h-3.5 w-3.5" /> Export Excel
+              <Download className="h-3.5 w-3.5" /> {t("exportExcel")}
             </Link>
           )}
           {canManage && (
             <Link href="/hr/contracts/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-              <Plus className="h-3.5 w-3.5" /> New Contract
+              <Plus className="h-3.5 w-3.5" /> {t("newContractBtn")}
             </Link>
           )}
         </div>
@@ -90,21 +92,21 @@ export default async function HrContractsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{activeCount}</p>
-          <p className="text-xs text-muted-foreground">Active contracts</p>
+          <p className="text-xs text-muted-foreground">{t("activeContracts")}</p>
         </Card>
         <Card className={`border-border p-4 ${expiringCount > 0 ? "border-amber-300 bg-amber-50/40" : ""}`}>
           <p className="text-2xl font-bold text-foreground">{expiringCount}</p>
-          <p className="text-xs text-muted-foreground">Expiring in 30 days</p>
+          <p className="text-xs text-muted-foreground">{t("expiringIn30")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{expiredCount}</p>
-          <p className="text-xs text-muted-foreground">Expired</p>
+          <p className="text-xs text-muted-foreground">{t("expiredLabel")}</p>
         </Card>
       </div>
 
       <Card className="border-border">
         {contracts.length === 0 ? (
-          <EmptyState title="No contracts" description="Create your first employee contract" icon={FileText} />
+          <EmptyState title={t("noContracts")} description={t("createFirst")} icon={FileText} />
         ) : (
           <div className="divide-y divide-border/60">
             {contracts.map((c) => {
@@ -125,8 +127,8 @@ export default async function HrContractsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right text-xs text-muted-foreground">
-                      <p>{new Date(c.startDate).toLocaleDateString()} — {c.endDate ? new Date(c.endDate).toLocaleDateString() : "Open"}</p>
-                      {isExpiring && <p className="flex items-center gap-1 text-amber-600 font-medium"><AlertTriangle className="h-3 w-3" /> Expiring soon</p>}
+                      <p>{new Date(c.startDate).toLocaleDateString()} — {c.endDate ? new Date(c.endDate).toLocaleDateString() : t("openLabel")}</p>
+                      {isExpiring && <p className="flex items-center gap-1 text-amber-600 font-medium"><AlertTriangle className="h-3 w-3" /> {t("expiringSoonBadge")}</p>}
                     </div>
                     <Badge variant={c.status === "ACTIVE" ? "default" : "outline"} className={`text-[10px] ${statusColor(c.status)}`}>{c.status}</Badge>
                     <Eye className="h-4 w-4 text-muted-foreground" />

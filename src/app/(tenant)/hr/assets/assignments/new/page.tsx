@@ -4,6 +4,7 @@ import { getSession } from "@/lib/auth/session";
 import { getRolePermissions, getManagedBranchIds, type HrPermission } from "@/lib/hr/permissions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { NewAssignmentForm } from "./NewAssignmentForm";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +13,7 @@ function hasPerm(role: string, perm: HrPermission): boolean {
 }
 
 export default async function NewAssignmentPage() {
+  const t = await getTranslations("hrAssets");
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
@@ -38,12 +40,12 @@ export default async function NewAssignmentPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
-        <Link href="/hr/assets/assignments" className="text-xs text-muted-foreground hover:text-foreground">← Assignments</Link>
-        <h1 className="mt-1 text-lg font-bold text-foreground">New Asset Assignment</h1>
+        <Link href="/hr/assets/assignments" className="text-xs text-muted-foreground hover:text-foreground">{t("backToAssets")}</Link>
+        <h1 className="mt-1 text-lg font-bold text-foreground">{t("newAssignment")}</h1>
       </div>
 
       <Card className="border-border">
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Assignment Details</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("assignmentDetails")}</CardTitle></CardHeader>
         <CardContent>
           <NewAssignmentForm availableAssets={availableAssets} employees={employees} />
         </CardContent>

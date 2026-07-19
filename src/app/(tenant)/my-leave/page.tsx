@@ -6,12 +6,14 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { MyLeaveClient } from "./MyLeaveClient";
 import { CalendarDays } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyLeavePage() {
   const t = await getTranslations("myLeave");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
 
@@ -63,8 +65,8 @@ export default async function MyLeavePage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-foreground">My Leave</h1>
-        <p className="text-sm text-muted-foreground">View your leave balances and submit requests.</p>
+        <h1 className="text-lg font-bold text-foreground">{t("myLeaveTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{t("myLeaveSubtitle")}</p>
       </div>
 
       <Card className="border-border">
@@ -118,7 +120,7 @@ export default async function MyLeavePage() {
                       {lr.reason && <p className="text-[10px] text-muted-foreground truncate max-w-[300px]">{lr.reason}</p>}
                     </div>
                   </div>
-                  <Badge variant={lr.status === "APPROVED" ? "default" : "outline"} className={`text-[10px] ${requestStatusColor(lr.status)}`}>{lr.status}</Badge>
+                  <Badge variant={lr.status === "APPROVED" ? "default" : "outline"} className={`text-[10px] ${requestStatusColor(lr.status)}`}>{getStatusLabel(lr.status, locale)}</Badge>
                 </div>
               ))}
             </div>

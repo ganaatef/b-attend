@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getRolePermissions, type HrPermission } from "@/lib/hr/permissions";
@@ -13,15 +14,7 @@ function hasPerm(role: string, perm: HrPermission): boolean {
   return getRolePermissions(role).includes(perm);
 }
 
-const statusConfig: Record<string, { label: string; cls: string; icon: typeof CreditCard }> = {
-  DRAFT: { label: "Draft", cls: "bg-muted text-muted-foreground border-border", icon: Clock },
-  REVIEW: { label: "Review", cls: "bg-amber-50 text-amber-600 border-amber-200", icon: Eye },
-  APPROVED: { label: "Approved", cls: "bg-blue-50 text-blue-600 border-blue-200", icon: CheckCircle },
-  LOCKED: { label: "Locked", cls: "bg-brand-success text-white border-transparent", icon: Lock },
-  CANCELLED: { label: "Cancelled", cls: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
-};
-
-const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const monthKeys = ["", "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"] as const;
 
 export default async function PayrollRunsPage({
   searchParams,
@@ -32,6 +25,7 @@ export default async function PayrollRunsPage({
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "BRANCH_MANAGER" || session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrPayrollRuns");
   const { status: statusFilter, year: yearFilter } = await searchParams;
 
   const canView = hasPerm(session.role, "VIEW_PAYROLL");
@@ -44,8 +38,8 @@ export default async function PayrollRunsPage({
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">Payroll requires Pro plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access payroll."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -76,58 +70,65 @@ export default async function PayrollRunsPage({
   const years = [...new Set(runs.map((r) => r.year))].sort((a, b) => b - a);
   const latestRun = runs[0];
 
+  const statusConfig: Record<string, { label: string; cls: string; icon: typeof CreditCard }> = {
+    DRAFT: { label: t("draft"), cls: "bg-muted text-muted-foreground border-border", icon: Clock },
+    REVIEW: { label: t("review"), cls: "bg-amber-50 text-amber-600 border-amber-200", icon: Eye },
+    APPROVED: { label: t("approved"), cls: "bg-blue-50 text-blue-600 border-blue-200", icon: CheckCircle },
+    LOCKED: { label: t("locked"), cls: "bg-brand-success text-white border-transparent", icon: Lock },
+    CANCELLED: { label: t("cancelled"), cls: "bg-destructive/10 text-destructive border-destructive/20", icon: XCircle },
+  };
+
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Payroll Runs</h1>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
           <p className="text-sm text-muted-foreground">
-            {statusCounts.total} total runs
-            {latestRun && ` · Latest: ${monthNames[latestRun.month]} ${latestRun.year}`}
+            {t("totalRuns")} · {latestRun && `${t(monthKeys[latestRun.month])} ${latestRun.year}`}
           </p>
         </div>
         <Link
           href="/hr/payroll-runs/new"
           className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90"
         >
-          <Plus className="h-3.5 w-3.5" /> New Run
+          <Plus className="h-3.5 w-3.5" /> {t("newRun")}
         </Link>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{statusCounts.total}</p>
-          <p className="text-xs text-muted-foreground">Total runs</p>
+          <p className="text-xs text-muted-foreground">{t("totalRuns")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-muted-foreground">{statusCounts.DRAFT}</p>
-          <p className="text-xs text-muted-foreground">Draft</p>
+          <p className="text-xs text-muted-foreground">{t("draft")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-amber-600">{statusCounts.REVIEW}</p>
-          <p className="text-xs text-muted-foreground">In Review</p>
+          <p className="text-xs text-muted-foreground">{t("review")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-blue-600">{statusCounts.APPROVED}</p>
-          <p className="text-xs text-muted-foreground">Approved</p>
+          <p className="text-xs text-muted-foreground">{t("approved")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-brand-success">{statusCounts.LOCKED}</p>
-          <p className="text-xs text-muted-foreground">Locked</p>
+          <p className="text-xs text-muted-foreground">{t("locked")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-destructive">{statusCounts.CANCELLED}</p>
-          <p className="text-xs text-muted-foreground">Cancelled</p>
+          <p className="text-xs text-muted-foreground">{t("cancelled")}</p>
         </Card>
       </div>
 
       <div className="flex items-center gap-2 text-xs">
-        <span className="text-muted-foreground">Filter:</span>
+        <span className="text-muted-foreground">{t("filterLabel")}</span>
         <Link
           href="/hr/payroll-runs"
           className={`rounded-md px-2 py-1 ${!statusFilter ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
         >
-          All
+          {t("all")}
         </Link>
         {Object.entries(statusConfig).map(([key, cfg]) => (
           <Link
@@ -140,12 +141,12 @@ export default async function PayrollRunsPage({
         ))}
         {years.length > 1 && (
           <>
-            <span className="text-muted-foreground ml-2">Year:</span>
+            <span className="text-muted-foreground ml-2">{t("yearLabel")}</span>
             <Link
               href={`/hr/payroll-runs${statusFilter ? `?status=${statusFilter}` : ""}`}
               className={`rounded-md px-2 py-1 ${!yearFilter ? "bg-foreground text-background" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}
             >
-              All
+              {t("all")}
             </Link>
             {years.map((y) => (
               <Link
@@ -165,13 +166,15 @@ export default async function PayrollRunsPage({
           {filtered.length === 0 ? (
             <div className="px-4 py-8 text-center">
               <CreditCard className="mx-auto h-8 w-8 text-muted-foreground" />
-              <p className="mt-2 text-sm font-medium text-foreground">No payroll runs</p>
-              <p className="mt-1 text-xs text-muted-foreground">Create your first payroll run to get started.</p>
+              <p className="mt-2 text-sm font-medium text-foreground">{t("noPayrollRuns")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t("createFirst")}</p>
             </div>
           ) : (
             filtered.map((run) => {
               const cfg = statusConfig[run.status] ?? statusConfig.DRAFT;
               const Icon = cfg.icon;
+              const lineCount = run._count.lines;
+              const lineText = lineCount === 1 ? t("lineCount", { count: lineCount }) : t("lineCountPlural", { count: lineCount });
               return (
                 <Link
                   key={run.id}
@@ -184,13 +187,13 @@ export default async function PayrollRunsPage({
                     </div>
                     <div>
                       <p className="font-medium text-foreground">
-                        {monthNames[run.month]} {run.year}
+                        {t(monthKeys[run.month])} {run.year}
                         {run.id === latestRun?.id && (
-                          <span className="ml-2 text-[10px] font-medium text-brand-accent">LATEST</span>
+                          <span className="ml-2 text-[10px] font-medium text-brand-accent">{t("latest")}</span>
                         )}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        {run._count.lines} line{run._count.lines !== 1 ? "s" : ""}
+                        {lineText}
                         {run.notes && ` · ${run.notes.slice(0, 60)}`}
                       </p>
                     </div>
@@ -198,12 +201,12 @@ export default async function PayrollRunsPage({
                   <div className="flex items-center gap-3">
                     {run.approvedAt && (
                       <p className="text-xs text-muted-foreground hidden sm:block">
-                        Approved {new Date(run.approvedAt).toLocaleDateString()}
+                        {t("approvedPrefix")} {new Date(run.approvedAt).toLocaleDateString()}
                       </p>
                     )}
                     {run.lockedAt && (
                       <p className="text-xs text-muted-foreground hidden sm:block">
-                        Locked {new Date(run.lockedAt).toLocaleDateString()}
+                        {t("lockedPrefix")} {new Date(run.lockedAt).toLocaleDateString()}
                       </p>
                     )}
                     <Badge variant="outline" className={`text-[10px] ${cfg.cls}`}>

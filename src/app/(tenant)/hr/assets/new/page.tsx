@@ -14,6 +14,7 @@ import { useTranslations } from "next-intl";
 
 export default function NewAssetPage() {
   const t = useTranslations("hrAssets");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [state, formAction] = useActionState(createAssetAction, { ok: false, error: "" });
 
@@ -30,41 +31,41 @@ export default function NewAssetPage() {
       </div>
 
       <Card className="border-border">
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Asset Details</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("assetDetails")}</CardTitle></CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-4">
             {state.error && <p className="text-xs text-destructive">{state.error}</p>}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="name">Name *</Label>
-                <Input id="name" name="name" required placeholder="e.g. Chef Uniform" />
+                <Label htmlFor="name">{t("nameRequired")}</Label>
+                <Input id="name" name="name" required placeholder={t("namePlaceholder")} />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="type">Type *</Label>
+                <Label htmlFor="type">{t("typeRequired")}</Label>
                 <select id="type" name="type" className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm" required>
-                  <option value="UNIFORM">Uniform</option>
-                  <option value="DEVICE">Device</option>
-                  <option value="CARD">Card</option>
-                  <option value="KEY">Key</option>
-                  <option value="TOOLS">Tools</option>
-                  <option value="OTHER">Other</option>
+                  <option value="UNIFORM">{t("uniform")}</option>
+                  <option value="DEVICE">{t("device")}</option>
+                  <option value="CARD">{t("card")}</option>
+                  <option value="KEY">{t("key")}</option>
+                  <option value="TOOLS">{t("tools")}</option>
+                  <option value="OTHER">{t("other")}</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="code">Code</Label>
-              <Input id="code" name="code" placeholder="e.g. AST-001" />
+              <Label htmlFor="code">{t("codeLabel")}</Label>
+              <Input id="code" name="code" placeholder={t("codePlaceholder")} />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Notes</Label>
-              <textarea id="notes" name="notes" rows={3} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" placeholder="Optional notes" />
+              <Label htmlFor="notes">{t("notesCard")}</Label>
+              <textarea id="notes" name="notes" rows={3} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" placeholder={t("optionalNotes")} />
             </div>
 
             <div className="flex justify-end gap-2">
-              <Link href="/hr/assets"><Button type="button" variant="outline" size="sm">Cancel</Button></Link>
+              <Link href="/hr/assets"><Button type="button" variant="outline" size="sm">{tCommon("cancel")}</Button></Link>
               <SubmitButton />
             </div>
           </form>

@@ -4,12 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { AlertTriangle } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyWarningsPage() {
   const t = await getTranslations("myWarnings");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
 
@@ -57,7 +59,7 @@ export default async function MyWarningsPage() {
       case "CANCELLED":
         return <Badge variant="outline">{t("cancelled")}</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{getStatusLabel(status, locale)}</Badge>;
     }
   };
 
@@ -72,15 +74,15 @@ export default async function MyWarningsPage() {
       case "LOW":
         return <Badge variant="outline">{t("low")}</Badge>;
       default:
-        return <Badge variant="outline">{severity}</Badge>;
+        return <Badge variant="outline">{getStatusLabel(severity, locale)}</Badge>;
     }
   };
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-foreground">My Warnings</h1>
-        <p className="text-sm text-muted-foreground">View warnings issued to you.</p>
+        <h1 className="text-lg font-bold text-foreground">{t("myWarningsTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{t("myWarningsSubtitle")}</p>
       </div>
 
       <Card className="border-border">

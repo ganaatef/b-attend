@@ -4,12 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Package } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyAssetsPage() {
   const t = await getTranslations("myAssets");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
 
@@ -51,15 +53,15 @@ export default async function MyAssetsPage() {
       case "DAMAGED":
         return <Badge variant="destructive">{t("damaged")}</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{getStatusLabel(status, locale)}</Badge>;
     }
   };
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-foreground">My Assets</h1>
-        <p className="text-sm text-muted-foreground">View assets and uniforms assigned to you.</p>
+        <h1 className="text-lg font-bold text-foreground">{t("myAssetsTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{t("myAssetsSubtitle")}</p>
       </div>
 
       <Card className="border-border">

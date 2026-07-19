@@ -162,8 +162,8 @@ export default async function CoachPage() {
             companyId: session.tenantId,
             userId: session.sub,
             channel: "IN_APP",
-            title: "Daily motivation ready",
-            body: motivation?.title ?? "Read today's coaching tip.",
+            title: t("dailyMotivationReady"),
+            body: motivation?.title ?? t("readTip"),
             eventType: "daily_motivation",
           },
         });
@@ -429,7 +429,7 @@ export default async function CoachPage() {
         </CardHeader>
         <CardContent>
           {tips.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No tips available yet.</p>
+            <p className="text-sm text-muted-foreground">{t("noTipsAvailable")}</p>
           ) : (
             <div className="grid gap-3 sm:grid-cols-2">
               {tips.map((t) => (
@@ -447,7 +447,7 @@ export default async function CoachPage() {
       </Card>
 
       <p className="text-center text-xs text-muted-foreground">
-        B-Coach AI provides development support only. It is not a replacement for HR judgment or legal compliance.
+        {t("aiDisclaimer")}
       </p>
     </div>
   );

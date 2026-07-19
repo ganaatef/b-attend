@@ -15,7 +15,8 @@ import {
   createOnboardingTaskAction,
   createDefaultOnboardingChecklistAction,
 } from "../../actions";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 import { ClipboardList, CheckCircle2, XCircle, Clock, AlertTriangle, ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +34,7 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
 
   const canManage = hasPerm(session.role, "MANAGE_ONBOARDING");
   const t = await getTranslations("hrOnboarding");
+  const locale = await getLocale();
 
   const employee = await db.employee.findFirst({
     where: { id: employeeId, companyId: tid, deletedAt: null },
@@ -51,11 +53,11 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
 
   const taskStatusBadge = (status: string) => {
     switch (status) {
-      case "PENDING": return <Badge variant="outline" className="text-[10px]">PENDING</Badge>;
-      case "IN_PROGRESS": return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600 bg-amber-50">IN PROGRESS</Badge>;
-      case "COMPLETED": return <Badge variant="default" className="text-[10px] bg-emerald-600 text-white border-transparent">COMPLETED</Badge>;
-      case "CANCELLED": return <Badge variant="outline" className="text-[10px] text-muted-foreground">CANCELLED</Badge>;
-      default: return <Badge variant="outline" className="text-[10px]">{status}</Badge>;
+      case "PENDING": return <Badge variant="outline" className="text-[10px]">{getStatusLabel(status, locale)}</Badge>;
+      case "IN_PROGRESS": return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600 bg-amber-50">{getStatusLabel(status, locale)}</Badge>;
+      case "COMPLETED": return <Badge variant="default" className="text-[10px] bg-emerald-600 text-white border-transparent">{getStatusLabel(status, locale)}</Badge>;
+      case "CANCELLED": return <Badge variant="outline" className="text-[10px] text-muted-foreground">{getStatusLabel(status, locale)}</Badge>;
+      default: return <Badge variant="outline" className="text-[10px]">{getStatusLabel(status, locale)}</Badge>;
     }
   };
 

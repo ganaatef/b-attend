@@ -32,10 +32,10 @@ export default async function BulkSchedulePage() {
       <div>
         <Link href="/schedules" className="text-xs text-muted-foreground hover:text-foreground">← {t("title")}</Link>
         <h1 className="mt-1 text-lg font-bold text-foreground">{t("bulkTitle")}</h1>
-        <p className="text-sm text-muted-foreground">Generate schedules across a date range for multiple employees. Weekends are skipped by default. Duplicate employee/date schedules are skipped.</p>
+        <p className="text-sm text-muted-foreground">{t("bulkDescription")}</p>
       </div>
       <Card>
-        <CardHeader><CardTitle className="text-sm font-semibold text-foreground">Generate</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm font-semibold text-foreground">{t("generateCard")}</CardTitle></CardHeader>
         <CardContent><BulkScheduleForm branches={branches} employees={employees} policies={policies} /></CardContent>
       </Card>
     </div>

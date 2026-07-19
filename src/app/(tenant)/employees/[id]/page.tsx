@@ -15,7 +15,8 @@ import {
   GraduationCap, Package, AlertTriangle, Wallet, ScrollText, Lock,
   UserPlus, UserMinus,
 } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ function hasPerm(role: string, perm: HrPermission): boolean {
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations("employees");
   const tA = await getTranslations("approvals");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
@@ -102,7 +104,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <h1 className="mt-1 text-lg font-bold text-foreground">{employee.fullName}</h1>
         <p className="text-sm text-muted-foreground">{employee.employeeCode} · {employee.jobTitleRef?.title ?? employee.jobTitle ?? "—"}</p>
         <div className="mt-2 flex items-center gap-2">
-          <Badge variant={employee.status === "ACTIVE" ? "default" : "destructive"} className={employee.status === "ACTIVE" ? "bg-brand-success text-white border-transparent" : ""}>{employee.status}</Badge>
+          <Badge variant={employee.status === "ACTIVE" ? "default" : "destructive"} className={employee.status === "ACTIVE" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(employee.status, locale)}</Badge>
           <Badge variant="outline">{employee.employmentType.replace(/_/g, " ")}</Badge>
         </div>
       </div>
@@ -147,7 +149,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                 <div><span className="text-muted-foreground">{t("jobTitleLabel")}</span> <span className="font-medium">{employee.jobTitleRef?.title ?? employee.jobTitle ?? "—"}</span></div>
                 <div><span className="text-muted-foreground">{t("employmentTypeLabel")}</span> <span className="font-medium">{employee.employmentType.replace(/_/g, " ")}</span></div>
                 <div><span className="text-muted-foreground">{t("startDateLabel")}</span> <span className="font-medium">{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : "—"}</span></div>
-                <div><span className="text-muted-foreground">{t("statusLabel")}</span> <span className="font-medium">{employee.status}</span></div>
+                <div><span className="text-muted-foreground">{t("statusLabel")}</span> <span className="font-medium">{getStatusLabel(employee.status, locale)}</span></div>
               </div>
             </CardContent>
           </Card>
@@ -199,7 +201,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                         <p className="font-medium text-foreground">{d.documentType.replace(/_/g, " ")}</p>
                         <p className="text-muted-foreground">{d.documentNumber ?? "—"} {d.expiryDate ? `· Expires ${new Date(d.expiryDate).toLocaleDateString()}` : ""}</p>
                       </div>
-                      <Badge variant={d.status === "VALID" ? "default" : d.status === "EXPIRED" ? "destructive" : "outline"} className={d.status === "VALID" ? "bg-brand-success text-white border-transparent" : ""}>{d.status.replace(/_/g, " ")}</Badge>
+                      <Badge variant={d.status === "VALID" ? "default" : d.status === "EXPIRED" ? "destructive" : "outline"} className={d.status === "VALID" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(d.status, locale)}</Badge>
                     </div>
                   ))}
                 </div>
@@ -228,7 +230,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                         <p className="font-medium text-foreground">{c.contractNumber}</p>
                         <p className="text-muted-foreground">{c.contractType.replace(/_/g, " ")} · {new Date(c.startDate).toLocaleDateString()} — {c.endDate ? new Date(c.endDate).toLocaleDateString() : "Open"}</p>
                       </div>
-                      <Badge variant={c.status === "ACTIVE" ? "default" : "outline"} className={c.status === "ACTIVE" ? "bg-brand-success text-white border-transparent" : ""}>{c.status}</Badge>
+                      <Badge variant={c.status === "ACTIVE" ? "default" : "outline"} className={c.status === "ACTIVE" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(c.status, locale)}</Badge>
                     </Link>
                   ))}
                 </div>
@@ -275,7 +277,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                           {lr.reason && <p className="text-muted-foreground truncate max-w-[250px]">{lr.reason}</p>}
                         </div>
                         <div className="flex items-center gap-2">
-                          <Badge variant={lr.status === "APPROVED" ? "default" : lr.status === "REJECTED" ? "destructive" : lr.status === "PENDING" ? "outline" : "outline"} className={lr.status === "APPROVED" ? "bg-brand-success text-white border-transparent" : ""}>{lr.status}</Badge>
+                          <Badge variant={lr.status === "APPROVED" ? "default" : lr.status === "REJECTED" ? "destructive" : lr.status === "PENDING" ? "outline" : "outline"} className={lr.status === "APPROVED" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(lr.status, locale)}</Badge>
                           {canApproveLeave && lr.status === "PENDING" && (
                             <div className="flex gap-1">
                               <form action={async () => { "use server"; await approveLeaveRequestAction(lr.id); }}>
@@ -309,7 +311,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                         <p className="font-medium text-foreground">{ta.course?.title ?? "—"}</p>
                         <p className="text-muted-foreground">{t("scoreLabel")} {ta.score ?? "—"}</p>
                       </div>
-                      <Badge variant={ta.status === "COMPLETED" ? "default" : ta.status === "OVERDUE" ? "destructive" : "outline"} className={ta.status === "COMPLETED" ? "bg-brand-success text-white border-transparent" : ""}>{ta.status}</Badge>
+                      <Badge variant={ta.status === "COMPLETED" ? "default" : ta.status === "OVERDUE" ? "destructive" : "outline"} className={ta.status === "COMPLETED" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(ta.status, locale)}</Badge>
                     </div>
                   ))}
                 </div>
@@ -331,7 +333,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                         <p className="font-medium text-foreground">{aa.asset?.name ?? "—"}</p>
                         <p className="text-muted-foreground">{aa.asset?.code ?? "—"} · {aa.asset?.type ?? "—"}</p>
                       </div>
-                      <Badge variant={aa.status === "ASSIGNED" ? "default" : "outline"}>{aa.status}</Badge>
+                      <Badge variant={aa.status === "ASSIGNED" ? "default" : "outline"}>{getStatusLabel(aa.status, locale)}</Badge>
                     </div>
                   ))}
                 </div>
@@ -354,8 +356,8 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                         <p className="text-muted-foreground">{w.reason} · {new Date(w.date).toLocaleDateString()}</p>
                       </div>
                       <div className="flex items-center gap-1">
-                        <Badge variant={w.severity === "CRITICAL" || w.severity === "HIGH" ? "destructive" : "outline"}>{w.severity}</Badge>
-                        <Badge variant="outline">{w.status}</Badge>
+                        <Badge variant={w.severity === "CRITICAL" || w.severity === "HIGH" ? "destructive" : "outline"}>{getStatusLabel(w.severity, locale)}</Badge>
+                        <Badge variant="outline">{getStatusLabel(w.status, locale)}</Badge>
                       </div>
                     </div>
                   ))}
@@ -448,7 +450,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                         <p className="font-medium text-foreground">{ot.title}</p>
                         {ot.description && <p className="text-muted-foreground truncate max-w-[250px]">{ot.description}</p>}
                       </div>
-                      <Badge variant={ot.status === "COMPLETED" ? "default" : ot.status === "CANCELLED" ? "outline" : "outline"} className={ot.status === "COMPLETED" ? "bg-brand-success text-white border-transparent" : ot.status === "IN_PROGRESS" ? "bg-amber-50 text-amber-600 border-amber-200" : ""}>{ot.status.replace(/_/g, " ")}</Badge>
+                      <Badge variant={ot.status === "COMPLETED" ? "default" : ot.status === "CANCELLED" ? "outline" : "outline"} className={ot.status === "COMPLETED" ? "bg-brand-success text-white border-transparent" : ot.status === "IN_PROGRESS" ? "bg-amber-50 text-amber-600 border-amber-200" : ""}>{getStatusLabel(ot.status, locale)}</Badge>
                     </div>
                   ))}
                 </div>
@@ -475,7 +477,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                         <p className="font-medium text-foreground">{oft.title}</p>
                         {oft.description && <p className="text-muted-foreground truncate max-w-[250px]">{oft.description}</p>}
                       </div>
-                      <Badge variant={oft.status === "COMPLETED" ? "default" : "outline"} className={oft.status === "COMPLETED" ? "bg-brand-success text-white border-transparent" : oft.status === "IN_PROGRESS" ? "bg-amber-50 text-amber-600 border-amber-200" : ""}>{oft.status.replace(/_/g, " ")}</Badge>
+                      <Badge variant={oft.status === "COMPLETED" ? "default" : "outline"} className={oft.status === "COMPLETED" ? "bg-brand-success text-white border-transparent" : oft.status === "IN_PROGRESS" ? "bg-amber-50 text-amber-600 border-amber-200" : ""}>{getStatusLabel(oft.status, locale)}</Badge>
                     </div>
                   ))}
                 </div>

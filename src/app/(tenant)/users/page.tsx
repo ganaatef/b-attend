@@ -7,12 +7,14 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { UserForm } from "./UserForm";
 import { Users } from "lucide-react";
 import { formatDateTime } from "@/lib/utils";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
   const t = await getTranslations("users");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId) return null;
   if (session.role !== "COMPANY_OWNER" && session.role !== "HR_ADMIN") {
@@ -49,7 +51,7 @@ export default async function UsersPage() {
                     <td className="px-4 py-3 font-medium text-foreground">{u.name}{u.employee && <span className="ml-1 text-xs text-muted-foreground">({u.employee.employeeCode})</span>}</td>
                     <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
                     <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{u.role.replace(/_/g, " ")}</Badge></td>
-                    <td className="px-4 py-3"><Badge variant={u.status === "ACTIVE" ? "default" : "secondary"} className={u.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{u.status}</Badge></td>
+                    <td className="px-4 py-3"><Badge variant={u.status === "ACTIVE" ? "default" : "secondary"} className={u.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{getStatusLabel(u.status, locale)}</Badge></td>
                     <td className="hidden px-4 py-3 text-xs text-muted-foreground sm:table-cell">{u.lastLoginAt ? formatDateTime(u.lastLoginAt) : "—"}</td>
                   </tr>
                 ))}

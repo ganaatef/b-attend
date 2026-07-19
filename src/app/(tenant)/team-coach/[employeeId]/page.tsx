@@ -16,6 +16,7 @@ import { ArrowLeft, Brain, Lock } from "lucide-react";
 import { generateEmployeeCoachSummary } from "@/lib/coach/employee-summary";
 import { canUseAiFeature } from "@/lib/ai/feature-gates";
 import { RegenerateButton } from "./RegenerateButton";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +28,11 @@ const levelColor: Record<string, string> = {
 };
 
 export default async function EmployeeCoachDetailPage({ params }: { params: Promise<{ employeeId: string }> }) {
+  const t = await getTranslations("teamCoach");
   const session = await getSession();
   if (!session?.tenantId) return null;
   if (session.role === "EMPLOYEE") {
-    return <div className="p-4 text-sm text-muted-foreground">Employees cannot access this page.</div>;
+    return <div className="p-4 text-sm text-muted-foreground">{t("employeesCannotAccess")}</div>;
   }
 
   const { employeeId } = await params;
@@ -47,7 +49,7 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
     const user = await db.user.findUnique({ where: { id: session.sub } });
     const managed = await db.branch.findMany({ where: { companyId: session.tenantId, managerId: user?.id } });
     if (!managed.some((b) => b.id === employee.branchId)) {
-      return <div className="p-4 text-sm text-muted-foreground">You can only view employees in your assigned branch.</div>;
+      return <div className="p-4 text-sm text-muted-foreground">{t("branchOnly")}</div>;
     }
   }
 
@@ -59,9 +61,9 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
         <Card>
           <CardContent className="pt-6 text-center">
             <Lock className="mx-auto h-10 w-10 text-muted-foreground" />
-            <h2 className="mt-3 text-base font-semibold text-foreground">Employee Coach Summary is not available</h2>
+            <h2 className="mt-3 text-base font-semibold text-foreground">{t("featureGateTitle")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{gate.reason}</p>
-            <Link href="/billing" className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">View plans</Link>
+            <Link href="/billing" className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">{t("viewPlans")}</Link>
           </CardContent>
         </Card>
       </div>
@@ -92,7 +94,7 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <Link href="/team-coach" className="text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="inline h-3 w-3" /> Back to Team Coach</Link>
+        <Link href="/team-coach" className="text-xs text-muted-foreground hover:text-foreground"><ArrowLeft className="inline h-3 w-3" /> {t("backToTeamCoach")}</Link>
         <div className="mt-1 flex items-center gap-2">
           <Brain className="h-5 w-5 text-brand-accent" />
           <h1 className="text-lg font-bold text-foreground">{employee.fullName}</h1>
@@ -112,20 +114,20 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Consistency Score</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("consistencyScore")}</CardTitle>
                 <Badge className={`${levelColor[summary.level]} text-xs`}>{summary.level.replace(/_/g, " ")}</Badge>
               </div>
             </CardHeader>
             <CardContent>
               <p className="text-5xl font-bold text-foreground">{summary.score}<span className="text-lg font-normal text-muted-foreground">/100</span></p>
-              {summary.cached && <p className="mt-2 text-xs text-muted-foreground">Cached snapshot from a previous generation.</p>}
-              <p className="mt-2 text-xs text-muted-foreground">Risk level: {summary.riskLevel}</p>
+              {summary.cached && <p className="mt-2 text-xs text-muted-foreground">{t("cachedSnapshot")}</p>}
+              <p className="mt-2 text-xs text-muted-foreground">{t("riskLevel")}: {summary.riskLevel}</p>
             </CardContent>
           </Card>
 
           {/* Strengths */}
           <Card className="border-brand-success/30">
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Positive summary</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("positiveSummary")}</CardTitle></CardHeader>
             <CardContent>
               <p className="text-sm leading-relaxed text-foreground/90">{summary.positiveSummary}</p>
             </CardContent>
@@ -133,18 +135,18 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
 
           {/* Improvement areas */}
           <Card className="border-amber-300">
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Improvement areas</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("improvementAreas")}</CardTitle></CardHeader>
             <CardContent>
               {summary.improvementAreas.length > 0 ? (
                 <ul className="space-y-1.5">
                   {summary.improvementAreas.map((area, i) => <li key={i} className="text-sm text-foreground/90">→ {area}</li>)}
                 </ul>
               ) : (
-                <p className="text-sm text-muted-foreground">No specific improvement areas this period.</p>
+                <p className="text-sm text-muted-foreground">{t("noImprovementAreas")}</p>
               )}
-              <p className="mt-3 text-xs font-medium text-amber-700">Practical advice</p>
+              <p className="mt-3 text-xs font-medium text-amber-700">{t("practicalAdvice")}</p>
               <p className="mt-1 text-sm text-foreground/90">{summary.practicalAdvice}</p>
-              <p className="mt-3 text-xs font-medium text-brand-accent">Tomorrow action</p>
+              <p className="mt-3 text-xs font-medium text-brand-accent">{t("tomorrowAction")}</p>
               <p className="mt-1 text-sm text-foreground/90">{summary.tomorrowAction}</p>
             </CardContent>
           </Card>
@@ -152,7 +154,7 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
           {/* Tags */}
           {summary.tags.length > 0 && (
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Tags</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("tagsCard")}</CardTitle></CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-1.5">
                   {summary.tags.map((t) => <Badge key={t} variant="outline" className="text-xs">{t}</Badge>)}
@@ -164,13 +166,13 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
       ) : (
         <Card>
           <CardContent className="py-8">
-            <EmptyState title="No coaching data yet" description="This employee's coaching summary will appear after a few attendance records are available." icon={Brain} />
+            <EmptyState title={t("noCoachingData")} description={t("coachingDataDesc")} icon={Brain} />
           </CardContent>
         </Card>
       )}
 
       <p className="text-center text-xs text-muted-foreground">
-        AI insights are for coaching support only and should not be used as the sole basis for disciplinary decisions.
+        {t("aiDisclaimer")}
       </p>
     </div>
   );

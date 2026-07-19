@@ -9,6 +9,7 @@ import { Users, Plus } from "lucide-react";
 import { EmployeeForm } from "./EmployeeForm";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,7 @@ export default async function EmployeesPage() {
                     <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{e.branch?.name ?? "—"}</td>
                     <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{e.department?.name ?? "—"}</td>
                     <td className="hidden px-4 py-3 text-muted-foreground sm:table-cell">{e.jobTitle ?? "—"}</td>
-                    <td className="px-4 py-3"><Badge variant={e.status === "ACTIVE" ? "default" : "destructive"} className={e.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{e.status}</Badge></td>
+                    <td className="px-4 py-3"><Badge variant={e.status === "ACTIVE" ? "default" : "destructive"} className={e.status === "ACTIVE" ? "bg-brand-success text-white border-transparent text-xs" : "text-xs"}>{getStatusLabel(e.status, locale)}</Badge></td>
                   </tr>
                 ))}
               </tbody>

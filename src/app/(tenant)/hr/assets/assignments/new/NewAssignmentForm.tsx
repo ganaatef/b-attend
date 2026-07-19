@@ -9,11 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { assignAssetAction } from "../../../actions";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type AssetOption = { id: string; name: string; code: string | null; type: string };
 type EmployeeOption = { id: string; fullName: string; employeeCode: string };
 
 export function NewAssignmentForm({ availableAssets, employees }: { availableAssets: AssetOption[]; employees: EmployeeOption[] }) {
+  const t = useTranslations("hrAssets");
+  const tCommon = useTranslations("common");
   const router = useRouter();
   const [state, formAction] = useActionState(assignAssetAction, { ok: false, error: "" });
 
@@ -48,17 +51,17 @@ export function NewAssignmentForm({ availableAssets, employees }: { availableAss
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="conditionOnAssign">Condition on Assign</Label>
-        <Input id="conditionOnAssign" name="conditionOnAssign" placeholder="e.g. New, Good, Fair" />
+        <Label htmlFor="conditionOnAssign">{t("conditionOnAssign")}</Label>
+        <Input id="conditionOnAssign" name="conditionOnAssign" placeholder={t("conditionPlaceholder")} />
       </div>
 
       <div className="space-y-1.5">
-        <Label htmlFor="notes">Notes</Label>
-        <textarea id="notes" name="notes" rows={3} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" placeholder="Optional notes" />
+        <Label htmlFor="notes">{t("notesCard")}</Label>
+        <textarea id="notes" name="notes" rows={3} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" placeholder={t("optionalNotes")} />
       </div>
 
       <div className="flex justify-end gap-2">
-        <Link href="/hr/assets/assignments"><Button type="button" variant="outline" size="sm">Cancel</Button></Link>
+        <Link href="/hr/assets/assignments"><Button type="button" variant="outline" size="sm">{tCommon("cancel")}</Button></Link>
         <SubmitButton />
       </div>
     </form>
@@ -66,10 +69,11 @@ export function NewAssignmentForm({ availableAssets, employees }: { availableAss
 }
 
 function SubmitButton() {
+  const t = useTranslations("hrAssets");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" size="sm" disabled={pending}>
-      {pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Assigning...</> : "Assign Asset"}
+      {pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> {t("assigning")}</> : t("assignAssetBtn")}
     </Button>
   );
 }

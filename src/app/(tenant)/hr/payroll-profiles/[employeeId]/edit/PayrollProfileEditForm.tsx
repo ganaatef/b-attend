@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,9 +13,10 @@ import { updatePayrollProfileAction } from "../../../actions";
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("hrPayrollProfiles");
   return (
     <Button type="submit" size="sm" disabled={pending}>
-      {pending ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Saving...</> : "Save Changes"}
+      {pending ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> {t("saving")}</> : t("saveChanges")}
     </Button>
   );
 }
@@ -42,6 +44,7 @@ type FormState = { ok: boolean; error?: string; id?: string };
 
 export function PayrollProfileEditForm({ profile }: { profile: Profile }) {
   const router = useRouter();
+  const t = useTranslations("hrPayrollProfiles");
   const [state, formAction] = useActionState<FormState, FormData>(async (prev, formData) => {
     const data: Record<string, any> = {
       baseSalary: Number(formData.get("baseSalary")),
@@ -64,86 +67,86 @@ export function PayrollProfileEditForm({ profile }: { profile: Profile }) {
 
   return (
     <Card className="border-border">
-      <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Payroll Details</CardTitle></CardHeader>
+      <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("payrollDetails")}</CardTitle></CardHeader>
       <CardContent>
         <form action={formAction} className="space-y-4">
           {state && !state.ok && state.error && <p className="text-xs text-destructive">{state.error}</p>}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="baseSalary">Base Salary *</Label>
+              <Label htmlFor="baseSalary">{t("baseSalaryRequired")}</Label>
               <Input id="baseSalary" name="baseSalary" type="number" min="0" required defaultValue={profile.baseSalary} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="salaryType">Salary Type *</Label>
+              <Label htmlFor="salaryType">{t("salaryTypeRequired")}</Label>
               <select id="salaryType" name="salaryType" required defaultValue={profile.salaryType} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
-                <option value="MONTHLY">Monthly</option>
-                <option value="DAILY">Daily</option>
-                <option value="HOURLY">Hourly</option>
+                <option value="MONTHLY">{t("monthly")}</option>
+                <option value="DAILY">{t("daily")}</option>
+                <option value="HOURLY">{t("hourly")}</option>
               </select>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="currency">Currency</Label>
+              <Label htmlFor="currency">{t("currencyLabel")}</Label>
               <Input id="currency" name="currency" defaultValue={profile.currency} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="paymentMethod">Payment Method</Label>
+              <Label htmlFor="paymentMethod">{t("paymentMethodLabel")}</Label>
               <select id="paymentMethod" name="paymentMethod" defaultValue={profile.paymentMethod} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm">
-                <option value="BANK_TRANSFER">Bank Transfer</option>
-                <option value="CASH">Cash</option>
-                <option value="WALLET">Mobile Wallet</option>
-                <option value="CHEQUE">Cheque</option>
+                <option value="BANK_TRANSFER">{t("bankTransfer")}</option>
+                <option value="CASH">{t("cash")}</option>
+                <option value="WALLET">{t("mobileWallet")}</option>
+                <option value="CHEQUE">{t("cheque")}</option>
               </select>
             </div>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="bankName">Bank Name</Label>
-              <Input id="bankName" name="bankName" defaultValue={profile.bankName ?? ""} placeholder="Optional" />
+              <Label htmlFor="bankName">{t("bankNameLabel")}</Label>
+              <Input id="bankName" name="bankName" defaultValue={profile.bankName ?? ""} placeholder={t("optionalPlaceholder")} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="bankAccount">Bank Account</Label>
-              <Input id="bankAccount" name="bankAccount" defaultValue={profile.bankAccount ?? ""} placeholder="Optional" />
+              <Label htmlFor="bankAccount">{t("bankAccountLabel")}</Label>
+              <Input id="bankAccount" name="bankAccount" defaultValue={profile.bankAccount ?? ""} placeholder={t("optionalPlaceholder")} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="walletNumber">Wallet Number</Label>
-            <Input id="walletNumber" name="walletNumber" defaultValue={profile.walletNumber ?? ""} placeholder="Optional" />
+            <Label htmlFor="walletNumber">{t("walletNumberLabel")}</Label>
+            <Input id="walletNumber" name="walletNumber" defaultValue={profile.walletNumber ?? ""} placeholder={t("optionalPlaceholder")} />
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="dailyRate">Daily Rate</Label>
-              <Input id="dailyRate" name="dailyRate" type="number" min="0" defaultValue={profile.dailyRate ?? ""} placeholder="Optional" />
+              <Label htmlFor="dailyRate">{t("dailyRateLabel")}</Label>
+              <Input id="dailyRate" name="dailyRate" type="number" min="0" defaultValue={profile.dailyRate ?? ""} placeholder={t("optionalPlaceholder")} />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="hourlyRate">Hourly Rate</Label>
-              <Input id="hourlyRate" name="hourlyRate" type="number" min="0" defaultValue={profile.hourlyRate ?? ""} placeholder="Optional" />
+              <Label htmlFor="hourlyRate">{t("hourlyRateLabel")}</Label>
+              <Input id="hourlyRate" name="hourlyRate" type="number" min="0" defaultValue={profile.hourlyRate ?? ""} placeholder={t("optionalPlaceholder")} />
             </div>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="overtimeRateMultiplier">Overtime Rate Multiplier</Label>
+            <Label htmlFor="overtimeRateMultiplier">{t("overtimeRateMultiplier")}</Label>
             <Input id="overtimeRateMultiplier" name="overtimeRateMultiplier" type="number" min="0" step="0.1" defaultValue={profile.overtimeRateMultiplier} />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="lateDeductionRule">Late Deduction Rule</Label>
-            <textarea id="lateDeductionRule" name="lateDeductionRule" rows={2} defaultValue={profile.lateDeductionRule ?? ""} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" placeholder="e.g. 50 per occurrence" />
+            <Label htmlFor="lateDeductionRule">{t("lateDeductionRule")}</Label>
+            <textarea id="lateDeductionRule" name="lateDeductionRule" rows={2} defaultValue={profile.lateDeductionRule ?? ""} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" placeholder={t("lateDeductionPlaceholder")} />
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="absenceDeductionRule">Absence Deduction Rule</Label>
-            <textarea id="absenceDeductionRule" name="absenceDeductionRule" rows={2} defaultValue={profile.absenceDeductionRule ?? ""} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" placeholder="e.g. Daily salary / 22 per day" />
+            <Label htmlFor="absenceDeductionRule">{t("absenceDeductionRule")}</Label>
+            <textarea id="absenceDeductionRule" name="absenceDeductionRule" rows={2} defaultValue={profile.absenceDeductionRule ?? ""} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm" placeholder={t("absenceDeductionPlaceholder")} />
           </div>
 
           <div className="flex justify-end gap-2">
-            <a href={`/hr/payroll-profiles/${profile.employeeId}`}><Button type="button" variant="outline" size="sm">Cancel</Button></a>
+            <a href={`/hr/payroll-profiles/${profile.employeeId}`}><Button type="button" variant="outline" size="sm">{t("cancel")}</Button></a>
             <SubmitButton />
           </div>
         </form>

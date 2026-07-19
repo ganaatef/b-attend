@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ export default async function OffboardingPage() {
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrOffboarding");
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
@@ -26,8 +28,8 @@ export default async function OffboardingPage() {
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">HR Module requires Starter plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access HR features."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -90,51 +92,51 @@ export default async function OffboardingPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <div>
-        <Link href="/hr" className="text-xs text-muted-foreground hover:text-foreground">&larr; HR Dashboard</Link>
-        <h1 className="mt-1 text-lg font-bold text-foreground">Offboarding</h1>
-        <p className="text-sm text-muted-foreground">{totalEmployees} employees in offboarding</p>
+        <Link href="/hr" className="text-xs text-muted-foreground hover:text-foreground">&larr; {t("backToHR")}</Link>
+        <h1 className="mt-1 text-lg font-bold text-foreground">{t("offboardingTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{totalEmployees} {t("employeesInOffboarding")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totalEmployees}</p>
-          <p className="text-xs text-muted-foreground">Employees in offboarding</p>
+          <p className="text-xs text-muted-foreground">{t("employeesInOffboardingCount")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
-          <p className="text-xs text-muted-foreground">Tasks pending</p>
+          <p className="text-xs text-muted-foreground">{t("tasksPending")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{completedCount}</p>
-          <p className="text-xs text-muted-foreground">Tasks completed</p>
+          <p className="text-xs text-muted-foreground">{t("tasksCompleted")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{finalizedCount}</p>
-          <p className="text-xs text-muted-foreground">Employees finalized</p>
+          <p className="text-xs text-muted-foreground">{t("employeesFinalized")}</p>
         </Card>
       </div>
 
       {canManage && eligibleEmployees.length > 0 && (
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-foreground">Start Offboarding</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("startOffboarding")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={async (formData: FormData) => { "use server"; await startOffboardingAction({}, formData); }} className="flex items-end gap-2">
               <div className="flex-1">
-                <Label htmlFor="offboard-emp" className="sr-only">Employee</Label>
+                <Label htmlFor="offboard-emp" className="sr-only">{t("employeeLabel")}</Label>
                 <select name="employeeId" id="offboard-emp" required className="flex h-8 w-full rounded-md border border-border bg-card px-2 text-xs text-foreground">
-                  <option value="">Select employee...</option>
+                  <option value="">{t("selectEmployee")}</option>
                   {eligibleEmployees.map((emp) => (
                     <option key={emp.id} value={emp.id}>{emp.fullName} ({emp.employeeCode})</option>
                   ))}
                 </select>
               </div>
               <div className="w-40">
-                <Label htmlFor="offboard-day" className="sr-only">Last working day</Label>
+                <Label htmlFor="offboard-day" className="sr-only">{t("lastWorkingDay")}</Label>
                 <input id="offboard-day" name="lastWorkingDay" type="date" required className="flex h-8 w-full rounded-md border border-border bg-card px-2 text-xs text-foreground" />
               </div>
-              <Button type="submit" size="sm" className="h-8">Start</Button>
+              <Button type="submit" size="sm" className="h-8">{t("startBtn")}</Button>
             </form>
           </CardContent>
         </Card>
@@ -142,11 +144,11 @@ export default async function OffboardingPage() {
 
       <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-foreground">Employees</CardTitle>
+          <CardTitle className="text-sm font-semibold text-foreground">{t("employeesCard")}</CardTitle>
         </CardHeader>
         <CardContent>
           {employeesWithOffboarding.length === 0 ? (
-            <EmptyState title="No employees in offboarding" icon={UserMinus} />
+            <EmptyState title={t("noEmployeesOffboarding")} icon={UserMinus} />
           ) : (
             <div className="divide-y divide-border/60">
               {employeesWithOffboarding.map((emp) => {
@@ -170,7 +172,7 @@ export default async function OffboardingPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <p className="text-xs font-medium text-foreground">{done}/{total} tasks</p>
+                        <p className="text-xs font-medium text-foreground">{done}/{total} {t("tasksLabel")}</p>
                         <div className="mt-1 h-1.5 w-24 rounded-full bg-muted">
                           <div className="h-full rounded-full bg-brand-accent" style={{ width: `${pct}%` }} />
                         </div>

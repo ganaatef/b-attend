@@ -52,7 +52,7 @@ export default async function BillingPage() {
                 <span className="text-sm font-normal text-muted-foreground"> /{subscription.billingCycle === "MONTHLY" ? t("perMonth") : t("perYear")}</span>
               </div>
               <div className="text-xs text-muted-foreground">
-                Period: {subscription.currentPeriodStart ? new Date(subscription.currentPeriodStart).toLocaleDateString() : "—"} → {subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : "—"}
+                {t("periodLabel")}: {subscription.currentPeriodStart ? new Date(subscription.currentPeriodStart).toLocaleDateString() : "—"} → {subscription.currentPeriodEnd ? new Date(subscription.currentPeriodEnd).toLocaleDateString() : "—"}
               </div>
               {subscription.trialEndsAt && (
                 <div className="rounded-md border border-amber-300 bg-amber-50/40 p-2 text-xs text-amber-800">
@@ -68,10 +68,10 @@ export default async function BillingPage() {
         <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("planUsage")}</CardTitle></CardHeader>
         <CardContent>
           <div className="grid gap-3 sm:grid-cols-4">
-            <Usage label="Branches" used={planUsage.branches} limit={plan?.maxBranches} />
-            <Usage label="Employees" used={planUsage.employees} limit={plan?.maxEmployees} />
-            <Usage label="Managers" used={planUsage.managers} limit={plan?.maxManagers} />
-            <Usage label="Kiosks" used={0} limit={plan?.maxKiosks} />
+            <Usage label={t("branchesLabel")} used={planUsage.branches} limit={plan?.maxBranches} />
+            <Usage label={t("employeesLabel")} used={planUsage.employees} limit={plan?.maxEmployees} />
+            <Usage label={t("managersLabel")} used={planUsage.managers} limit={plan?.maxManagers} />
+            <Usage label={t("kiosksLabel")} used={0} limit={plan?.maxKiosks} />
           </div>
           {plan?.features && (
             <div className="mt-4">

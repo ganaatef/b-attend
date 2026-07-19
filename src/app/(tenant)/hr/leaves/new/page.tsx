@@ -5,6 +5,7 @@ import { getRolePermissions, type HrPermission } from "@/lib/hr/permissions";
 import { Card } from "@/components/ui/card";
 import { Lock } from "lucide-react";
 import NewLeaveRequestClient from "./NewLeaveRequestClient";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +14,7 @@ function hasPerm(role: string, perm: HrPermission): boolean {
 }
 
 export default async function NewLeaveRequestPage() {
+  const t = await getTranslations("hrLeaves");
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
@@ -26,8 +28,8 @@ export default async function NewLeaveRequestPage() {
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">Leave Management requires Growth plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access leave features."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -40,8 +42,8 @@ export default async function NewLeaveRequestPage() {
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">Permission Required</h3>
-            <p className="mt-1 text-xs text-muted-foreground">You do not have permission to create leave requests.</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("permissionRequired")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{t("noPermission")}</p>
           </div>
         </Card>
       </div>

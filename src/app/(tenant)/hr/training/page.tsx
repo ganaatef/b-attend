@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GraduationCap, BookOpen, Plus, AlertTriangle, CheckCircle2, Clock, Eye, Lock } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
   const t = await getTranslations("hrTraining");
+  const locale = await getLocale();
 
   const featureCheck = await canUseHrFeature(tid, "hr_training");
   if (!featureCheck.allowed) {
@@ -195,7 +197,7 @@ export default async function TrainingPage({ searchParams }: { searchParams: Pro
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <Badge variant={a.status === "COMPLETED" ? "default" : "outline"} className={`text-[10px] ${statusColor(a.status)}`}>{a.status.replace(/_/g, " ")}</Badge>
+                        <Badge variant={a.status === "COMPLETED" ? "default" : "outline"} className={`text-[10px] ${statusColor(a.status)}`}>{getStatusLabel(a.status, locale)}</Badge>
                         <Eye className="h-4 w-4 text-muted-foreground" />
                       </div>
                     </Link>

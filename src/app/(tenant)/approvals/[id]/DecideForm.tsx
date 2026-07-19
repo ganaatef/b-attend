@@ -7,8 +7,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { decideRequestAction } from "../actions";
 import { Check, X, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function DecideForm({ requestId }: { requestId: string }) {
+  const t = useTranslations("approvals");
   const [state, formAction] = useActionState(decideRequestAction, { ok: false });
   const { pending } = useFormStatus();
 
@@ -16,17 +18,17 @@ export function DecideForm({ requestId }: { requestId: string }) {
     <form action={formAction} className="space-y-3">
       <input type="hidden" name="requestId" value={requestId} />
       <div>
-        <Label htmlFor="managerNotes">Notes (optional)</Label>
-        <Textarea id="managerNotes" name="managerNotes" rows={3} placeholder="Notes visible to the employee..." />
+        <Label htmlFor="managerNotes">{t("notesOptional")}</Label>
+        <Textarea id="managerNotes" name="managerNotes" rows={3} placeholder={t("notesPlaceholder")} />
       </div>
       {state.error && <p className="text-xs text-destructive">{state.error}</p>}
-      {state.ok && <p className="text-xs text-brand-success">Decision recorded.</p>}
+      {state.ok && <p className="text-xs text-brand-success">{t("decisionRecorded")}</p>}
       <div className="flex gap-2">
         <Button type="submit" name="decision" value="APPROVED" disabled={pending} className="bg-brand-success hover:bg-brand-success/90">
-          {pending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />} Approve
+          {pending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <Check className="mr-1.5 h-3.5 w-3.5" />} {t("approve")}
         </Button>
         <Button type="submit" name="decision" value="REJECTED" variant="destructive" disabled={pending}>
-          {pending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <X className="mr-1.5 h-3.5 w-3.5" />} Reject
+          {pending ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <X className="mr-1.5 h-3.5 w-3.5" />} {t("reject")}
         </Button>
       </div>
     </form>

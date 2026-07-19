@@ -16,7 +16,8 @@ import {
   disableEmployeeUserAccessAction,
   finalizeOffboardingAction,
 } from "../../actions";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 import { UserMinus, CheckCircle2, XCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -34,6 +35,7 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
 
   const canManage = hasPerm(session.role, "MANAGE_OFFBOARDING");
   const t = await getTranslations("hrOffboarding");
+  const locale = await getLocale();
 
   const employee = await db.employee.findFirst({
     where: { id: employeeId, companyId: tid, deletedAt: null },
@@ -53,11 +55,11 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
 
   const taskStatusBadge = (status: string) => {
     switch (status) {
-      case "PENDING": return <Badge variant="outline" className="text-[10px]">PENDING</Badge>;
-      case "IN_PROGRESS": return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600 bg-amber-50">IN PROGRESS</Badge>;
-      case "COMPLETED": return <Badge variant="default" className="text-[10px] bg-emerald-600 text-white border-transparent">COMPLETED</Badge>;
-      case "CANCELLED": return <Badge variant="outline" className="text-[10px] text-muted-foreground">CANCELLED</Badge>;
-      default: return <Badge variant="outline" className="text-[10px]">{status}</Badge>;
+      case "PENDING": return <Badge variant="outline" className="text-[10px]">{getStatusLabel(status, locale)}</Badge>;
+      case "IN_PROGRESS": return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600 bg-amber-50">{getStatusLabel(status, locale)}</Badge>;
+      case "COMPLETED": return <Badge variant="default" className="text-[10px] bg-emerald-600 text-white border-transparent">{getStatusLabel(status, locale)}</Badge>;
+      case "CANCELLED": return <Badge variant="outline" className="text-[10px] text-muted-foreground">{getStatusLabel(status, locale)}</Badge>;
+      default: return <Badge variant="outline" className="text-[10px]">{getStatusLabel(status, locale)}</Badge>;
     }
   };
 
@@ -73,7 +75,7 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>{employee.employeeCode}</span>
               <span>&middot;</span>
-              <Badge variant={employee.status === "LEFT" ? "default" : "outline"} className={`text-[10px] ${employee.status === "LEFT" ? "bg-brand-success text-white border-transparent" : ""}`}>{employee.status}</Badge>
+              <Badge variant={employee.status === "LEFT" ? "default" : "outline"} className={`text-[10px] ${employee.status === "LEFT" ? "bg-brand-success text-white border-transparent" : ""}`}>{getStatusLabel(employee.status, locale)}</Badge>
               <span>&middot;</span>
               <span>{employee.branch?.name ?? "—"}</span>
             </div>

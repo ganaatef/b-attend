@@ -4,12 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { GraduationCap } from "lucide-react";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
 export default async function MyTrainingPage() {
   const t = await getTranslations("myTraining");
+  const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
 
@@ -51,15 +53,15 @@ export default async function MyTrainingPage() {
       case "OVERDUE":
         return <Badge variant="destructive">{t("overdue")}</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline">{getStatusLabel(status, locale)}</Badge>;
     }
   };
 
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-foreground">My Training</h1>
-        <p className="text-sm text-muted-foreground">View your training assignments and progress.</p>
+        <h1 className="text-lg font-bold text-foreground">{t("myTrainingTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{t("myTrainingSubtitle")}</p>
       </div>
 
       <Card className="border-border">

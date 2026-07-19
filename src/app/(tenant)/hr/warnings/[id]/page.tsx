@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
+import { getStatusLabel } from "@/lib/status-labels";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
   if (session.role === "EMPLOYEE") return null;
 
   const t = await getTranslations("hrWarnings");
+  const locale = await getLocale();
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
@@ -59,28 +61,28 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
     switch (sev) {
       case "CRITICAL":
       case "HIGH":
-        return <Badge variant="destructive" className="text-[10px]">{sev}</Badge>;
+        return <Badge variant="destructive" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
       case "MEDIUM":
-        return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600">{sev}</Badge>;
+        return <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-600">{getStatusLabel(sev, locale)}</Badge>;
       case "LOW":
-        return <Badge variant="default" className="text-[10px]">{sev}</Badge>;
+        return <Badge variant="default" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{sev}</Badge>;
+        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(sev, locale)}</Badge>;
     }
   };
 
   const statusBadge = (st: string) => {
     switch (st) {
       case "OPEN":
-        return <Badge variant="outline" className="text-[10px]">{st}</Badge>;
+        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(st, locale)}</Badge>;
       case "ACKNOWLEDGED":
-        return <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 border-blue-200">{st}</Badge>;
+        return <Badge variant="outline" className="text-[10px] bg-blue-50 text-blue-600 border-blue-200">{getStatusLabel(st, locale)}</Badge>;
       case "RESOLVED":
-        return <Badge variant="default" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">{st}</Badge>;
+        return <Badge variant="default" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">{getStatusLabel(st, locale)}</Badge>;
       case "CANCELLED":
-        return <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">{st}</Badge>;
+        return <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">{getStatusLabel(st, locale)}</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px]">{st}</Badge>;
+        return <Badge variant="outline" className="text-[10px]">{getStatusLabel(st, locale)}</Badge>;
     }
   };
 

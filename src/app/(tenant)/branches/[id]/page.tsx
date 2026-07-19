@@ -6,10 +6,12 @@ import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Building2, Users, CalendarClock } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function BranchDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("branches");
   const session = await getSession();
   if (!session?.tenantId) return null;
   const { id } = await params;
@@ -29,14 +31,14 @@ export default async function BranchDetailPage({ params }: { params: Promise<{ i
         <p className="text-sm text-muted-foreground">{branch.code} · {branch.address ?? branch.city ?? "No address"}</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Geofence radius</p><p className="text-lg font-bold text-foreground">{branch.geofenceRadius}m</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Employees</p><p className="text-lg font-bold text-foreground">{employees.length}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Scheduled today</p><p className="text-lg font-bold text-foreground">{schedulesToday.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">{t("geofenceRadius")}</p><p className="text-lg font-bold text-foreground">{branch.geofenceRadius}m</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">{t("employeesLabel")}</p><p className="text-lg font-bold text-foreground">{employees.length}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">{t("scheduledToday")}</p><p className="text-lg font-bold text-foreground">{schedulesToday.length}</p></CardContent></Card>
       </div>
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Employees at this branch</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("employeesAtBranch")}</CardTitle></CardHeader>
         <CardContent>
-          {employees.length === 0 ? <EmptyState title="No employees" icon={Users} /> : (
+          {employees.length === 0 ? <EmptyState title={t("noEmployees")} icon={Users} /> : (
             <div className="grid gap-2 sm:grid-cols-2">
               {employees.map((e) => (
                 <Link key={e.id} href={`/employees/${e.id}`} className="flex items-center justify-between rounded-md border border-border bg-card px-3 py-2 text-sm hover:bg-muted/40">

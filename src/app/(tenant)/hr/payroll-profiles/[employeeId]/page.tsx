@@ -9,6 +9,7 @@ import { getRolePermissions, type HrPermission } from "@/lib/hr/permissions";
 import { deactivatePayrollProfileAction } from "../../actions";
 import { Wallet } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function PayrollProfileDetailPage({
 }: {
   params: Promise<{ employeeId: string }>;
 }) {
+  const t = await getTranslations("hrPayrollProfiles");
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "BRANCH_MANAGER" || session.role === "EMPLOYEE") return null;
@@ -50,17 +52,17 @@ export default async function PayrollProfileDetailPage({
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
-        <Link href="/hr/payroll-profiles" className="text-xs text-muted-foreground hover:text-foreground">← Payroll Profiles</Link>
+        <Link href="/hr/payroll-profiles" className="text-xs text-muted-foreground hover:text-foreground">{t("backToProfiles")}</Link>
         <div className="mt-1 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-foreground">Payroll Profile</h1>
+            <h1 className="text-lg font-bold text-foreground">{t("payrollProfile")}</h1>
             <p className="text-sm text-muted-foreground">{profile.employee.fullName} ({profile.employee.employeeCode})</p>
           </div>
           <div className="flex items-center gap-2">
             {profile.active ? (
-              <Badge variant="default" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">Active</Badge>
+              <Badge variant="default" className="text-[10px] bg-emerald-50 text-emerald-600 border-emerald-200">{t("activeBadge")}</Badge>
             ) : (
-              <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">Inactive</Badge>
+              <Badge variant="outline" className="text-[10px] bg-muted text-muted-foreground">{t("inactiveBadge")}</Badge>
             )}
           </div>
         </div>
@@ -68,52 +70,52 @@ export default async function PayrollProfileDetailPage({
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Employee</p>
+          <p className="text-xs text-muted-foreground">{t("employeeLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{profile.employee.fullName}</p>
           <p className="text-[10px] text-muted-foreground">{profile.employee.employeeCode}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Branch</p>
+          <p className="text-xs text-muted-foreground">{t("branchLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{profile.employee.branch?.name ?? "—"}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Department</p>
+          <p className="text-xs text-muted-foreground">{t("departmentLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{profile.employee.department?.name ?? "—"}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Salary Type</p>
+          <p className="text-xs text-muted-foreground">{t("salaryTypeLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{profile.salaryType}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Base Salary</p>
+          <p className="text-xs text-muted-foreground">{t("baseSalaryLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{formatNumber(profile.baseSalary)} {profile.currency}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Payment Method</p>
+          <p className="text-xs text-muted-foreground">{t("paymentMethodLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{profile.paymentMethod.replace(/_/g, " ")}</p>
         </Card>
       </div>
 
       {(profile.bankName || profile.bankAccount || profile.walletNumber) && (
         <Card className="border-border">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">Payment Details</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">{t("paymentDetails")}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-3">
               {profile.bankName && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Bank Name</p>
+                  <p className="text-xs text-muted-foreground">{t("bankNameLabel")}</p>
                   <p className="text-sm font-semibold text-foreground">{profile.bankName}</p>
                 </div>
               )}
               {profile.bankAccount && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Bank Account</p>
+                  <p className="text-xs text-muted-foreground">{t("bankAccountLabel")}</p>
                   <p className="text-sm font-semibold text-foreground">{profile.bankAccount}</p>
                 </div>
               )}
               {profile.walletNumber && (
                 <div>
-                  <p className="text-xs text-muted-foreground">Wallet Number</p>
+                  <p className="text-xs text-muted-foreground">{t("walletNumberLabel")}</p>
                   <p className="text-sm font-semibold text-foreground">{profile.walletNumber}</p>
                 </div>
               )}
@@ -125,33 +127,33 @@ export default async function PayrollProfileDetailPage({
       <div className="grid gap-4 sm:grid-cols-3">
         {profile.dailyRate != null && (
           <Card className="border-border p-4">
-            <p className="text-xs text-muted-foreground">Daily Rate</p>
+            <p className="text-xs text-muted-foreground">{t("dailyRateLabel")}</p>
             <p className="text-sm font-semibold text-foreground">{formatNumber(profile.dailyRate)} {profile.currency}</p>
           </Card>
         )}
         {profile.hourlyRate != null && (
           <Card className="border-border p-4">
-            <p className="text-xs text-muted-foreground">Hourly Rate</p>
+            <p className="text-xs text-muted-foreground">{t("hourlyRateLabel")}</p>
             <p className="text-sm font-semibold text-foreground">{formatNumber(profile.hourlyRate)} {profile.currency}</p>
           </Card>
         )}
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Overtime Multiplier</p>
+          <p className="text-xs text-muted-foreground">{t("overtimeMultiplier")}</p>
           <p className="text-sm font-semibold text-foreground">{profile.overtimeRateMultiplier}x</p>
         </Card>
       </div>
 
       {(profile.lateDeductionRule || profile.absenceDeductionRule) && (
         <Card className="border-border">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">Deduction Rules</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">{t("deductionRules")}</CardTitle></CardHeader>
           <CardContent>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <p className="text-xs text-muted-foreground">Late Deduction Rule</p>
+                <p className="text-xs text-muted-foreground">{t("lateDeductionRule")}</p>
                 <p className="text-sm font-semibold text-foreground">{profile.lateDeductionRule ?? "—"}</p>
               </div>
               <div>
-                <p className="text-xs text-muted-foreground">Absence Deduction Rule</p>
+                <p className="text-xs text-muted-foreground">{t("absenceDeductionRule")}</p>
                 <p className="text-sm font-semibold text-foreground">{profile.absenceDeductionRule ?? "—"}</p>
               </div>
             </div>
@@ -160,18 +162,18 @@ export default async function PayrollProfileDetailPage({
       )}
 
       <Card className="border-border p-4">
-        <p className="text-xs text-muted-foreground">Created</p>
+        <p className="text-xs text-muted-foreground">{t("createdLabel")}</p>
         <p className="text-sm font-semibold text-foreground">{new Date(profile.createdAt).toLocaleDateString()}</p>
       </Card>
 
       <Card className="border-border">
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Links</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("linksCard")}</CardTitle></CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Link
             href={`/employees/${profile.employeeId}`}
             className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40"
           >
-            Employee Profile
+            {t("employeeProfile")}
           </Link>
           {canManage && (
             <>
@@ -179,7 +181,7 @@ export default async function PayrollProfileDetailPage({
                 href={`/hr/payroll-profiles/${profile.employeeId}/edit`}
                 className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40"
               >
-                Edit Profile
+                {t("editProfile")}
               </Link>
               {profile.active && (
                 <form action={async () => {
@@ -187,7 +189,7 @@ export default async function PayrollProfileDetailPage({
                   await deactivatePayrollProfileAction(profile.id);
                 }}>
                   <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5">
-                    Deactivate
+                    {t("deactivateBtn")}
                   </button>
                 </form>
               )}

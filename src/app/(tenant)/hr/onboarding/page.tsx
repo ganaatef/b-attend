@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ export default async function OnboardingPage() {
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrOnboarding");
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
@@ -27,8 +29,8 @@ export default async function OnboardingPage() {
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">HR Module requires Starter plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access HR features."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -92,47 +94,47 @@ export default async function OnboardingPage() {
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <div>
-        <Link href="/hr" className="text-xs text-muted-foreground hover:text-foreground">&larr; HR Dashboard</Link>
-        <h1 className="mt-1 text-lg font-bold text-foreground">Onboarding</h1>
-        <p className="text-sm text-muted-foreground">{totalEmployees} employees with onboarding tasks</p>
+        <Link href="/hr" className="text-xs text-muted-foreground hover:text-foreground">&larr; {t("backToHR")}</Link>
+        <h1 className="mt-1 text-lg font-bold text-foreground">{t("onboardingTitle")}</h1>
+        <p className="text-sm text-muted-foreground">{totalEmployees} {t("employeesWithTasks")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totalEmployees}</p>
-          <p className="text-xs text-muted-foreground">Employees in onboarding</p>
+          <p className="text-xs text-muted-foreground">{t("employeesInOnboarding")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{pendingCount}</p>
-          <p className="text-xs text-muted-foreground">Tasks pending</p>
+          <p className="text-xs text-muted-foreground">{t("tasksPending")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{completedCount}</p>
-          <p className="text-xs text-muted-foreground">Tasks completed</p>
+          <p className="text-xs text-muted-foreground">{t("tasksCompleted")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{overdueCount}</p>
-          <p className="text-xs text-muted-foreground">Tasks overdue</p>
+          <p className="text-xs text-muted-foreground">{t("tasksOverdue")}</p>
         </Card>
       </div>
 
       {canManage && allEmployees.length > 0 && (
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-foreground">Create Default Checklist</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("createDefaultChecklist")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={async (formData: FormData) => { "use server"; await createDefaultOnboardingChecklistAction(formData.get("employeeId") as string); }} className="flex items-end gap-2">
               <div className="flex-1">
-                <Label htmlFor="emp-select" className="sr-only">Employee</Label>
+                <Label htmlFor="emp-select" className="sr-only">{t("employeeLabel")}</Label>
                 <select name="employeeId" id="emp-select" required className="flex h-8 w-full rounded-md border border-border bg-card px-2 text-xs text-foreground">
-                  <option value="">Select employee...</option>
+                  <option value="">{t("selectEmployee")}</option>
                   {allEmployees.map((emp) => (
                     <option key={emp.id} value={emp.id}>{emp.fullName} ({emp.employeeCode})</option>
                   ))}
                 </select>
               </div>
-              <Button type="submit" size="sm" className="h-8">Create</Button>
+              <Button type="submit" size="sm" className="h-8">{t("createBtn")}</Button>
             </form>
           </CardContent>
         </Card>
@@ -140,11 +142,11 @@ export default async function OnboardingPage() {
 
       <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-foreground">Employees</CardTitle>
+          <CardTitle className="text-sm font-semibold text-foreground">{t("employeesCard")}</CardTitle>
         </CardHeader>
         <CardContent>
           {employeesWithOnboarding.length === 0 ? (
-            <EmptyState title="No employees in onboarding" icon={ClipboardList} />
+            <EmptyState title={t("noEmployeesOnboarding")} icon={ClipboardList} />
           ) : (
             <div className="divide-y divide-border/60">
               {employeesWithOnboarding.map((emp) => {
@@ -165,7 +167,7 @@ export default async function OnboardingPage() {
                     </div>
                     <div className="flex items-center gap-3">
                       <div className="text-right">
-                        <p className="text-xs font-medium text-foreground">{done}/{total} tasks</p>
+                        <p className="text-xs font-medium text-foreground">{done}/{total} {t("tasksLabel")}</p>
                         <div className="mt-1 h-1.5 w-24 rounded-full bg-muted">
                           <div className="h-full rounded-full bg-brand-accent" style={{ width: `${pct}%` }} />
                         </div>

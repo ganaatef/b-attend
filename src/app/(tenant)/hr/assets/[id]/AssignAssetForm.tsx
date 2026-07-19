@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { assignAssetAction } from "../../actions";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export function AssignAssetForm({ assetId }: { assetId: string }) {
+  const t = useTranslations("hrAssets");
   const [state, formAction] = useActionState(assignAssetAction, { ok: false, error: "" });
 
   if (state.ok) {
-    return <p className="text-xs text-brand-success">Asset assigned successfully.</p>;
+    return <p className="text-xs text-brand-success">{t("assetAssigned")}</p>;
   }
 
   return (
@@ -21,17 +23,17 @@ export function AssignAssetForm({ assetId }: { assetId: string }) {
       {state.error && <p className="text-xs text-destructive">{state.error}</p>}
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label htmlFor="employeeId">Employee ID *</Label>
-          <Input id="employeeId" name="employeeId" required placeholder="Employee ID" />
+          <Label htmlFor="employeeId">{t("employeeIdLabel")}</Label>
+          <Input id="employeeId" name="employeeId" required placeholder={t("employeeIdPlaceholder")} />
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="conditionOnAssign">Condition on Assign</Label>
-          <Input id="conditionOnAssign" name="conditionOnAssign" placeholder="e.g. New, Good" />
+          <Label htmlFor="conditionOnAssign">{t("conditionOnAssign")}</Label>
+          <Input id="conditionOnAssign" name="conditionOnAssign" placeholder={t("conditionPlaceholder")} />
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="assign-notes">Notes</Label>
-        <Input id="assign-notes" name="notes" placeholder="Optional notes" />
+        <Label htmlFor="assign-notes">{t("notesCard")}</Label>
+        <Input id="assign-notes" name="notes" placeholder={t("optionalNotes")} />
       </div>
       <div className="flex justify-end">
         <SubmitButton />
@@ -41,10 +43,11 @@ export function AssignAssetForm({ assetId }: { assetId: string }) {
 }
 
 function SubmitButton() {
+  const t = useTranslations("hrAssets");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" size="sm" disabled={pending}>
-      {pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Assigning...</> : "Assign Asset"}
+      {pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> {t("assigning")}</> : t("assignAssetBtn")}
     </Button>
   );
 }

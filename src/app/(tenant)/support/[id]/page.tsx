@@ -7,10 +7,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TicketReplyForm } from "./TicketReplyForm";
 import { formatDateTime } from "@/lib/utils";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("support");
   const session = await getSession();
   if (!session?.tenantId) return null;
   const { id } = await params;
@@ -20,13 +22,13 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <Link href="/support" className="text-xs text-muted-foreground hover:text-foreground">← Support</Link>
+        <Link href="/support" className="text-xs text-muted-foreground hover:text-foreground">← {t("backToSupport")}</Link>
         <h1 className="mt-1 text-lg font-bold text-foreground">{ticket.subject}</h1>
-        <p className="text-sm text-muted-foreground">{ticket.category ?? "Uncategorized"} · {ticket.priority} priority</p>
+        <p className="text-sm text-muted-foreground">{ticket.category ?? t("uncategorized")} · {ticket.priority} {t("priorityLabel")}</p>
         <Badge variant="outline" className="mt-2 text-xs">{ticket.status.replace(/_/g, " ")}</Badge>
       </div>
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Conversation</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("conversationCard")}</CardTitle></CardHeader>
         <CardContent>
           <div className="space-y-3 max-h-[50vh] overflow-y-auto battend-scroll">
             {ticket.messages.map((m) => (
@@ -43,7 +45,7 @@ export default async function TicketDetailPage({ params }: { params: Promise<{ i
       </Card>
       {ticket.status !== "CLOSED" && ticket.status !== "RESOLVED" && (
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Reply</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("replyCard")}</CardTitle></CardHeader>
           <CardContent><TicketReplyForm ticketId={ticket.id} /></CardContent>
         </Card>
       )}

@@ -2,6 +2,7 @@
 
 import { useState, useActionState } from "react";
 import { useFormStatus } from "react-dom";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +14,7 @@ import { Loader2, Moon, Sun } from "lucide-react";
 export function ScheduleForm({ branches, employees, policies }: { branches: Branch[]; employees: Employee[]; policies: ShiftPolicy[] }) {
   const [state, formAction] = useActionState(createScheduleAction, { ok: false });
   const { pending } = useFormStatus();
+  const t = useTranslations("schedules");
 
   const [policyId, setPolicyId] = useState("");
   const [plannedStart, setPlannedStart] = useState("");
@@ -56,39 +58,39 @@ export function ScheduleForm({ branches, employees, policies }: { branches: Bran
   return (
     <form action={formAction} className="grid gap-3 sm:grid-cols-5">
       <div className="sm:col-span-2">
-        <Label htmlFor="employeeId">Employee *</Label>
-        <Select name="employeeId" required><SelectTrigger id="employeeId"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.id}>{e.fullName} ({e.employeeCode})</SelectItem>)}</SelectContent></Select>
+        <Label htmlFor="employeeId">{t("employeeRequired")}</Label>
+        <Select name="employeeId" required><SelectTrigger id="employeeId"><SelectValue placeholder={t("selectPlaceholder")} /></SelectTrigger><SelectContent>{employees.map((e) => <SelectItem key={e.id} value={e.id}>{e.fullName} ({e.employeeCode})</SelectItem>)}</SelectContent></Select>
       </div>
       <div>
-        <Label htmlFor="branchId">Branch *</Label>
-        <Select name="branchId" required><SelectTrigger id="branchId"><SelectValue placeholder="Select" /></SelectTrigger><SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
+        <Label htmlFor="branchId">{t("branchRequired")}</Label>
+        <Select name="branchId" required><SelectTrigger id="branchId"><SelectValue placeholder={t("selectPlaceholder")} /></SelectTrigger><SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent></Select>
       </div>
       <div>
-        <Label htmlFor="date">Date *</Label>
+        <Label htmlFor="date">{t("dateRequired")}</Label>
         <Input id="date" name="date" type="date" required defaultValue={new Date().toISOString().split("T")[0]} />
       </div>
       <div>
-        <Label htmlFor="shiftPolicyId">Policy *</Label>
+        <Label htmlFor="shiftPolicyId">{t("policyRequired")}</Label>
         <Select name="shiftPolicyId" required value={policyId} onValueChange={handlePolicyChange}>
-          <SelectTrigger id="shiftPolicyId"><SelectValue placeholder="Select" /></SelectTrigger>
+          <SelectTrigger id="shiftPolicyId"><SelectValue placeholder={t("selectPlaceholder")} /></SelectTrigger>
           <SelectContent>{policies.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
         </Select>
       </div>
       <div className="sm:col-span-5 flex items-center gap-3 border-t border-border pt-3">
         <Button type="button" variant={useCustomTimes ? "default" : "outline"} size="sm" onClick={toggleCustomTimes} className="text-xs">
-          {useCustomTimes ? <><Sun className="mr-1 h-3 w-3" /> Custom times</> : <><Moon className="mr-1 h-3 w-3" /> Use policy times</>}
+          {useCustomTimes ? <><Sun className="mr-1 h-3 w-3" /> {t("customTimes")}</> : <><Moon className="mr-1 h-3 w-3" /> {t("usePolicyTimes")}</>}
         </Button>
-        {duration && <span className="text-xs text-muted-foreground">Duration: {duration}</span>}
-        {isOvernight && <span className="text-xs text-amber-600">Overnight shift</span>}
+        {duration && <span className="text-xs text-muted-foreground">{t("durationLabel")} {duration}</span>}
+        {isOvernight && <span className="text-xs text-amber-600">{t("overnightShift")}</span>}
       </div>
       {useCustomTimes && (
         <div className="sm:col-span-5 grid gap-3 sm:grid-cols-2">
           <div>
-            <Label htmlFor="plannedStart">Planned Start</Label>
+            <Label htmlFor="plannedStart">{t("plannedStart")}</Label>
             <Input id="plannedStart" name="plannedStart" type="time" value={plannedStart} onChange={(e) => setPlannedStart(e.target.value)} />
           </div>
           <div>
-            <Label htmlFor="plannedEnd">Planned End</Label>
+            <Label htmlFor="plannedEnd">{t("plannedEnd")}</Label>
             <Input id="plannedEnd" name="plannedEnd" type="time" value={plannedEnd} onChange={(e) => setPlannedEnd(e.target.value)} />
           </div>
         </div>
@@ -101,8 +103,8 @@ export function ScheduleForm({ branches, employees, policies }: { branches: Bran
       )}
       <div className="sm:col-span-5 flex items-center gap-3">
         {state.error && <p className="text-xs text-destructive">{state.error}</p>}
-        {state.ok && <p className="text-xs text-brand-success">Schedule added.</p>}
-        <Button type="submit" size="sm" disabled={pending} className="ml-auto">{pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Saving...</> : "Add schedule"}</Button>
+        {state.ok && <p className="text-xs text-brand-success">{t("scheduleAdded")}</p>}
+        <Button type="submit" size="sm" disabled={pending} className="ml-auto">{pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> {t("saving")}</> : t("addScheduleBtn")}</Button>
       </div>
     </form>
   );

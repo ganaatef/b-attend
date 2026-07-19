@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,25 +12,27 @@ import { Label } from "@/components/ui/label";
 import { createPayrollRunAction } from "../../actions";
 import { Info } from "lucide-react";
 
-const monthNames = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const monthKeys = ["", "january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"] as const;
 
 function SubmitButton() {
   const { pending } = useFormStatus();
+  const t = useTranslations("hrPayrollRuns");
   return (
     <Button type="submit" size="sm" disabled={pending}>
-      {pending ? "Creating..." : "Create Payroll Run"}
+      {pending ? t("creating") : t("createRun")}
     </Button>
   );
 }
 
 export function NewPayrollRunForm() {
   const router = useRouter();
+  const t = useTranslations("hrPayrollRuns");
   const [state, formAction] = useActionState(
     async (prev: any, formData: FormData) => {
       const result = await createPayrollRunAction(prev, formData);
       if (result.ok) {
         if (result.warnings && result.warnings.length > 0) {
-          alert(`Created with warnings:\n${result.warnings.join("\n")}`);
+          alert(t("createdWarnings", { warnings: result.warnings.join("\n") }));
         }
         router.push(`/hr/payroll-runs/${result.id}`);
       }
@@ -45,9 +48,9 @@ export function NewPayrollRunForm() {
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
         <Link href="/hr/payroll-runs" className="text-xs text-muted-foreground hover:text-foreground">
-          ← Payroll Runs
+          ← {t("title")}
         </Link>
-        <h1 className="mt-1 text-lg font-bold text-foreground">New Payroll Run</h1>
+        <h1 className="mt-1 text-lg font-bold text-foreground">{t("newPayrollRun")}</h1>
       </div>
 
       <Card className="border-border bg-blue-50/30 border-blue-200">
@@ -56,10 +59,10 @@ export function NewPayrollRunForm() {
             <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
             <div>
               <p className="text-xs text-blue-700">
-                Lines will be generated from AttendanceDay data. Employees without active payroll profiles will appear in warnings.
+                {t("linesInfo")}
               </p>
               <p className="text-[10px] text-blue-500 mt-1">
-                Note: Tax and social insurance are not calculated in this MVP.
+                {t("taxNoteShort")}
               </p>
             </div>
           </div>
@@ -68,7 +71,7 @@ export function NewPayrollRunForm() {
 
       <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-foreground">Run Details</CardTitle>
+          <CardTitle className="text-sm font-semibold text-foreground">{t("runDetails")}</CardTitle>
         </CardHeader>
         <CardContent>
           <form action={formAction} className="space-y-4">
@@ -76,7 +79,7 @@ export function NewPayrollRunForm() {
 
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
-                <Label htmlFor="month">Month *</Label>
+                <Label htmlFor="month">{t("month")} *</Label>
                 <select
                   id="month"
                   name="month"
@@ -84,15 +87,15 @@ export function NewPayrollRunForm() {
                   required
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
                 >
-                  {monthNames.slice(1).map((name, i) => (
+                  {monthKeys.slice(1).map((key, i) => (
                     <option key={i + 1} value={i + 1}>
-                      {name}
+                      {t(key)}
                     </option>
                   ))}
                 </select>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="year">Year *</Label>
+                <Label htmlFor="year">{t("year")} *</Label>
                 <Input
                   id="year"
                   name="year"
@@ -106,20 +109,20 @@ export function NewPayrollRunForm() {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Notes</Label>
+              <Label htmlFor="notes">{t("notes")}</Label>
               <textarea
                 id="notes"
                 name="notes"
                 rows={3}
                 className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                placeholder="Optional notes about this payroll run"
+                placeholder={t("optionalNotes")}
               />
             </div>
 
             <div className="flex justify-end gap-2">
               <Link href="/hr/payroll-runs">
                 <Button type="button" variant="outline" size="sm">
-                  Cancel
+                  {t("cancelRun")}
                 </Button>
               </Link>
               <SubmitButton />
