@@ -18,14 +18,15 @@ const NO_RECORDS: ExcelRow[] = [{ msg: "No records found." }];
 const EMPTY_COL: ExcelColumn[] = [{ key: "msg", label: "Info", width: 40 }];
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session || session.kind !== "tenant" || !session.tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (session.role === "EMPLOYEE") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  const tid = session.tenantId;
+  try {
+    const session = await getSession();
+    if (!session || session.kind !== "tenant" || !session.tenantId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.role === "EMPLOYEE") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const tid = session.tenantId;
 
   const featureCheck = await canUseHrFeature(tid, "hr_excel_export");
   if (!featureCheck.allowed) {
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
     employeeWhere.id = employeeId;
   }
 
-  const matchingEmployeeIds = (await db.employee.findMany({ where: employeeWhere, select: { id: true } })).map((e) => e.id);
+  const matchingEmployeeIds = (await db.employee.findMany({ where: employeeWhere, select: { id: true }, take: 5000 })).map((e) => e.id);
 
   const tasks = await db.onboardingTask.findMany({
     where: { companyId: tid, employeeId: { in: matchingEmployeeIds } },
@@ -74,6 +75,7 @@ export async function GET(req: NextRequest) {
       employee: { select: { employeeCode: true, fullName: true, branch: { select: { name: true } }, department: { select: { name: true } }, onboardingStatus: true } },
     },
     orderBy: { createdAt: "desc" },
+    take: 5000,
   });
 
   const employeeProgressMap = new Map<string, { total: number; completed: number; inProgress: number; pending: number }>();
@@ -92,6 +94,7 @@ export async function GET(req: NextRequest) {
   const employeesWithOnboarding = await db.employee.findMany({
     where: { companyId: tid, id: { in: matchingEmployeeIds }, onboardingStatus: { not: "NONE" } },
     select: { id: true, employeeCode: true, fullName: true, branch: { select: { name: true } }, department: { select: { name: true } }, onboardingStatus: true },
+    take: 5000,
   });
 
   const progressColumns: ExcelColumn[] = [
@@ -190,4 +193,8 @@ export async function GET(req: NextRequest) {
   });
 
   return sendWorkbookResponse(wb, filename);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

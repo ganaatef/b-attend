@@ -26,14 +26,15 @@ const NO_RECORDS: ExcelRow[] = [{ msg: "No records found." }];
 const EMPTY_COL: ExcelColumn[] = [{ key: "msg", label: "Info", width: 40 }];
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session || session.kind !== "tenant" || !session.tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (session.role === "EMPLOYEE") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
-  const tid = session.tenantId;
+  try {
+    const session = await getSession();
+    if (!session || session.kind !== "tenant" || !session.tenantId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.role === "EMPLOYEE") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+    const tid = session.tenantId;
 
   // Feature gate check
   const featureCheck = await canUseHrFeature(tid, "hr_excel_export");
@@ -101,6 +102,7 @@ export async function GET(req: NextRequest) {
       payrollProfile: includePayroll ? true : false,
     },
     orderBy: { employeeCode: "asc" },
+    take: 5000,
   });
 
   // Build columns
@@ -214,4 +216,8 @@ export async function GET(req: NextRequest) {
 
   // 5. Return workbook response (last)
   return sendWorkbookResponse(wb, filename);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

@@ -1,17 +1,10 @@
 /**
- * B-Attend middleware — protects authenticated routes and routes by role.
+ * B-Attend middleware — protects authenticated routes, routes by role, and rate limits.
  *
- * Public (no auth required):
- *   /, /pricing, /features, /contact, /request-demo, /signup, /login,
- *   /legal/privacy, /legal/terms, /api/public/*
- *
- * Platform (Super Admin / Sales / Support / Billing):
- *   /admin/*
- *
- * Tenant (Company Owner / HR / Branch Manager / Employee):
- *   /dashboard, /onboarding, /branches, /employees, /policies, /schedules,
- *   /clock, /kiosk, /approvals, /reports, /audit, /settings, /billing,
- *   /support, /today, /attendance, /requests, /profile, /live, /users
+ * Rate limits (per IP, sliding window 1 min):
+ * - General: 120 req/min
+ * - API routes: 60 req/min
+ * - Auth routes: 10 req/min (brute-force protection)
  *
  * Verification of the JWT happens here using jose. We do NOT fetch the DB on
  * every request — the session cookie is the source of truth.
@@ -19,6 +12,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 const COOKIE_NAME = "battend_session";
 
@@ -54,15 +48,39 @@ async function verifyToken(token: string): Promise<{ kind: string; role: string;
   }
 }
 
+function getClientIp(req: NextRequest): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
+    || req.headers.get("x-real-ip")
+    || "unknown";
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const ip = getClientIp(req);
+
+  // ── Rate limiting ──
+  let rateLimit: number = RATE_LIMITS.general;
+  if (pathname.startsWith("/api/auth/")) rateLimit = RATE_LIMITS.auth;
+  else if (pathname.startsWith("/api/")) rateLimit = RATE_LIMITS.api;
+
+  const rl = checkRateLimit(ip, pathname, rateLimit);
+  if (!rl.allowed) {
+    return new NextResponse(JSON.stringify({ error: "Too many requests. Please try again later." }), {
+      status: 429,
+      headers: {
+        "Content-Type": "application/json",
+        "Retry-After": String(Math.ceil(rl.retryAfterMs / 1000)),
+        ...getRateLimitHeaders(rateLimit, 0, rl.retryAfterMs),
+      },
+    });
+  }
 
   // Allow public routes
   if (PUBLIC_ROUTES.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
     return NextResponse.next();
   }
 
-  // Allow /api/auth/* (login, logout handlers if any)
+  // Allow /api/auth/* (login, logout handlers)
   if (pathname.startsWith("/api/auth/")) {
     return NextResponse.next();
   }
@@ -84,7 +102,9 @@ export async function middleware(req: NextRequest) {
       home.pathname = "/";
       return NextResponse.redirect(home);
     }
-    return NextResponse.next();
+    const res = NextResponse.next();
+    res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+    return res;
   }
 
   // All other protected routes require tenant session
@@ -94,7 +114,9 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(home);
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+  return res;
 }
 
 export const config = {
@@ -103,8 +125,7 @@ export const config = {
      * Match everything except:
      * - _next/static, _next/image, favicon
      * - public assets
-     * - api/public/* (handled in route)
      */
-    "/((?!_next/static|_next/image|favicon.ico|logo.svg|robots.txt|api/public).*)",
+    "/((?!_next/static|_next/image|favicon.ico|logo.svg|robots.txt).*)",
   ],
 };

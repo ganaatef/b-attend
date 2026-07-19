@@ -32,13 +32,14 @@ const REPORT_TYPES: ReportType[] = [
 export async function GET(
   req: NextRequest,
 ) {
-  const session = await getSession();
-  if (!session || session.kind !== "tenant" || !session.tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (session.role === "EMPLOYEE") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  try {
+    const session = await getSession();
+    if (!session || session.kind !== "tenant" || !session.tenantId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.role === "EMPLOYEE") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
   const tid = session.tenantId;
   const permissions = getRolePermissions(session.role);
@@ -92,6 +93,7 @@ export async function GET(
       where: { companyId: tid, deletedAt: null, ...(isBranchManager ? { branch: { managerId: session.sub } } : {}) },
       include: { branch: { select: { name: true } }, department: { select: { name: true } }, jobTitleRef: { select: { title: true } } },
       orderBy: { fullName: "asc" },
+      take: 5000,
     });
     const cols: ExcelColumn[] = [
       { key: "code", label: "Employee Code", width: 16 },
@@ -125,6 +127,7 @@ export async function GET(
     const employees = await db.employee.findMany({
       where: { companyId: tid, deletedAt: null },
       include: { branch: { select: { name: true } }, department: { select: { name: true } }, jobTitleRef: { select: { title: true } } },
+      take: 5000,
     });
     const groups = new Map<string, { active: number; suspended: number; left: number; total: number }>();
     for (const e of employees) {
@@ -153,6 +156,7 @@ export async function GET(
       where: { companyId: tid, status: "ACTIVE" },
       include: { employee: { select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } } } },
       orderBy: { endDate: "asc" },
+      take: 5000,
     });
     const now = Date.now();
     const cols: ExcelColumn[] = [
@@ -190,6 +194,7 @@ export async function GET(
       where: { companyId: tid },
       include: { employee: { select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } } } },
       orderBy: { expiryDate: "asc" },
+      take: 5000,
     });
     const now = Date.now();
     const cols: ExcelColumn[] = [
@@ -225,6 +230,7 @@ export async function GET(
     const docs = await db.employeeDocument.findMany({
       where: { companyId: tid, status: "MISSING" },
       include: { employee: { select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } } } },
+      take: 5000,
     });
     const cols: ExcelColumn[] = [
       { key: "code", label: "Employee Code", width: 16 },
@@ -255,6 +261,7 @@ export async function GET(
         employee: { select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } } },
         leaveType: { select: { name: true } },
       },
+      take: 5000,
     });
     const cols: ExcelColumn[] = [
       { key: "code", label: "Employee Code", width: 16 },
@@ -294,6 +301,7 @@ export async function GET(
         leaveType: { select: { name: true } },
       },
       orderBy: { startDate: "desc" },
+      take: 5000,
     });
     const cols: ExcelColumn[] = [
       { key: "code", label: "Employee Code", width: 16 },
@@ -328,6 +336,7 @@ export async function GET(
       where: { companyId: tid },
       include: { employee: { select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } } } },
       orderBy: { date: "desc" },
+      take: 5000,
     });
     const cols: ExcelColumn[] = [
       { key: "code", label: "Employee Code", width: 16 },
@@ -363,6 +372,7 @@ export async function GET(
         course: { select: { title: true, category: true } },
       },
       orderBy: { assignedAt: "desc" },
+      take: 5000,
     });
     const cols: ExcelColumn[] = [
       { key: "code", label: "Employee Code", width: 16 },
@@ -404,6 +414,7 @@ export async function GET(
           take: 1,
         },
       },
+      take: 5000,
     });
     const cols: ExcelColumn[] = [
       { key: "code", label: "Asset Code", width: 16 },
@@ -437,6 +448,7 @@ export async function GET(
       where: { companyId: tid },
       include: { employee: { select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } } } },
       orderBy: { dueDate: "asc" },
+      take: 5000,
     });
     const empMap = new Map<string, { pending: number; completed: number; total: number }>();
     for (const t of tasks) {
@@ -450,6 +462,7 @@ export async function GET(
     const empList = await db.employee.findMany({
       where: { companyId: tid, id: { in: [...empMap.keys()] } },
       select: { id: true, fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } },
+      take: 5000,
     });
     const empLookup = new Map(empList.map((e) => [e.id, e]));
     const cols: ExcelColumn[] = [
@@ -484,6 +497,7 @@ export async function GET(
       where: { companyId: tid },
       include: { employee: { select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } } } },
       orderBy: { dueDate: "asc" },
+      take: 5000,
     });
     const empMap = new Map<string, { pending: number; completed: number; total: number }>();
     for (const t of tasks) {
@@ -497,6 +511,7 @@ export async function GET(
     const empList = await db.employee.findMany({
       where: { companyId: tid, id: { in: [...empMap.keys()] } },
       select: { id: true, fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } }, endDate: true, status: true },
+      take: 5000,
     });
     const empLookup = new Map(empList.map((e) => [e.id, e]));
     const cols: ExcelColumn[] = [
@@ -540,6 +555,7 @@ export async function GET(
           },
         },
       },
+      take: 5000,
     });
     const cols: ExcelColumn[] = [
       { key: "code", label: "Employee Code", width: 16 },
@@ -570,6 +586,7 @@ export async function GET(
       where: { companyId: tid },
       orderBy: [{ year: "desc" }, { month: "desc" }],
       include: { _count: { select: { lines: true } } },
+      take: 5000,
     });
     const monthNames = ["", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     const cols: ExcelColumn[] = [
@@ -617,4 +634,8 @@ export async function GET(
   });
 
   return sendWorkbookResponse(wb, filename);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

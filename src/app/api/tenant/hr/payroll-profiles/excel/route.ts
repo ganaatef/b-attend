@@ -17,13 +17,14 @@ const NO_RECORDS: ExcelRow[] = [{ msg: "No records found." }];
 const EMPTY_COL: ExcelColumn[] = [{ key: "msg", label: "Info", width: 40 }];
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session || session.kind !== "tenant" || !session.tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  try {
+    const session = await getSession();
+    if (!session || session.kind !== "tenant" || !session.tenantId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
   const tid = session.tenantId;
   const permissions = getRolePermissions(session.role);
@@ -55,6 +56,7 @@ export async function GET(req: NextRequest) {
       },
     },
     orderBy: { createdAt: "desc" },
+    take: 5000,
   });
 
   const tenant = await db.tenant.findUnique({ where: { id: tid }, select: { name: true } });
@@ -129,4 +131,8 @@ export async function GET(req: NextRequest) {
   });
 
   return sendWorkbookResponse(wb, filename);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

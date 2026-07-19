@@ -25,13 +25,14 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  const session = await getSession();
-  if (!session || session.kind !== "tenant" || !session.tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  try {
+    const session = await getSession();
+    if (!session || session.kind !== "tenant" || !session.tenantId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
   const tid = session.tenantId;
   const { id } = await params;
@@ -101,6 +102,7 @@ export async function GET(
           },
         },
         orderBy: { date: "asc" },
+        take: 5000,
       })
     : [];
 
@@ -404,6 +406,7 @@ export async function GET(
             select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } },
           },
         },
+        take: 5000,
       })
     : [];
   for (const ar of pendingApprovalRequests) {
@@ -467,6 +470,7 @@ export async function GET(
             select: { fullName: true, employeeCode: true, branch: { select: { name: true } }, department: { select: { name: true } } },
           },
         },
+        take: 5000,
       })
     : [];
   for (const lr of pendingLeaves) {
@@ -536,4 +540,8 @@ export async function GET(
   });
 
   return sendWorkbookResponse(wb, filename);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }

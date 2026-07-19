@@ -11,13 +11,14 @@ import { logTenantEvent } from "@/lib/auth/audit";
 import { toCsv, csvFilename, formatDate, formatTime, type CsvColumn, type CsvRow } from "@/lib/csv";
 
 export async function GET(req: NextRequest) {
-  const session = await getSession();
-  if (!session || session.kind !== "tenant" || !session.tenantId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  if (session.role === "EMPLOYEE") {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  try {
+    const session = await getSession();
+    if (!session || session.kind !== "tenant" || !session.tenantId) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (session.role === "EMPLOYEE") {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
   const url = new URL(req.url);
   const type = url.searchParams.get("type") ?? "daily";
@@ -52,6 +53,7 @@ export async function GET(req: NextRequest) {
     where,
     include: { employee: { include: { branch: true, department: true } }, branch: true, schedule: { include: { shiftPolicy: true } } },
     orderBy: [{ date: "asc" }, { employee: { employeeCode: "asc" } }],
+    take: 5000,
   });
 
   let columns: CsvColumn[] = [];
@@ -314,4 +316,8 @@ export async function GET(req: NextRequest) {
       "Content-Disposition": `attachment; filename="${filename}"`,
     },
   });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+  }
 }
