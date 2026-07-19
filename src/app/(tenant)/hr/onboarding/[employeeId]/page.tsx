@@ -15,6 +15,7 @@ import {
   createOnboardingTaskAction,
   createDefaultOnboardingChecklistAction,
 } from "../../actions";
+import { getTranslations } from "next-intl/server";
 import { ClipboardList, CheckCircle2, XCircle, Clock, AlertTriangle, ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -31,6 +32,7 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
   const tid = session.tenantId;
 
   const canManage = hasPerm(session.role, "MANAGE_ONBOARDING");
+  const t = await getTranslations("hrOnboarding");
 
   const employee = await db.employee.findFirst({
     where: { id: employeeId, companyId: tid, deletedAt: null },
@@ -79,7 +81,7 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
       {total > 0 && (
         <Card className="border-border p-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-            <span>Progress</span>
+            <span>{t("progress")}</span>
             <span>{pct}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted">
@@ -94,7 +96,7 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
             <p className="text-xs text-muted-foreground mb-3">No onboarding tasks yet.</p>
             <form action={async () => { "use server"; await createDefaultOnboardingChecklistAction(employeeId); }}>
               <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-                <ClipboardList className="h-3.5 w-3.5" /> Create Default Checklist
+                <ClipboardList className="h-3.5 w-3.5" /> {t("createDefaultChecklist")}
               </button>
             </form>
           </CardContent>
@@ -104,7 +106,7 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
       {canManage && (
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-foreground">Add Task</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("addTask")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={async (formData: FormData) => { "use server"; await createOnboardingTaskAction({}, formData); }} className="flex flex-col gap-2">
@@ -112,7 +114,7 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
               <div className="flex gap-2">
                 <div className="flex-1">
                   <Label htmlFor="task-title" className="sr-only">Title</Label>
-                  <Input id="task-title" name="title" required placeholder="Task title" className="h-8 text-xs" />
+                  <Input id="task-title" name="title" required placeholder={t("taskTitle")} className="h-8 text-xs" />
                 </div>
                 <div className="w-40">
                   <Label htmlFor="task-due" className="sr-only">Due date</Label>
@@ -121,9 +123,9 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
               </div>
               <div>
                 <Label htmlFor="task-desc" className="sr-only">Description</Label>
-                <Input id="task-desc" name="description" placeholder="Description (optional)" className="h-8 text-xs" />
+                <Input id="task-desc" name="description" placeholder={t("taskDescription")} className="h-8 text-xs" />
               </div>
-              <Button type="submit" size="sm" className="w-fit h-8">Add Task</Button>
+              <Button type="submit" size="sm" className="w-fit h-8">{t("addTask")}</Button>
             </form>
           </CardContent>
         </Card>
@@ -146,19 +148,19 @@ export default async function OnboardingDetailPage({ params }: { params: Promise
                       {taskStatusBadge(task.status)}
                     </div>
                     {task.description && <p className="text-xs text-muted-foreground truncate mt-0.5">{task.description}</p>}
-                    {task.dueDate && <p className="text-[10px] text-muted-foreground mt-0.5">Due: {new Date(task.dueDate).toLocaleDateString()}</p>}
+                    {task.dueDate && <p className="text-[10px] text-muted-foreground mt-0.5">{t("dueLabel")} {new Date(task.dueDate).toLocaleDateString()}</p>}
                   </div>
                   {canManage && (task.status === "PENDING" || task.status === "IN_PROGRESS") && (
                     <div className="flex items-center gap-1 ml-3">
                       <form action={async () => { "use server"; await completeOnboardingTaskAction(task.id); }}>
                         <button type="submit" className="inline-flex items-center gap-1 rounded-md bg-brand-success px-2 py-1 text-[10px] font-medium text-white hover:bg-brand-success/90">
-                          <CheckCircle2 className="h-3 w-3" /> Complete
+                          <CheckCircle2 className="h-3 w-3" /> {t("complete")}
                         </button>
                       </form>
                       {task.status === "PENDING" && (
                         <form action={async () => { "use server"; await cancelOnboardingTaskAction(task.id); }}>
                           <button type="submit" className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[10px] font-medium text-destructive hover:bg-destructive/5">
-                            <XCircle className="h-3 w-3" /> Cancel
+                            <XCircle className="h-3 w-3" /> {t("cancel")}
                           </button>
                         </form>
                       )}

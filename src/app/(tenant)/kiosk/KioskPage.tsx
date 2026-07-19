@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { clockAction, kioskLookupAction } from "../clock/actions";
 import type { Branch } from "@prisma/client";
 import { Loader2, LogIn, LogOut, Search, RotateCcw } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { employeeDisplayName } from "@/lib/employee-display";
 
 interface KioskProps {
@@ -22,6 +22,7 @@ interface KioskProps {
 
 export function KioskPage({ branches }: KioskProps) {
   const locale = useLocale();
+  const t = useTranslations("kiosk");
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
   const [lookup, setLookup] = useState<{ ok: boolean; error?: string; employee?: any; schedule?: any; lastPunch?: any; nextAction?: string } | null>(null);
   const [pending, setPending] = useState(false);
@@ -75,16 +76,16 @@ export function KioskPage({ branches }: KioskProps) {
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-foreground">Kiosk Mode</h1>
-        <p className="text-sm text-muted-foreground">Enter your employee code or PIN to clock in/out.</p>
+        <h1 className="text-2xl font-bold text-foreground">{t("kioskMode")}</h1>
+        <p className="text-sm text-muted-foreground">{t("description")}</p>
       </div>
 
       <Card>
         <CardContent className="pt-6">
           <div className="mb-4">
-            <Label htmlFor="branchId" className="text-sm font-medium">Branch</Label>
+            <Label htmlFor="branchId" className="text-sm font-medium">{t("branchLabel")}</Label>
             <Select value={branchId} onValueChange={(v) => { setBranchId(v); reset(); }}>
-              <SelectTrigger id="branchId" className="mt-1 h-12 text-base"><SelectValue placeholder="Select branch" /></SelectTrigger>
+              <SelectTrigger id="branchId" className="mt-1 h-12 text-base"><SelectValue placeholder={t("selectBranch")} /></SelectTrigger>
               <SelectContent>{branches.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
@@ -92,17 +93,17 @@ export function KioskPage({ branches }: KioskProps) {
           {!lookup?.ok ? (
             <form onSubmit={handleLookup} className="space-y-3">
               <div>
-                <Label htmlFor="code" className="text-sm font-medium">Employee code</Label>
-                <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="mt-1 h-14 text-center text-2xl tracking-widest" placeholder="EMP001" autoFocus />
+                <Label htmlFor="code" className="text-sm font-medium">{t("employeeCode")}</Label>
+                <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="mt-1 h-14 text-center text-2xl tracking-widest" placeholder={t("codePlaceholder")} autoFocus />
               </div>
-              <div className="text-center text-xs text-muted-foreground">— or —</div>
+              <div className="text-center text-xs text-muted-foreground">{t("orDivider")}</div>
               <div>
-                <Label htmlFor="pin" className="text-sm font-medium">PIN</Label>
-                <Input id="pin" type="password" value={pin} onChange={(e) => setPin(e.target.value)} className="mt-1 h-14 text-center text-2xl tracking-widest" placeholder="0000" />
+                <Label htmlFor="pin" className="text-sm font-medium">{t("pinLabel")}</Label>
+                <Input id="pin" type="password" value={pin} onChange={(e) => setPin(e.target.value)} className="mt-1 h-14 text-center text-2xl tracking-widest" placeholder={t("pinPlaceholder")} />
               </div>
               {lookup?.error && <p className="text-sm text-destructive text-center">{lookup.error}</p>}
               <Button type="submit" size="lg" className="w-full h-14 text-base" disabled={pending || !branchId || (!code && !pin)}>
-                {pending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Search className="mr-2 h-5 w-5" /> Find employee</>}
+                {pending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Search className="mr-2 h-5 w-5" /> {t("findEmployee")}</>}
               </Button>
             </form>
           ) : (
@@ -116,14 +117,14 @@ export function KioskPage({ branches }: KioskProps) {
                 <p className="text-xs text-muted-foreground">{lookup.employee.branchName ?? "—"}</p>
                 {lookup.schedule && (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Shift: {lookup.schedule.policyName} · {lookup.schedule.expectedStart ? new Date(lookup.schedule.expectedStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} → {lookup.schedule.expectedEnd ? new Date(lookup.schedule.expectedEnd).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
+                    {t("shiftLabel")} {lookup.schedule.policyName} · {lookup.schedule.expectedStart ? new Date(lookup.schedule.expectedStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} → {lookup.schedule.expectedEnd ? new Date(lookup.schedule.expectedEnd).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}
                   </p>
                 )}
               </div>
 
               {clockResult?.ok ? (
                 <div className="rounded-lg border border-brand-success/30 bg-brand-success/5 p-4 text-center">
-                  <p className="text-lg font-semibold text-brand-success">{clockResult.type === "CLOCK_IN" ? "Clocked In" : "Clocked Out"}</p>
+                  <p className="text-lg font-semibold text-brand-success">{clockResult.type === "CLOCK_IN" ? t("clockedIn") : t("clockedOut")}</p>
                   <p className="text-sm text-muted-foreground">{new Date().toLocaleTimeString()}</p>
                 </div>
               ) : (
@@ -134,14 +135,14 @@ export function KioskPage({ branches }: KioskProps) {
                   onClick={() => handleClock(lookup.nextAction as "CLOCK_IN" | "CLOCK_OUT")}
                 >
                   {pending ? <Loader2 className="h-6 w-6 animate-spin" /> :
-                    lookup.nextAction === "CLOCK_IN" ? <><LogIn className="mr-2 h-6 w-6" /> Clock In</> : <><LogOut className="mr-2 h-6 w-6" /> Clock Out</>}
+                    lookup.nextAction === "CLOCK_IN" ? <><LogIn className="mr-2 h-6 w-6" /> {t("clockInBtn")}</> : <><LogOut className="mr-2 h-6 w-6" /> {t("clockOutBtn")}</>}
                 </Button>
               )}
 
               {clockResult?.error && <p className="text-sm text-destructive text-center">{clockResult.error}</p>}
 
               <Button variant="ghost" size="sm" onClick={reset} className="w-full">
-                <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> Cancel / Look up another employee
+                <RotateCcw className="mr-1.5 h-3.5 w-3.5" /> {t("cancel")}
               </Button>
             </div>
           )}

@@ -1,6 +1,7 @@
 /** /audit — tenant-scoped audit log */
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getTranslations } from "next-intl/server";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
@@ -13,6 +14,7 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role !== "COMPANY_OWNER" && session.role !== "HR_ADMIN") return null;
+  const t = await getTranslations("audit");
   const params = await searchParams;
   const where: any = { companyId: session.tenantId };
   if (params.action) where.action = params.action;
@@ -23,22 +25,22 @@ export default async function AuditPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
-      <div><h1 className="text-lg font-bold text-foreground">Audit log</h1><p className="text-sm text-muted-foreground">All important actions in your company. Latest 200 entries.</p></div>
+      <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("subtitle")}</p></div>
       <div className="flex flex-wrap gap-1.5">
-        <a href="/audit" className={`rounded-md px-3 py-1.5 text-xs font-medium ${!params.action ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:bg-muted"}`}>ALL</a>
+        <a href="/audit" className={`rounded-md px-3 py-1.5 text-xs font-medium ${!params.action ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:bg-muted"}`}>{t("all")}</a>
         {actions.map((a) => <a key={a.action} href={`/audit?action=${a.action}`} className={`rounded-md px-3 py-1.5 text-xs font-medium ${params.action === a.action ? "bg-primary text-primary-foreground" : "border border-border bg-card text-muted-foreground hover:bg-muted"}`}>{a.action.replace(/_/g, " ")}</a>)}
       </div>
       <Card className="border-border">
-        {logs.length === 0 ? <EmptyState title="No audit events yet" icon={ScrollText} /> : (
+        {logs.length === 0 ? <EmptyState title={t("noAudit")} icon={ScrollText} /> : (
           <div className="max-h-[70vh] overflow-y-auto battend-scroll">
             <table className="w-full text-sm">
               <thead className="sticky top-0 border-b border-border bg-card text-xs text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left font-medium">When</th>
-                  <th className="px-4 py-3 text-left font-medium">Actor</th>
-                  <th className="px-4 py-3 text-left font-medium">Action</th>
-                  <th className="px-4 py-3 text-left font-medium">Entity</th>
-                  <th className="px-4 py-3 text-left font-medium">Reason</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("time")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("actor")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("action")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("entity")}</th>
+                  <th className="px-4 py-3 text-left font-medium">{t("details")}</th>
                 </tr>
               </thead>
               <tbody>

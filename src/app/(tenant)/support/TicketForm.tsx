@@ -24,12 +24,12 @@ export function TicketForm() {
           <Select name="category">
             <SelectTrigger id="category"><SelectValue placeholder="Select" /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="GENERAL">General</SelectItem>
-              <SelectItem value="BILLING">Billing</SelectItem>
-              <SelectItem value="TECHNICAL">Technical</SelectItem>
-              <SelectItem value="REPORTS">Reports</SelectItem>
-              <SelectItem value="ATTENDANCE">Attendance</SelectItem>
-              <SelectItem value="OTHER">Other</SelectItem>
+              <SelectItem value="GENERAL">{t("categoryGeneral")}</SelectItem>
+              <SelectItem value="BILLING">{t("categoryBilling")}</SelectItem>
+              <SelectItem value="TECHNICAL">{t("categoryTechnical")}</SelectItem>
+              <SelectItem value="REPORTS">{t("categoryReports")}</SelectItem>
+              <SelectItem value="ATTENDANCE">{t("categoryAttendance")}</SelectItem>
+              <SelectItem value="OTHER">{t("categoryOther")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -38,10 +38,10 @@ export function TicketForm() {
           <Select name="priority" defaultValue="NORMAL">
             <SelectTrigger id="priority"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="LOW">Low</SelectItem>
-              <SelectItem value="NORMAL">Normal</SelectItem>
-              <SelectItem value="HIGH">High</SelectItem>
-              <SelectItem value="URGENT">Urgent</SelectItem>
+              <SelectItem value="LOW">{t("priorityLow")}</SelectItem>
+              <SelectItem value="NORMAL">{t("priorityNormal")}</SelectItem>
+              <SelectItem value="HIGH">{t("priorityHigh")}</SelectItem>
+              <SelectItem value="URGENT">{t("priorityUrgent")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,6 +23,8 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
   const tid = session.tenantId;
   if (session.role === "EMPLOYEE") return null;
 
+  const t = await getTranslations("hrWarnings");
+
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
     return (
@@ -29,8 +32,8 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">HR Module requires Starter plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access HR features."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -84,10 +87,10 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
-        <Link href="/hr/warnings" className="text-xs text-muted-foreground hover:text-foreground">← Warnings</Link>
+        <Link href="/hr/warnings" className="text-xs text-muted-foreground hover:text-foreground">{t("backToList")}</Link>
         <div className="mt-1 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-foreground">{warning.type.replace(/_/g, " ")} Warning</h1>
+            <h1 className="text-lg font-bold text-foreground">{t("detailTitle", { type: warning.type.replace(/_/g, " ") })}</h1>
             <p className="text-sm text-muted-foreground">{warning.employee.fullName} ({warning.employee.employeeCode})</p>
           </div>
           <div className="flex items-center gap-2">
@@ -104,11 +107,11 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
           <p className="text-[10px] text-muted-foreground">{warning.employee.employeeCode}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Branch</p>
+          <p className="text-xs text-muted-foreground">{t("branchLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{warning.employee.branch?.name ?? "—"}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Department</p>
+          <p className="text-xs text-muted-foreground">{t("departmentLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{warning.employee.department?.name ?? "—"}</p>
         </Card>
         <Card className="border-border p-4">
@@ -116,42 +119,42 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
           <p className="text-sm font-semibold text-foreground">{new Date(warning.date).toLocaleDateString()}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Issued By</p>
+          <p className="text-xs text-muted-foreground">{t("issuedBy")}</p>
           <p className="text-sm font-semibold text-foreground">{issuedBy?.name ?? "—"}</p>
           {issuedBy?.email && <p className="text-[10px] text-muted-foreground">{issuedBy.email}</p>}
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Created</p>
+          <p className="text-xs text-muted-foreground">{t("createdLabel")}</p>
           <p className="text-sm font-semibold text-foreground">{new Date(warning.createdAt).toLocaleDateString()}</p>
         </Card>
       </div>
 
       <Card className="border-border">
-        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">Reason</CardTitle></CardHeader>
+        <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">{t("reasonCard")}</CardTitle></CardHeader>
         <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{warning.reason}</p></CardContent>
       </Card>
 
       {warning.actionTaken && (
         <Card className="border-border">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">Action Taken</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">{t("actionTakenCard")}</CardTitle></CardHeader>
           <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{warning.actionTaken}</p></CardContent>
         </Card>
       )}
 
       {warning.notes && (
         <Card className="border-border">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">Notes</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">{t("notesCard")}</CardTitle></CardHeader>
           <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{warning.notes}</p></CardContent>
         </Card>
       )}
 
       {warning.acknowledgedByEmployee && (
         <Card className="border-border">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">Acknowledgment</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">{t("acknowledgmentCard")}</CardTitle></CardHeader>
           <CardContent>
-            <p className="text-sm text-foreground">Acknowledged by employee</p>
+            <p className="text-sm text-foreground">{t("acknowledgedByEmployee")}</p>
             {warning.acknowledgedAt && (
-              <p className="text-xs text-muted-foreground">On {new Date(warning.acknowledgedAt).toLocaleDateString()}</p>
+              <p className="text-xs text-muted-foreground">{t("onDate", { date: new Date(warning.acknowledgedAt).toLocaleDateString() })}</p>
             )}
           </CardContent>
         </Card>
@@ -159,16 +162,16 @@ export default async function WarningDetailPage({ params }: { params: Promise<{ 
 
       {canManage && isActive && (
         <Card className="border-border">
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Actions</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("actionsCard")}</CardTitle></CardHeader>
           <CardContent className="flex gap-2">
             <form action={async () => { "use server"; await resolveWarningAction(warning.id); }}>
               <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700">
-                Resolve
+                {t("resolve")}
               </button>
             </form>
             <form action={async () => { "use server"; await cancelWarningAction(warning.id); }}>
               <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5">
-                Cancel Warning
+                {t("cancelWarning")}
               </button>
             </form>
           </CardContent>

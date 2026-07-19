@@ -15,6 +15,7 @@ import {
   GraduationCap, Package, AlertTriangle, Wallet, ScrollText, Lock,
   UserPlus, UserMinus,
 } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,8 @@ function hasPerm(role: string, perm: HrPermission): boolean {
 }
 
 export default async function EmployeeDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("employees");
+  const tA = await getTranslations("approvals");
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
@@ -95,7 +98,7 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div>
-        <Link href="/employees" className="text-xs text-muted-foreground hover:text-foreground">← Employees</Link>
+        <Link href="/employees" className="text-xs text-muted-foreground hover:text-foreground">{t("backToList")}</Link>
         <h1 className="mt-1 text-lg font-bold text-foreground">{employee.fullName}</h1>
         <p className="text-sm text-muted-foreground">{employee.employeeCode} · {employee.jobTitleRef?.title ?? employee.jobTitle ?? "—"}</p>
         <div className="mt-2 flex items-center gap-2">
@@ -105,46 +108,46 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Branch</p><p className="text-sm font-semibold text-foreground">{employee.branch?.name ?? "—"}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Department</p><p className="text-sm font-semibold text-foreground">{employee.department?.name ?? "—"}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Phone</p><p className="text-sm font-semibold text-foreground">{employee.phone ?? "—"}</p></CardContent></Card>
-        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">Email</p><p className="text-sm font-semibold text-foreground truncate">{employee.email ?? "—"}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">{t("branch")}</p><p className="text-sm font-semibold text-foreground">{employee.branch?.name ?? "—"}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">{t("department")}</p><p className="text-sm font-semibold text-foreground">{employee.department?.name ?? "—"}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">{t("phone")}</p><p className="text-sm font-semibold text-foreground">{employee.phone ?? "—"}</p></CardContent></Card>
+        <Card><CardContent className="pt-4"><p className="text-xs text-muted-foreground">{t("email")}</p><p className="text-sm font-semibold text-foreground truncate">{employee.email ?? "—"}</p></CardContent></Card>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
         <TabsList className="flex-wrap h-auto gap-1">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="attendance">Attendance</TabsTrigger>
-          {(isOwnerOrHr) && <TabsTrigger value="documents">Documents</TabsTrigger>}
-          {isOwnerOrHr && <TabsTrigger value="contracts">Contracts</TabsTrigger>}
-          {(isOwnerOrHr || canApproveLeave || isSelf) && <TabsTrigger value="leave">Leave</TabsTrigger>}
-          {(isOwnerOrHr || isBranchManager) && <TabsTrigger value="training">Training</TabsTrigger>}
-          {(isOwnerOrHr || isBranchManager) && <TabsTrigger value="assets">Assets</TabsTrigger>}
-          {(isOwnerOrHr || canManageWarnings) && <TabsTrigger value="warnings">Warnings</TabsTrigger>}
-          {isOwnerOrHr && canViewPayroll && <TabsTrigger value="payroll">Payroll</TabsTrigger>}
-          {isOwnerOrHr && <TabsTrigger value="onboarding">Onboarding</TabsTrigger>}
-          {isOwnerOrHr && <TabsTrigger value="offboarding">Offboarding</TabsTrigger>}
-          {isOwnerOrHr && <TabsTrigger value="audit">Audit</TabsTrigger>}
+          <TabsTrigger value="overview">{t("tabOverview")}</TabsTrigger>
+          <TabsTrigger value="attendance">{t("tabAttendance")}</TabsTrigger>
+          {(isOwnerOrHr) && <TabsTrigger value="documents">{t("tabDocuments")}</TabsTrigger>}
+          {isOwnerOrHr && <TabsTrigger value="contracts">{t("tabContracts")}</TabsTrigger>}
+          {(isOwnerOrHr || canApproveLeave || isSelf) && <TabsTrigger value="leave">{t("tabLeave")}</TabsTrigger>}
+          {(isOwnerOrHr || isBranchManager) && <TabsTrigger value="training">{t("tabTraining")}</TabsTrigger>}
+          {(isOwnerOrHr || isBranchManager) && <TabsTrigger value="assets">{t("tabAssets")}</TabsTrigger>}
+          {(isOwnerOrHr || canManageWarnings) && <TabsTrigger value="warnings">{t("tabWarnings")}</TabsTrigger>}
+          {isOwnerOrHr && canViewPayroll && <TabsTrigger value="payroll">{t("tabPayroll")}</TabsTrigger>}
+          {isOwnerOrHr && <TabsTrigger value="onboarding">{t("tabOnboarding")}</TabsTrigger>}
+          {isOwnerOrHr && <TabsTrigger value="offboarding">{t("tabOffboarding")}</TabsTrigger>}
+          {isOwnerOrHr && <TabsTrigger value="audit">{t("tabAudit")}</TabsTrigger>}
         </TabsList>
 
         {/* Overview */}
         <TabsContent value="overview">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Profile</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("profileTab")}</CardTitle></CardHeader>
             <CardContent className="space-y-2 text-sm">
               <div className="grid grid-cols-2 gap-2">
-                <div><span className="text-muted-foreground">Employee Code:</span> <span className="font-medium">{employee.employeeCode}</span></div>
-                <div><span className="text-muted-foreground">Full Name:</span> <span className="font-medium">{employee.fullName}</span></div>
-                {employee.arabicName && <div><span className="text-muted-foreground">Arabic Name:</span> <span className="font-medium">{employee.arabicName}</span></div>}
-                <div><span className="text-muted-foreground">Phone:</span> <span className="font-medium">{employee.phone ?? "—"}</span></div>
-                <div><span className="text-muted-foreground">Email:</span> <span className="font-medium">{employee.email ?? "—"}</span></div>
-                {canViewSensitive && employee.nationalId && <div><span className="text-muted-foreground">National ID:</span> <span className="font-medium">{employee.nationalId}</span></div>}
-                <div><span className="text-muted-foreground">Branch:</span> <span className="font-medium">{employee.branch?.name ?? "—"}</span></div>
-                <div><span className="text-muted-foreground">Department:</span> <span className="font-medium">{employee.department?.name ?? "—"}</span></div>
-                <div><span className="text-muted-foreground">Job Title:</span> <span className="font-medium">{employee.jobTitleRef?.title ?? employee.jobTitle ?? "—"}</span></div>
-                <div><span className="text-muted-foreground">Employment Type:</span> <span className="font-medium">{employee.employmentType.replace(/_/g, " ")}</span></div>
-                <div><span className="text-muted-foreground">Start Date:</span> <span className="font-medium">{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : "—"}</span></div>
-                <div><span className="text-muted-foreground">Status:</span> <span className="font-medium">{employee.status}</span></div>
+                <div><span className="text-muted-foreground">{t("employeeCode")}</span> <span className="font-medium">{employee.employeeCode}</span></div>
+                <div><span className="text-muted-foreground">{t("fullNameLabel")}</span> <span className="font-medium">{employee.fullName}</span></div>
+                {employee.arabicName && <div><span className="text-muted-foreground">{t("arabicNameLabel")}</span> <span className="font-medium">{employee.arabicName}</span></div>}
+                <div><span className="text-muted-foreground">{t("phone")}</span> <span className="font-medium">{employee.phone ?? "—"}</span></div>
+                <div><span className="text-muted-foreground">{t("email")}</span> <span className="font-medium">{employee.email ?? "—"}</span></div>
+                {canViewSensitive && employee.nationalId && <div><span className="text-muted-foreground">{t("nationalIdLabel")}</span> <span className="font-medium">{employee.nationalId}</span></div>}
+                <div><span className="text-muted-foreground">{t("branch")}</span> <span className="font-medium">{employee.branch?.name ?? "—"}</span></div>
+                <div><span className="text-muted-foreground">{t("department")}</span> <span className="font-medium">{employee.department?.name ?? "—"}</span></div>
+                <div><span className="text-muted-foreground">{t("jobTitleLabel")}</span> <span className="font-medium">{employee.jobTitleRef?.title ?? employee.jobTitle ?? "—"}</span></div>
+                <div><span className="text-muted-foreground">{t("employmentTypeLabel")}</span> <span className="font-medium">{employee.employmentType.replace(/_/g, " ")}</span></div>
+                <div><span className="text-muted-foreground">{t("startDateLabel")}</span> <span className="font-medium">{employee.startDate ? new Date(employee.startDate).toLocaleDateString() : "—"}</span></div>
+                <div><span className="text-muted-foreground">{t("statusLabel")}</span> <span className="font-medium">{employee.status}</span></div>
               </div>
             </CardContent>
           </Card>
@@ -153,21 +156,21 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         {/* Attendance */}
         <TabsContent value="attendance">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">This month summary</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("monthlySummary")}</CardTitle></CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 mb-4">
-                <div><p className="text-2xl font-bold text-foreground">{present}</p><p className="text-xs text-muted-foreground">Present days</p></div>
-                <div><p className="text-2xl font-bold text-foreground">{absent}</p><p className="text-xs text-muted-foreground">Absent days</p></div>
-                <div><p className="text-2xl font-bold text-foreground">{totalLate}</p><p className="text-xs text-muted-foreground">Late minutes</p></div>
-                <div><p className="text-2xl font-bold text-foreground">{Math.floor(totalWorked / 60)}h</p><p className="text-xs text-muted-foreground">Worked hours</p></div>
+                <div><p className="text-2xl font-bold text-foreground">{present}</p><p className="text-xs text-muted-foreground">{t("presentDays")}</p></div>
+                <div><p className="text-2xl font-bold text-foreground">{absent}</p><p className="text-xs text-muted-foreground">{t("absentDays")}</p></div>
+                <div><p className="text-2xl font-bold text-foreground">{totalLate}</p><p className="text-xs text-muted-foreground">{t("lateMinutes")}</p></div>
+                <div><p className="text-2xl font-bold text-foreground">{Math.floor(totalWorked / 60)}h</p><p className="text-xs text-muted-foreground">{t("workedHours")}</p></div>
               </div>
-              <h4 className="text-xs font-semibold text-muted-foreground mb-2">Recent punches</h4>
-              {punches.length === 0 ? <EmptyState title="No punches yet" icon={Clock} /> : (
+              <h4 className="text-xs font-semibold text-muted-foreground mb-2">{t("recentPunches")}</h4>
+              {punches.length === 0 ? <EmptyState title={t("noPunches")} icon={Clock} /> : (
                 <div className="max-h-72 space-y-1.5 overflow-y-auto battend-scroll">
                   {punches.map((p) => (
                     <div key={p.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                       <div><p className="font-medium text-foreground">{p.type.replace(/_/g, " ")}</p><p className="text-muted-foreground">{formatDateTime(p.timestamp)}</p></div>
-                      <div className="text-right"><p className="text-muted-foreground">{p.source}</p><p className="text-muted-foreground">{p.insideGeofence ? "In geofence" : "Outside"}</p></div>
+                      <div className="text-right"><p className="text-muted-foreground">{p.source}</p><p className="text-muted-foreground">{p.insideGeofence ? t("inGeofence") : t("outsideGeofence")}</p></div>
                     </div>
                   ))}
                 </div>
@@ -181,14 +184,14 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Documents</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("documentsTitle")}</CardTitle>
                 {isOwnerOrHr && (
-                  <Link href="/hr/documents" className="text-xs text-brand-accent hover:underline">Manage →</Link>
+                  <Link href="/hr/documents" className="text-xs text-brand-accent hover:underline">{t("manage")}</Link>
                 )}
               </div>
             </CardHeader>
             <CardContent>
-              {documents.length === 0 ? <EmptyState title="No documents" icon={FileText} /> : (
+              {documents.length === 0 ? <EmptyState title={t("noDocuments")} icon={FileText} /> : (
                 <div className="space-y-1.5">
                   {documents.map((d) => (
                     <div key={d.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
@@ -210,14 +213,14 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Contracts</CardTitle>
+                <CardTitle className="text-sm font-semibold text-foreground">{t("contractsTitle")}</CardTitle>
                 {isOwnerOrHr && (
-                  <Link href="/hr/contracts" className="text-xs text-brand-accent hover:underline">Manage →</Link>
+                  <Link href="/hr/contracts" className="text-xs text-brand-accent hover:underline">{t("manage")}</Link>
                 )}
               </div>
             </CardHeader>
             <CardContent>
-              {contracts.length === 0 ? <EmptyState title="No contracts" icon={FileText} /> : (
+              {contracts.length === 0 ? <EmptyState title={t("noContracts")} icon={FileText} /> : (
                 <div className="space-y-1.5">
                   {contracts.map((c) => (
                     <Link key={c.id} href={`/hr/contracts/${c.id}`} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs hover:bg-muted/20 transition-colors">
@@ -238,19 +241,19 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <TabsContent value="leave">
           <div className="space-y-4">
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Leave Balances ({currentYear})</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("leaveBalancesTitle", { year: currentYear })}</CardTitle></CardHeader>
               <CardContent>
-                {leaveBalances.length === 0 ? <EmptyState title="No leave balances" icon={CalendarDays} /> : (
+                {leaveBalances.length === 0 ? <EmptyState title={t("noLeaveBalances")} icon={CalendarDays} /> : (
                   <div className="space-y-1.5">
                     {leaveBalances.map((lb) => (
                       <div key={lb.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                         <div>
                           <p className="font-medium text-foreground">{lb.leaveType.name}</p>
-                          <p className="text-muted-foreground">{lb.leaveType.code} · {lb.leaveType.paid ? "Paid" : "Unpaid"}</p>
+                          <p className="text-muted-foreground">{lb.leaveType.code} · {lb.leaveType.paid ? t("paid") : t("unpaid")}</p>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium text-foreground">{lb.remaining}/{lb.openingBalance} days</p>
-                          <p className="text-muted-foreground">Used: {lb.used} · Pending: {lb.pending}</p>
+                          <p className="font-medium text-foreground">{lb.remaining}/{lb.openingBalance} {t("daysLabel")}</p>
+                          <p className="text-muted-foreground">{t("usedLabel")} {lb.used} · {t("pendingLabel")} {lb.pending}</p>
                         </div>
                       </div>
                     ))}
@@ -260,9 +263,9 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             </Card>
 
             <Card>
-              <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Leave Requests</CardTitle></CardHeader>
+              <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("leaveRequestsTitle")}</CardTitle></CardHeader>
               <CardContent>
-                {leaveRequests.length === 0 ? <EmptyState title="No leave requests" icon={CalendarDays} /> : (
+                {leaveRequests.length === 0 ? <EmptyState title={t("noLeaveRequests")} icon={CalendarDays} /> : (
                   <div className="space-y-1.5">
                     {leaveRequests.map((lr) => (
                       <div key={lr.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
@@ -276,10 +279,10 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
                           {canApproveLeave && lr.status === "PENDING" && (
                             <div className="flex gap-1">
                               <form action={async () => { "use server"; await approveLeaveRequestAction(lr.id); }}>
-                                <button type="submit" className="rounded bg-brand-success px-1.5 py-0.5 text-[10px] text-white hover:bg-brand-success/90">Approve</button>
+                                <button type="submit" className="rounded bg-brand-success px-1.5 py-0.5 text-[10px] text-white hover:bg-brand-success/90">{tA("approve")}</button>
                               </form>
                               <form action={async () => { "use server"; await rejectLeaveRequestAction(lr.id); }}>
-                                <button type="submit" className="rounded border border-destructive/30 px-1.5 py-0.5 text-[10px] text-destructive hover:bg-destructive/5">Reject</button>
+                                <button type="submit" className="rounded border border-destructive/30 px-1.5 py-0.5 text-[10px] text-destructive hover:bg-destructive/5">{tA("reject")}</button>
                               </form>
                             </div>
                           )}
@@ -296,15 +299,15 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         {/* Training */}
         <TabsContent value="training">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Training Assignments</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("trainingAssignmentsTitle")}</CardTitle></CardHeader>
             <CardContent>
-              {trainingAssignments.length === 0 ? <EmptyState title="No training assignments" icon={GraduationCap} /> : (
+              {trainingAssignments.length === 0 ? <EmptyState title={t("noTrainingAssignments")} icon={GraduationCap} /> : (
                 <div className="space-y-1.5">
                   {trainingAssignments.map((ta) => (
                     <div key={ta.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                       <div>
                         <p className="font-medium text-foreground">{ta.course?.title ?? "—"}</p>
-                        <p className="text-muted-foreground">Score: {ta.score ?? "—"}</p>
+                        <p className="text-muted-foreground">{t("scoreLabel")} {ta.score ?? "—"}</p>
                       </div>
                       <Badge variant={ta.status === "COMPLETED" ? "default" : ta.status === "OVERDUE" ? "destructive" : "outline"} className={ta.status === "COMPLETED" ? "bg-brand-success text-white border-transparent" : ""}>{ta.status}</Badge>
                     </div>
@@ -318,9 +321,9 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         {/* Assets */}
         <TabsContent value="assets">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Assigned Assets</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("assignedAssetsTitle")}</CardTitle></CardHeader>
             <CardContent>
-              {assetAssignments.length === 0 ? <EmptyState title="No assets assigned" icon={Package} /> : (
+              {assetAssignments.length === 0 ? <EmptyState title={t("noAssetsAssigned")} icon={Package} /> : (
                 <div className="space-y-1.5">
                   {assetAssignments.map((aa) => (
                     <div key={aa.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
@@ -340,9 +343,9 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         {/* Warnings */}
         <TabsContent value="warnings">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Warnings</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("warningsTitle")}</CardTitle></CardHeader>
             <CardContent>
-              {warnings.length === 0 ? <EmptyState title="No warnings" icon={AlertTriangle} /> : (
+              {warnings.length === 0 ? <EmptyState title={t("noWarnings")} icon={AlertTriangle} /> : (
                 <div className="space-y-1.5">
                   {warnings.map((w) => (
                     <div key={w.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
@@ -368,20 +371,20 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
-                  <CardTitle className="text-sm font-semibold text-foreground">Payroll Profile</CardTitle>
-                  {isOwnerOrHr && <Link href="/hr/payroll-profiles" className="text-xs text-brand-accent hover:underline">Manage →</Link>}
+                  <CardTitle className="text-sm font-semibold text-foreground">{t("payrollProfileTitle")}</CardTitle>
+                  {isOwnerOrHr && <Link href="/hr/payroll-profiles" className="text-xs text-brand-accent hover:underline">{t("manage")}</Link>}
                 </div>
               </CardHeader>
               <CardContent>
-                {!payrollProfile ? <EmptyState title="No payroll profile" icon={Wallet} /> : (
+                {!payrollProfile ? <EmptyState title={t("noPayrollProfile")} icon={Wallet} /> : (
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div><span className="text-muted-foreground">Base Salary:</span> <span className="font-medium">{payrollProfile.baseSalary ? formatNumber(payrollProfile.baseSalary) : ""} {payrollProfile.currency}</span></div>
-                    <div><span className="text-muted-foreground">Salary Type:</span> <span className="font-medium">{payrollProfile.salaryType}</span></div>
-                    <div><span className="text-muted-foreground">Payment Method:</span> <span className="font-medium">{payrollProfile.paymentMethod?.replace(/_/g, " ") ?? "—"}</span></div>
-                    <div><span className="text-muted-foreground">Overtime Rate:</span> <span className="font-medium">{payrollProfile.overtimeRateMultiplier}x</span></div>
-                    {payrollProfile.dailyRate && <div><span className="text-muted-foreground">Daily Rate:</span> <span className="font-medium">{formatNumber(payrollProfile.dailyRate)} {payrollProfile.currency}</span></div>}
-                    {payrollProfile.hourlyRate && <div><span className="text-muted-foreground">Hourly Rate:</span> <span className="font-medium">{formatNumber(payrollProfile.hourlyRate)} {payrollProfile.currency}</span></div>}
-                    <div><span className="text-muted-foreground">Status:</span> <Badge variant={payrollProfile.active ? "default" : "outline"} className={payrollProfile.active ? "bg-brand-success text-white border-transparent" : ""}>{payrollProfile.active ? "Active" : "Inactive"}</Badge></div>
+                    <div><span className="text-muted-foreground">{t("baseSalary")}</span> <span className="font-medium">{payrollProfile.baseSalary ? formatNumber(payrollProfile.baseSalary) : ""} {payrollProfile.currency}</span></div>
+                    <div><span className="text-muted-foreground">{t("salaryType")}</span> <span className="font-medium">{payrollProfile.salaryType}</span></div>
+                    <div><span className="text-muted-foreground">{t("paymentMethod")}</span> <span className="font-medium">{payrollProfile.paymentMethod?.replace(/_/g, " ") ?? "—"}</span></div>
+                    <div><span className="text-muted-foreground">{t("overtimeRate")}</span> <span className="font-medium">{payrollProfile.overtimeRateMultiplier}x</span></div>
+                    {payrollProfile.dailyRate && <div><span className="text-muted-foreground">{t("dailyRate")}</span> <span className="font-medium">{formatNumber(payrollProfile.dailyRate)} {payrollProfile.currency}</span></div>}
+                    {payrollProfile.hourlyRate && <div><span className="text-muted-foreground">{t("hourlyRate")}</span> <span className="font-medium">{formatNumber(payrollProfile.hourlyRate)} {payrollProfile.currency}</span></div>}
+                    <div><span className="text-muted-foreground">{t("statusLabel")}</span> <Badge variant={payrollProfile.active ? "default" : "outline"} className={payrollProfile.active ? "bg-brand-success text-white border-transparent" : ""}>{payrollProfile.active ? t("active") : t("inactive")}</Badge></div>
                   </div>
                 )}
               </CardContent>
@@ -389,14 +392,14 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
             {recentPayrollLines.length > 0 && (
               <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Recent Payroll Lines</CardTitle></CardHeader>
+                <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("recentPayrollLines")}</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-1.5">
                     {recentPayrollLines.map((line) => (
                       <div key={line.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                         <div>
                           <p className="font-medium text-foreground">{line.payrollRun.month}/{line.payrollRun.year}</p>
-                          <p className="text-muted-foreground">Base: {formatNumber(line.baseSalary)} EGP · Net: {formatNumber(line.netAmount)} EGP</p>
+                          <p className="text-muted-foreground">Base: {formatNumber(line.baseSalary)} {t("currencyLabel")} · Net: {formatNumber(line.netAmount)} {t("currencyLabel")}</p>
                         </div>
                         <Badge variant="outline" className="text-[10px]">{line.payrollRun.status}</Badge>
                       </div>
@@ -408,14 +411,14 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
 
             {recentAdjustments.length > 0 && (
               <Card>
-                <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Recent Adjustments</CardTitle></CardHeader>
+                <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("recentAdjustments")}</CardTitle></CardHeader>
                 <CardContent>
                   <div className="space-y-1.5">
                     {recentAdjustments.map((adj) => (
                       <div key={adj.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
                         <div>
-                          <p className="font-medium text-foreground">{adj.type.replace(/_/g, " ")} — {formatNumber(adj.amount)} EGP</p>
-                          <p className="text-muted-foreground truncate max-w-[300px]">{adj.reason ?? "No reason"}</p>
+                          <p className="font-medium text-foreground">{adj.type.replace(/_/g, " ")} — {formatNumber(adj.amount)} {t("currencyLabel")}</p>
+                          <p className="text-muted-foreground truncate max-w-[300px]">{adj.reason ?? t("noReason")}</p>
                         </div>
                         <Badge variant={adj.status === "APPROVED" ? "default" : adj.status === "REJECTED" ? "destructive" : "outline"} className={adj.status === "APPROVED" ? "bg-brand-success text-white border-transparent" : ""}>{adj.status}</Badge>
                       </div>
@@ -432,12 +435,12 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Onboarding Tasks</CardTitle>
-                {isOwnerOrHr && <Link href="/hr/onboarding" className="text-xs text-brand-accent hover:underline">Manage →</Link>}
+                <CardTitle className="text-sm font-semibold text-foreground">{t("onboardingTasks")}</CardTitle>
+                {isOwnerOrHr && <Link href="/hr/onboarding" className="text-xs text-brand-accent hover:underline">{t("manage")}</Link>}
               </div>
             </CardHeader>
             <CardContent>
-              {onboardingTasks.length === 0 ? <EmptyState title="No onboarding tasks" icon={UserPlus} /> : (
+              {onboardingTasks.length === 0 ? <EmptyState title={t("noOnboardingTasks")} icon={UserPlus} /> : (
                 <div className="space-y-1.5">
                   {onboardingTasks.map((ot) => (
                     <div key={ot.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
@@ -459,12 +462,12 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold text-foreground">Offboarding Tasks</CardTitle>
-                {isOwnerOrHr && <Link href="/hr/offboarding" className="text-xs text-brand-accent hover:underline">Manage →</Link>}
+                <CardTitle className="text-sm font-semibold text-foreground">{t("offboardingTasks")}</CardTitle>
+                {isOwnerOrHr && <Link href="/hr/offboarding" className="text-xs text-brand-accent hover:underline">{t("manage")}</Link>}
               </div>
             </CardHeader>
             <CardContent>
-              {offboardingTasks.length === 0 ? <EmptyState title="No offboarding tasks" icon={UserMinus} /> : (
+              {offboardingTasks.length === 0 ? <EmptyState title={t("noOffboardingTasks")} icon={UserMinus} /> : (
                 <div className="space-y-1.5">
                   {offboardingTasks.map((oft) => (
                     <div key={oft.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">
@@ -484,9 +487,9 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         {/* Audit */}
         <TabsContent value="audit">
           <Card>
-            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Audit Log</CardTitle></CardHeader>
+            <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("auditLog")}</CardTitle></CardHeader>
             <CardContent>
-              {auditLogs.length === 0 ? <EmptyState title="No audit entries" icon={ScrollText} /> : (
+              {auditLogs.length === 0 ? <EmptyState title={t("noAuditEntries")} icon={ScrollText} /> : (
                 <div className="max-h-96 space-y-1.5 overflow-y-auto battend-scroll">
                   {auditLogs.map((al) => (
                     <div key={al.id} className="flex items-center justify-between rounded-md border border-border/60 bg-card px-3 py-2 text-xs">

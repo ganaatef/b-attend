@@ -16,6 +16,7 @@ import {
   disableEmployeeUserAccessAction,
   finalizeOffboardingAction,
 } from "../../actions";
+import { getTranslations } from "next-intl/server";
 import { UserMinus, CheckCircle2, XCircle, AlertTriangle, ArrowLeft } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -32,6 +33,7 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
   const tid = session.tenantId;
 
   const canManage = hasPerm(session.role, "MANAGE_OFFBOARDING");
+  const t = await getTranslations("hrOffboarding");
 
   const employee = await db.employee.findFirst({
     where: { id: employeeId, companyId: tid, deletedAt: null },
@@ -87,7 +89,7 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
       {total > 0 && (
         <Card className="border-border p-4">
           <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
-            <span>Progress</span>
+            <span>{t("progress")}</span>
             <span>{pct}%</span>
           </div>
           <div className="h-2 w-full rounded-full bg-muted">
@@ -99,7 +101,7 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
       {canManage && (
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-foreground">Add Task</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("addTask")}</CardTitle>
           </CardHeader>
           <CardContent>
             <form action={async (formData: FormData) => { "use server"; await createOffboardingTaskAction({}, formData); }} className="flex flex-col gap-2">
@@ -107,7 +109,7 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
               <div className="flex gap-2">
                 <div className="flex-1">
                   <Label htmlFor="task-title" className="sr-only">Title</Label>
-                  <Input id="task-title" name="title" required placeholder="Task title" className="h-8 text-xs" />
+                  <Input id="task-title" name="title" required placeholder={t("taskTitle")} className="h-8 text-xs" />
                 </div>
                 <div className="w-40">
                   <Label htmlFor="task-due" className="sr-only">Due date</Label>
@@ -116,9 +118,9 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
               </div>
               <div>
                 <Label htmlFor="task-desc" className="sr-only">Description</Label>
-                <Input id="task-desc" name="description" placeholder="Description (optional)" className="h-8 text-xs" />
+                <Input id="task-desc" name="description" placeholder={t("taskDescription")} className="h-8 text-xs" />
               </div>
-              <Button type="submit" size="sm" className="w-fit h-8">Add Task</Button>
+              <Button type="submit" size="sm" className="w-fit h-8">{t("addTask")}</Button>
             </form>
           </CardContent>
         </Card>
@@ -128,13 +130,13 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
         <div className="grid gap-4 sm:grid-cols-2">
           <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-foreground">Disable User Access</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("disableUserAccess")}</CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-xs text-muted-foreground mb-3">This will immediately disable the employee&apos;s portal and system access.</p>
               <form action={async () => { "use server"; await disableEmployeeUserAccessAction(employeeId); }}>
                 <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5">
-                  Disable Access
+                  {t("disableAccess")}
                 </button>
               </form>
             </CardContent>
@@ -142,20 +144,20 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
 
           <Card className="border-border">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold text-foreground">Finalize Offboarding</CardTitle>
+              <CardTitle className="text-sm font-semibold text-foreground">{t("finalizeOffboarding")}</CardTitle>
             </CardHeader>
             <CardContent>
               {allTasksCompleted ? (
                 <>
-                  <p className="text-xs text-muted-foreground mb-3">All tasks completed. Finalizing will set the employee status to LEFT and disable their account.</p>
+                  <p className="text-xs text-muted-foreground mb-3">{t("allTasksCompleted")}</p>
                   <form action={async () => { "use server"; await finalizeOffboardingAction(employeeId); }}>
                     <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-brand-success px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-success/90">
-                      <CheckCircle2 className="h-3.5 w-3.5" /> Finalize
+                      <CheckCircle2 className="h-3.5 w-3.5" /> {t("finalize")}
                     </button>
                   </form>
                 </>
               ) : (
-                <p className="text-xs text-muted-foreground">Complete or cancel all tasks before finalizing.</p>
+                <p className="text-xs text-muted-foreground">{t("completeAllTasks")}</p>
               )}
             </CardContent>
           </Card>
@@ -179,19 +181,19 @@ export default async function OffboardingDetailPage({ params }: { params: Promis
                       {taskStatusBadge(task.status)}
                     </div>
                     {task.description && <p className="text-xs text-muted-foreground truncate mt-0.5">{task.description}</p>}
-                    {task.dueDate && <p className="text-[10px] text-muted-foreground mt-0.5">Due: {new Date(task.dueDate).toLocaleDateString()}</p>}
+                    {task.dueDate && <p className="text-[10px] text-muted-foreground mt-0.5">{t("dueLabel")} {new Date(task.dueDate).toLocaleDateString()}</p>}
                   </div>
                   {canManage && (task.status === "PENDING" || task.status === "IN_PROGRESS") && (
                     <div className="flex items-center gap-1 ml-3">
                       <form action={async () => { "use server"; await completeOffboardingTaskAction(task.id); }}>
                         <button type="submit" className="inline-flex items-center gap-1 rounded-md bg-brand-success px-2 py-1 text-[10px] font-medium text-white hover:bg-brand-success/90">
-                          <CheckCircle2 className="h-3 w-3" /> Complete
+                          <CheckCircle2 className="h-3 w-3" /> {t("complete")}
                         </button>
                       </form>
                       {task.status === "PENDING" && (
                         <form action={async () => { "use server"; await cancelOffboardingTaskAction(task.id); }}>
                           <button type="submit" className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[10px] font-medium text-destructive hover:bg-destructive/5">
-                            <XCircle className="h-3 w-3" /> Cancel
+                            <XCircle className="h-3 w-3" /> {t("cancel")}
                           </button>
                         </form>
                       )}

@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { GraduationCap, Plus, Eye } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrTraining");
   const params = await searchParams;
   const canManage = hasPerm(session.role, "MANAGE_TRAINING");
 
@@ -39,12 +41,12 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Training Courses</h1>
-          <p className="text-sm text-muted-foreground">{totalCourses} total · {activeCourses} active · {inactiveCourses} inactive</p>
+          <h1 className="text-lg font-bold text-foreground">{t("trainingCourses")}</h1>
+          <p className="text-sm text-muted-foreground">{totalCourses} {t("totalCourses")} · {activeCourses} {t("activeCourses")} · {inactiveCourses} {t("inactive")}</p>
         </div>
         {canManage && (
           <Link href="/hr/training/courses/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-            <Plus className="h-3.5 w-3.5" /> New Course
+            <Plus className="h-3.5 w-3.5" /> {t("newCourse")}
           </Link>
         )}
       </div>
@@ -52,21 +54,21 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totalCourses}</p>
-          <p className="text-xs text-muted-foreground">Total courses</p>
+          <p className="text-xs text-muted-foreground">{t("totalCourses")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{activeCourses}</p>
-          <p className="text-xs text-muted-foreground">Active courses</p>
+          <p className="text-xs text-muted-foreground">{t("activeCourses")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{inactiveCourses}</p>
-          <p className="text-xs text-muted-foreground">Inactive courses</p>
+          <p className="text-xs text-muted-foreground">{t("inactive")}</p>
         </Card>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Link href="/hr/training/courses" className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${!params.category && params.active === undefined ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
-          All
+           {t("all")}
         </Link>
         {categories.map((cat) => (
           <Link key={cat} href={`/hr/training/courses?category=${cat}`} className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${params.category === cat ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
@@ -74,16 +76,16 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
           </Link>
         ))}
         <Link href="/hr/training/courses?active=true" className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${params.active === "true" ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
-          Active
+          {t("active")}
         </Link>
         <Link href="/hr/training/courses?active=false" className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${params.active === "false" ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
-          Inactive
+          {t("inactive")}
         </Link>
       </div>
 
       <Card className="border-border">
         {courses.length === 0 ? (
-          <EmptyState title="No training courses" description="Create your first training course" icon={GraduationCap} />
+          <EmptyState title={t("noTrainingCourses")} description={t("noTrainingCoursesDesc")} icon={GraduationCap} />
         ) : (
           <div className="divide-y divide-border/60">
             {courses.map((c) => (
@@ -96,13 +98,13 @@ export default async function CoursesPage({ searchParams }: { searchParams: Prom
                     <p className="font-medium text-foreground">{c.title}</p>
                     <p className="text-xs text-muted-foreground">
                       {categoryLabel(c.category)}
-                      {c.requiredForJobTitle ? ` · Required for ${c.requiredForJobTitle}` : ""}
-                      {c.validityMonths ? ` · ${c.validityMonths} months validity` : ""}
+                      {c.requiredForJobTitle ? ` · ${t("requiredFor")} ${c.requiredForJobTitle}` : ""}
+                      {c.validityMonths ? ` · ${c.validityMonths} ${t("monthsValidity")}` : ""}
                     </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant={c.active ? "default" : "outline"} className="text-[10px]">{c.active ? "Active" : "Inactive"}</Badge>
+                  <Badge variant={c.active ? "default" : "outline"} className="text-[10px]">{c.active ? t("active") : t("inactive")}</Badge>
                   <Eye className="h-4 w-4 text-muted-foreground" />
                 </div>
               </Link>

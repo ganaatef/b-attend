@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getTranslations } from "next-intl/server";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
@@ -19,6 +20,7 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrWarnings");
 
   const featureCheck = await canUseHrFeature(tid, "hr_core");
   if (!featureCheck.allowed) {
@@ -27,8 +29,8 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">HR Module requires Starter plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access HR features."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -110,12 +112,12 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Employee Warnings</h1>
+          <h1 className="text-lg font-bold text-foreground">{t("listTitle")}</h1>
           <p className="text-sm text-muted-foreground">{openCount} open · {ackCount} acknowledged · {criticalCount} critical</p>
         </div>
         {canManage && (
           <Link href="/hr/warnings/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-            <Plus className="h-3.5 w-3.5" /> New Warning
+            <Plus className="h-3.5 w-3.5" /> {t("newWarning")}
           </Link>
         )}
       </div>
@@ -123,34 +125,34 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
       <div className="grid gap-4 sm:grid-cols-5">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totals}</p>
-          <p className="text-xs text-muted-foreground">Total Warnings</p>
+          <p className="text-xs text-muted-foreground">{t("totalWarnings")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{openCount}</p>
-          <p className="text-xs text-muted-foreground">Open</p>
+          <p className="text-xs text-muted-foreground">{t("openCount")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{ackCount}</p>
-          <p className="text-xs text-muted-foreground">Acknowledged</p>
+          <p className="text-xs text-muted-foreground">{t("acknowledgedCount")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{resolvedCount}</p>
-          <p className="text-xs text-muted-foreground">Resolved</p>
+          <p className="text-xs text-muted-foreground">{t("resolvedCount")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{criticalCount}</p>
-          <p className="text-xs text-muted-foreground">Critical Severity</p>
+          <p className="text-xs text-muted-foreground">{t("criticalSeverity")}</p>
         </Card>
       </div>
 
       <Card className="border-border">
         <CardHeader className="pb-3">
           <form method="GET" action="/hr/warnings" className="flex flex-wrap items-end gap-2">
-            <CardTitle className="text-sm font-semibold text-foreground mr-2 mb-1">Filters</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground mr-2 mb-1">{t("filters")}</CardTitle>
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-muted-foreground">Branch</label>
               <select name="branch" defaultValue={sp.branch || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
-                <option value="">All Branches</option>
+                <option value="">{t("allBranches")}</option>
                 {branches.map((b) => (
                   <option key={b.id} value={b.id}>{b.name}</option>
                 ))}
@@ -159,7 +161,7 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-muted-foreground">Severity</label>
               <select name="severity" defaultValue={sp.severity || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
-                <option value="">All Severity</option>
+                <option value="">{t("allSeverity")}</option>
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HIGH">High</option>
@@ -169,36 +171,36 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
             <div className="flex flex-col gap-1">
               <label className="text-[10px] text-muted-foreground">Status</label>
               <select name="status" defaultValue={sp.status || ""} className="flex h-8 rounded-md border border-input bg-transparent px-2 text-xs">
-                <option value="">All Status</option>
+                <option value="">{t("allStatus")}</option>
                 <option value="OPEN">Open</option>
                 <option value="ACKNOWLEDGED">Acknowledged</option>
                 <option value="RESOLVED">Resolved</option>
                 <option value="CANCELLED">Cancelled</option>
               </select>
             </div>
-            <button type="submit" className="h-8 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground hover:bg-muted/40">Apply</button>
+            <button type="submit" className="h-8 rounded-md border border-border bg-card px-3 text-xs font-medium text-foreground hover:bg-muted/40">{t("apply")}</button>
           </form>
         </CardHeader>
       </Card>
 
       <Card className="border-border">
         <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-semibold text-foreground">Warnings ({warnings.length})</CardTitle>
+          <CardTitle className="text-sm font-semibold text-foreground">{t("warningsCount", { count: warnings.length })}</CardTitle>
         </CardHeader>
         <CardContent>
           {warnings.length === 0 ? (
-            <EmptyState title="No warnings found" icon={AlertTriangle} />
+            <EmptyState title={t("noWarningsFound")} icon={AlertTriangle} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border text-left text-xs font-medium text-muted-foreground">
-                    <th className="pb-2 pr-4">Employee</th>
-                    <th className="pb-2 pr-4">Type</th>
-                    <th className="pb-2 pr-4">Severity</th>
-                    <th className="pb-2 pr-4">Date</th>
-                    <th className="pb-2 pr-4">Status</th>
-                    <th className="pb-2 text-right">Actions</th>
+                    <th className="pb-2 pr-4">{t("tableEmployee")}</th>
+                    <th className="pb-2 pr-4">{t("tableType")}</th>
+                    <th className="pb-2 pr-4">{t("tableSeverity")}</th>
+                    <th className="pb-2 pr-4">{t("tableDate")}</th>
+                    <th className="pb-2 pr-4">{t("tableStatus")}</th>
+                    <th className="pb-2 text-right">{t("tableActions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
@@ -214,7 +216,7 @@ export default async function WarningsListPage({ searchParams }: { searchParams:
                       <td className="py-3 pr-4">{statusBadge(w.status)}</td>
                       <td className="py-3 text-right">
                         <Link href={`/hr/warnings/${w.id}`} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-foreground hover:bg-muted/40">
-                          <Eye className="h-3 w-3" /> View
+                          <Eye className="h-3 w-3" /> {t("view")}
                         </Link>
                       </td>
                     </tr>

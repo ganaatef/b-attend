@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { markTrainingInProgressAction, markTrainingCompletedAction, cancelTrainingAssignmentAction } from "../../../actions";
 import { GraduationCap } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
   if (session.role === "EMPLOYEE") return null;
   const { id } = await params;
   const tid = session.tenantId;
+  const t = await getTranslations("hrTraining");
 
   const assignment = await db.trainingAssignment.findFirst({
     where: { id, companyId: tid },
@@ -48,10 +50,10 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
-        <Link href="/hr/training/assignments" className="text-xs text-muted-foreground hover:text-foreground">← Training Assignments</Link>
+        <Link href="/hr/training/assignments" className="text-xs text-muted-foreground hover:text-foreground">← {t("trainingAssignments")}</Link>
         <div className="mt-1 flex items-center justify-between">
           <div>
-            <h1 className="text-lg font-bold text-foreground">Training Assignment</h1>
+            <h1 className="text-lg font-bold text-foreground">{t("trainingAssignment")}</h1>
             <p className="text-sm text-muted-foreground">{assignment.employee.fullName} ({assignment.employee.employeeCode})</p>
           </div>
           <Badge variant={assignment.status === "COMPLETED" ? "default" : "outline"} className={`text-[10px] ${statusColor(assignment.status)}`}>{assignment.status.replace(/_/g, " ")}</Badge>
@@ -60,49 +62,49 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Employee</p>
+          <p className="text-xs text-muted-foreground">{t("employee")}</p>
           <p className="text-sm font-semibold text-foreground">{assignment.employee.fullName} ({assignment.employee.employeeCode})</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Branch</p>
+          <p className="text-xs text-muted-foreground">{t("branch")}</p>
           <p className="text-sm font-semibold text-foreground">{assignment.employee.branch?.name ?? "—"}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Course</p>
+          <p className="text-xs text-muted-foreground">{t("course")}</p>
           <p className="text-sm font-semibold text-foreground">{assignment.course.title} ({categoryLabel(assignment.course.category)})</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Category</p>
+          <p className="text-xs text-muted-foreground">{t("category")}</p>
           <p className="text-sm font-semibold text-foreground">{categoryLabel(assignment.course.category)}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Assigned Date</p>
+          <p className="text-xs text-muted-foreground">{t("assignedDate")}</p>
           <p className="text-sm font-semibold text-foreground">{new Date(assignment.assignedAt).toLocaleDateString()}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Due Date</p>
-          <p className="text-sm font-semibold text-foreground">{assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : "No due date"}</p>
+          <p className="text-xs text-muted-foreground">{t("dueDate")}</p>
+          <p className="text-sm font-semibold text-foreground">{assignment.dueDate ? new Date(assignment.dueDate).toLocaleDateString() : t("noDueDate")}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Score</p>
+          <p className="text-xs text-muted-foreground">{t("score")}</p>
           <p className="text-sm font-semibold text-foreground">{assignment.score !== null ? `${assignment.score}%` : "—"}</p>
         </Card>
         <Card className="border-border p-4">
-          <p className="text-xs text-muted-foreground">Completed At</p>
+          <p className="text-xs text-muted-foreground">{t("completedAt")}</p>
           <p className="text-sm font-semibold text-foreground">{assignment.completedAt ? new Date(assignment.completedAt).toLocaleDateString() : "—"}</p>
         </Card>
       </div>
 
       {assignment.notes && (
         <Card className="border-border">
-          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">Notes</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm font-semibold text-foreground">{t("notes")}</CardTitle></CardHeader>
           <CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap">{assignment.notes}</p></CardContent>
         </Card>
       )}
 
       {canManage && (assignment.status === "ASSIGNED" || assignment.status === "IN_PROGRESS") && (
         <Card className="border-border">
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Actions</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("actions")}</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             {assignment.status === "ASSIGNED" && (
               <form action={async () => {
@@ -110,7 +112,7 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
                 await markTrainingInProgressAction(assignment.id);
               }}>
                 <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-                  Mark In Progress
+                  {t("markInProgress")}
                 </button>
               </form>
             )}
@@ -122,11 +124,11 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
                 await markTrainingCompletedAction(assignment.id, score);
               }} className="flex items-end gap-2">
                 <div className="space-y-1.5">
-                  <label className="text-xs text-muted-foreground">Score (%)</label>
-                  <input name="score" type="number" min="0" max="100" placeholder="Optional" className="flex h-9 w-32 rounded-md border border-input bg-transparent px-3 text-sm" />
+                  <label className="text-xs text-muted-foreground">{t("scorePercent")}</label>
+                  <input name="score" type="number" min="0" max="100" placeholder={t("optional")} className="flex h-9 w-32 rounded-md border border-input bg-transparent px-3 text-sm" />
                 </div>
                 <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-brand-success px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-success/90">
-                  Mark Completed
+                  {t("markCompleted")}
                 </button>
               </form>
             )}
@@ -136,7 +138,7 @@ export default async function AssignmentDetailPage({ params }: { params: Promise
               await cancelTrainingAssignmentAction(assignment.id);
             }}>
               <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5">
-                Cancel
+                  {t("cancel")}
               </button>
             </form>
           </CardContent>

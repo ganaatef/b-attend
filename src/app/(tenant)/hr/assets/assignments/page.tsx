@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { hasHrPermission, getManagedBranchIds } from "@/lib/hr/permissions";
 import { ArrowRightLeft, Plus, ArrowLeftRight } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,6 +16,7 @@ export default async function AssetAssignmentsPage({ searchParams }: { searchPar
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
   const { status } = await searchParams;
+  const t = await getTranslations("hrAssets");
 
   const canManage = await hasHrPermission("MANAGE_ASSETS");
 
@@ -53,24 +55,24 @@ export default async function AssetAssignmentsPage({ searchParams }: { searchPar
   };
 
   const statusFilters = [
-    { value: "", label: "All" },
-    { value: "ASSIGNED", label: "Active" },
-    { value: "RETURNED", label: "Returned" },
-    { value: "LOST", label: "Lost" },
-    { value: "DAMAGED", label: "Damaged" },
+    { value: "", label: t("allFilter") },
+    { value: "ASSIGNED", label: t("activeSummary") },
+    { value: "RETURNED", label: t("returnedSummary") },
+    { value: "LOST", label: t("lostSummary") },
+    { value: "DAMAGED", label: t("damagedSummary") },
   ];
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Asset Assignments</h1>
+          <h1 className="text-lg font-bold text-foreground">{t("assignmentsTitle")}</h1>
           <p className="text-sm text-muted-foreground">{totalCount} total · {activeCount} active · {returnedCount} returned</p>
         </div>
         <div className="flex items-center gap-2">
           {canManage && (
             <Link href="/hr/assets/assignments/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-              <Plus className="h-3.5 w-3.5" /> New Assignment
+              <Plus className="h-3.5 w-3.5" /> {t("newAssignment")}
             </Link>
           )}
         </div>
@@ -79,23 +81,23 @@ export default async function AssetAssignmentsPage({ searchParams }: { searchPar
       <div className="grid gap-4 sm:grid-cols-5">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totalCount}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="text-xs text-muted-foreground">{t("totalSummary")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{activeCount}</p>
-          <p className="text-xs text-muted-foreground">Active</p>
+          <p className="text-xs text-muted-foreground">{t("activeSummary")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{returnedCount}</p>
-          <p className="text-xs text-muted-foreground">Returned</p>
+          <p className="text-xs text-muted-foreground">{t("returnedSummary")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{lostCount}</p>
-          <p className="text-xs text-muted-foreground">Lost</p>
+          <p className="text-xs text-muted-foreground">{t("lostSummary")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{damagedCount}</p>
-          <p className="text-xs text-muted-foreground">Damaged</p>
+          <p className="text-xs text-muted-foreground">{t("damagedSummary")}</p>
         </Card>
       </div>
 
@@ -117,7 +119,7 @@ export default async function AssetAssignmentsPage({ searchParams }: { searchPar
 
       <Card className="border-border">
         {assignments.length === 0 ? (
-          <EmptyState title="No assignments" description="Assign assets to employees to track them" icon={ArrowLeftRight} />
+          <EmptyState title={t("noAssignments")} description={t("noAssignmentsDesc")} icon={ArrowLeftRight} />
         ) : (
           <div className="divide-y divide-border/60">
             {assignments.map((aa) => (

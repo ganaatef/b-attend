@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { GraduationCap, Plus, Eye } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
+  const t = await getTranslations("hrTraining");
   const params = await searchParams;
   const canManage = hasPerm(session.role, "MANAGE_TRAINING");
 
@@ -60,12 +62,12 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Training Assignments</h1>
-          <p className="text-sm text-muted-foreground">{total} total · {assignedCount} assigned · {overdueCount} overdue</p>
+          <h1 className="text-lg font-bold text-foreground">{t("trainingAssignments")}</h1>
+          <p className="text-sm text-muted-foreground">{total} {t("total")} · {assignedCount} {t("assigned")} · {overdueCount} {t("overdue")}</p>
         </div>
         {canManage && (
           <Link href="/hr/training/assignments/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-            <Plus className="h-3.5 w-3.5" /> New Assignment
+            <Plus className="h-3.5 w-3.5" /> {t("assignTraining")}
           </Link>
         )}
       </div>
@@ -73,29 +75,29 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
       <div className="grid gap-4 sm:grid-cols-5">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{total}</p>
-          <p className="text-xs text-muted-foreground">Total</p>
+          <p className="text-xs text-muted-foreground">{t("total")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{assignedCount}</p>
-          <p className="text-xs text-muted-foreground">Assigned</p>
+          <p className="text-xs text-muted-foreground">{t("assigned")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{inProgressCount}</p>
-          <p className="text-xs text-muted-foreground">In Progress</p>
+          <p className="text-xs text-muted-foreground">{t("inProgress")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{completedCount}</p>
-          <p className="text-xs text-muted-foreground">Completed</p>
+          <p className="text-xs text-muted-foreground">{t("completed")}</p>
         </Card>
         <Card className={`border-border p-4 ${overdueCount > 0 ? "border-amber-300 bg-amber-50/40" : ""}`}>
           <p className="text-2xl font-bold text-foreground">{overdueCount}</p>
-          <p className="text-xs text-muted-foreground">Overdue</p>
+          <p className="text-xs text-muted-foreground">{t("overdue")}</p>
         </Card>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <Link href="/hr/training/assignments" className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${!params.status ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
-          All
+           {t("all")}
         </Link>
         {["ASSIGNED", "IN_PROGRESS", "COMPLETED", "OVERDUE", "CANCELLED"].map((s) => (
           <Link key={s} href={`/hr/training/assignments?status=${s}`} className={`inline-flex items-center rounded-md px-3 py-1.5 text-xs font-medium ${params.status === s ? "bg-brand-accent text-white" : "border border-border bg-card text-foreground hover:bg-muted/40"}`}>
@@ -106,7 +108,7 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
 
       <Card className="border-border">
         {assignments.length === 0 ? (
-          <EmptyState title="No training assignments" description="Assign training to employees" icon={GraduationCap} />
+          <EmptyState title={t("noTrainingAssignments")} description={t("noTrainingAssignmentsDesc")} icon={GraduationCap} />
         ) : (
           <div className="divide-y divide-border/60">
             {assignments.map((a) => (
@@ -118,8 +120,8 @@ export default async function AssignmentsPage({ searchParams }: { searchParams: 
                   <div>
                     <p className="font-medium text-foreground">{a.employee.fullName}</p>
                     <p className="text-xs text-muted-foreground">
-                      {a.course.title} · {a.dueDate ? `Due ${new Date(a.dueDate).toLocaleDateString()}` : "No due date"}
-                      {a.score !== null ? ` · Score: ${a.score}` : ""}
+                      {a.course.title} · {a.dueDate ? `${t("due")} ${new Date(a.dueDate).toLocaleDateString()}` : t("noDueDate")}
+                      {a.score !== null ? ` · ${t("score")}: ${a.score}` : ""}
                     </p>
                   </div>
                 </div>

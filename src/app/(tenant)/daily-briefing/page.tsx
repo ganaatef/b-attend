@@ -2,6 +2,7 @@
  * /daily-briefing — Manager daily briefing to read to staff before shift.
  */
 import Link from "next/link";
+import { getTranslations } from "next-intl/server";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,10 +14,11 @@ import { canUseAiFeature } from "@/lib/ai/feature-gates";
 export const dynamic = "force-dynamic";
 
 export default async function DailyBriefingPage() {
+  const t = await getTranslations("dailyBriefing");
   const session = await getSession();
   if (!session?.tenantId) return null;
   if (session.role === "EMPLOYEE") {
-    return <div className="p-4 text-sm text-muted-foreground">Daily briefing is for managers, HR, and owners only.</div>;
+    return <div className="p-4 text-sm text-muted-foreground">{t("accessDenied")}</div>;
   }
 
   const gate = await canUseAiFeature(session.tenantId, "daily_briefing");
@@ -26,10 +28,10 @@ export default async function DailyBriefingPage() {
         <Card>
           <CardContent className="pt-6 text-center">
             <Lock className="mx-auto h-10 w-10 text-muted-foreground" />
-            <h2 className="mt-3 text-base font-semibold text-foreground">Daily Briefing is not available</h2>
+            <h2 className="mt-3 text-base font-semibold text-foreground">{t("notAvailable")}</h2>
             <p className="mt-1 text-sm text-muted-foreground">{gate.reason}</p>
             <Link href="/billing" className="mt-4 inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90">
-              View plans
+              {t("viewPlans")}
             </Link>
           </CardContent>
         </Card>
@@ -59,7 +61,7 @@ export default async function DailyBriefingPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-4">
       <div>
-        <h1 className="text-lg font-bold text-foreground">Daily Briefing</h1>
+        <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}{branchName ? ` · ${branchName}` : ""}</p>
       </div>
 
@@ -67,7 +69,7 @@ export default async function DailyBriefingPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Sunrise className="h-4 w-4 text-brand-accent" />
-            <CardTitle className="text-sm font-semibold text-foreground">Today&apos;s focus theme</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("focusTheme")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -79,7 +81,7 @@ export default async function DailyBriefingPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <ListChecks className="h-4 w-4 text-brand-accent" />
-            <CardTitle className="text-sm font-semibold text-foreground">3 talking points</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("talkingPoints")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -98,7 +100,7 @@ export default async function DailyBriefingPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-amber-600" />
-            <CardTitle className="text-sm font-semibold text-foreground">Operational reminder</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("operationalReminder")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -110,7 +112,7 @@ export default async function DailyBriefingPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center gap-2">
             <Heart className="h-4 w-4 text-brand-success" />
-            <CardTitle className="text-sm font-semibold text-foreground">Motivation paragraph</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("motivationParagraph")}</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -120,7 +122,7 @@ export default async function DailyBriefingPage() {
 
       {briefing.branchNote && (
         <Card>
-          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">Branch note</CardTitle></CardHeader>
+          <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("branchNote")}</CardTitle></CardHeader>
           <CardContent>
             <p className="text-sm text-foreground/90">{briefing.branchNote}</p>
           </CardContent>
@@ -128,7 +130,7 @@ export default async function DailyBriefingPage() {
       )}
 
       <div className="rounded-lg border border-dashed border-border bg-card/40 p-4 text-center">
-        <p className="text-xs text-muted-foreground">Read this briefing to your team at the start of the shift. Keep it under 2 minutes — short, clear, supportive.</p>
+        <p className="text-xs text-muted-foreground">{t("readToTeam")}</p>
       </div>
     </div>
   );

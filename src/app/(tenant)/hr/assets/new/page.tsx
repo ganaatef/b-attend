@@ -10,8 +10,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { createAssetAction } from "../../actions";
 import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export default function NewAssetPage() {
+  const t = useTranslations("hrAssets");
   const router = useRouter();
   const [state, formAction] = useActionState(createAssetAction, { ok: false, error: "" });
 
@@ -24,7 +26,7 @@ export default function NewAssetPage() {
     <div className="mx-auto max-w-2xl space-y-4">
       <div>
         <Link href="/hr/assets" className="text-xs text-muted-foreground hover:text-foreground">← Assets</Link>
-        <h1 className="mt-1 text-lg font-bold text-foreground">Add Asset</h1>
+        <h1 className="mt-1 text-lg font-bold text-foreground">{t("addAsset")}</h1>
       </div>
 
       <Card className="border-border">
@@ -73,10 +75,11 @@ export default function NewAssetPage() {
 }
 
 function SubmitButton() {
+  const t = useTranslations("hrAssets");
   const { pending } = useFormStatus();
   return (
     <Button type="submit" size="sm" disabled={pending}>
-      {pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> Adding...</> : "Add Asset"}
+      {pending ? <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> {t("adding")}</> : t("addAsset")}
     </Button>
   );
 }

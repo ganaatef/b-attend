@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { canUseHrFeature } from "@/lib/hr/feature-gates";
 import { hasHrPermission } from "@/lib/hr/permissions";
 import { FileText, Download, Lock, Plus, AlertTriangle, Eye } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
@@ -17,6 +18,8 @@ export default async function HrDocumentsPage() {
   if (session.role === "EMPLOYEE" || session.role === "BRANCH_MANAGER") return null;
   const tid = session.tenantId;
 
+  const t = await getTranslations("hrDocuments");
+
   const featureCheck = await canUseHrFeature(tid, "hr_documents");
   if (!featureCheck.allowed) {
     return (
@@ -24,8 +27,8 @@ export default async function HrDocumentsPage() {
         <Card className="border-dashed border-amber-300 bg-amber-50/40">
           <div className="pt-6 pb-6 text-center">
             <Lock className="mx-auto h-8 w-8 text-amber-500" />
-            <h3 className="mt-2 text-sm font-semibold text-foreground">Document Management requires Starter plan or higher</h3>
-            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? "Upgrade to access document management."}</p>
+            <h3 className="mt-2 text-sm font-semibold text-foreground">{t("featureGateTitle")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">{featureCheck.reason ?? t("upgradeMessage")}</p>
           </div>
         </Card>
       </div>
@@ -63,18 +66,18 @@ export default async function HrDocumentsPage() {
     <div className="mx-auto max-w-6xl space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-bold text-foreground">Documents</h1>
-          <p className="text-sm text-muted-foreground">{documents.length} total · {expiringDocs.length} expiring in 30 days · {missingDocs.length} missing</p>
+          <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+          <p className="text-sm text-muted-foreground">{t("summary", { total: documents.length, expiring: expiringDocs.length, missing: missingDocs.length })}</p>
         </div>
         <div className="flex items-center gap-2">
           {canExport && (
             <Link href="/api/tenant/hr/documents/excel" className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-              <Download className="h-3.5 w-3.5" /> Export Excel
+              <Download className="h-3.5 w-3.5" /> {t("exportExcel")}
             </Link>
           )}
           {canManage && (
             <Link href="/hr/documents/new" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-              <Plus className="h-3.5 w-3.5" /> Add Document
+              <Plus className="h-3.5 w-3.5" /> {t("addDocument")}
             </Link>
           )}
         </div>
@@ -83,21 +86,21 @@ export default async function HrDocumentsPage() {
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{documents.filter((d) => d.status === "VALID").length}</p>
-          <p className="text-xs text-muted-foreground">Valid documents</p>
+          <p className="text-xs text-muted-foreground">{t("validDocuments")}</p>
         </Card>
         <Card className={`border-border p-4 ${expiringDocs.length > 0 ? "border-amber-300 bg-amber-50/40" : ""}`}>
           <p className="text-2xl font-bold text-foreground">{expiringDocs.length}</p>
-          <p className="text-xs text-muted-foreground">Expiring in 30 days</p>
+          <p className="text-xs text-muted-foreground">{t("expiringIn30")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{missingDocs.length}</p>
-          <p className="text-xs text-muted-foreground">Missing documents</p>
+          <p className="text-xs text-muted-foreground">{t("missingDocuments")}</p>
         </Card>
       </div>
 
       <Card className="border-border">
         {documents.length === 0 ? (
-          <EmptyState title="No documents" description="Upload employee documents" icon={FileText} />
+          <EmptyState title={t("noDocuments")} description={t("emptyDescription")} icon={FileText} />
         ) : (
           <div className="divide-y divide-border/60">
             {documents.map((d) => {
@@ -118,8 +121,8 @@ export default async function HrDocumentsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="text-right text-xs text-muted-foreground">
-                      {d.expiryDate && <p>Expires {new Date(d.expiryDate).toLocaleDateString()}</p>}
-                      {isExpiring && <p className="flex items-center gap-1 text-amber-600 font-medium"><AlertTriangle className="h-3 w-3" /> Expiring soon</p>}
+                      {d.expiryDate && <p>{t("expiresLabel", { date: new Date(d.expiryDate).toLocaleDateString() })}</p>}
+                      {isExpiring && <p className="flex items-center gap-1 text-amber-600 font-medium"><AlertTriangle className="h-3 w-3" /> {t("expiringSoon")}</p>}
                     </div>
                     <Badge variant={d.status === "VALID" ? "default" : "outline"} className={`text-[10px] ${statusColor(d.status)}`}>{d.status.replace(/_/g, " ")}</Badge>
                     <Eye className="h-4 w-4 text-muted-foreground" />

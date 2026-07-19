@@ -23,6 +23,7 @@ import {
   cancelPayrollAdjustmentAction,
   checkPayrollLockReadiness,
 } from "../../actions";
+import { getTranslations } from "next-intl/server";
 import { CreditCard, Lock, CheckCircle, Clock, XCircle, Eye, Download, Info } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -68,11 +69,30 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
   const { id } = await params;
   const tid = session.tenantId;
 
+  const t = await getTranslations("hrPayrollRuns");
+
   const canView = hasPerm(session.role, "VIEW_PAYROLL");
   if (!canView) return null;
 
   const featureCheck = await canUseHrFeature(tid, "hr_payroll");
   if (!featureCheck.allowed) notFound();
+
+  const statusLabel: Record<string, string> = {
+    DRAFT: t("draft"),
+    REVIEW: t("review"),
+    APPROVED: t("approved"),
+    LOCKED: t("locked"),
+    CANCELLED: t("cancelled"),
+  };
+
+  const adjTypeLabel: Record<string, string> = {
+    BONUS: t("adjustmentBonus"),
+    DEDUCTION: t("adjustmentDeduction"),
+    ALLOWANCE: t("adjustmentAllowance"),
+    PENALTY: t("adjustmentPenalty"),
+    OVERTIME_ADJUSTMENT: t("adjustmentOT"),
+    MANUAL_CORRECTION: t("adjustmentManual"),
+  };
 
   const run = await db.payrollRun.findFirst({
     where: { id, companyId: tid },
@@ -123,12 +143,12 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
     <div className="mx-auto max-w-7xl space-y-4">
       <div>
         <Link href="/hr/payroll-runs" className="text-xs text-muted-foreground hover:text-foreground">
-          ← Payroll Runs
+          ← {t("backToRuns")}
         </Link>
         <div className="mt-1 flex items-center justify-between">
           <div>
             <h1 className="text-lg font-bold text-foreground">
-              Payroll Run — {monthNames[run.month]} {run.year}
+              {t("runTitle", { month: monthNames[run.month], year: run.year })}
             </h1>
             <p className="text-sm text-muted-foreground">
               {run.lines.length} employee{run.lines.length !== 1 ? "s" : ""}
@@ -137,7 +157,7 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
           </div>
           <Badge variant="outline" className={`text-[10px] ${cfg.cls}`}>
             <Icon className="mr-1 h-3 w-3" />
-            {cfg.label}
+            {statusLabel[run.status] ?? cfg.label}
           </Badge>
         </div>
       </div>
@@ -145,13 +165,13 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
       {showActions && (
         <Card className="border-border">
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-semibold text-foreground">Actions</CardTitle>
+            <CardTitle className="text-sm font-semibold text-foreground">{t("actionsCard")}</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {run.status === "DRAFT" && run.lines.length === 0 && (
               <form action={async () => { "use server"; await generatePayrollLinesAction(run.id); }}>
                 <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-brand-success px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-success/90">
-                  <CreditCard className="h-3.5 w-3.5" /> Generate Lines
+                  <CreditCard className="h-3.5 w-3.5" /> {t("generateLines")}
                 </button>
               </form>
             )}
@@ -159,12 +179,12 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
               <>
                 <form action={async () => { "use server"; await recalculatePayrollRunAction(run.id); }}>
                   <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40">
-                    <CreditCard className="h-3.5 w-3.5" /> Recalculate
+                    <CreditCard className="h-3.5 w-3.5" /> {t("recalculate")}
                   </button>
                 </form>
                 <form action={async () => { "use server"; await movePayrollRunToReviewAction(run.id); }}>
                   <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-brand-success px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-success/90">
-                    <Eye className="h-3.5 w-3.5" /> Move to Review
+                    <Eye className="h-3.5 w-3.5" /> {t("moveToReview")}
                   </button>
                 </form>
               </>
@@ -172,7 +192,7 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
             {run.status === "REVIEW" && (
               <form action={async () => { "use server"; await approvePayrollRunAction(run.id); }}>
                 <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-brand-success px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-success/90">
-                  <CheckCircle className="h-3.5 w-3.5" /> Approve
+                  <CheckCircle className="h-3.5 w-3.5" /> {t("approveRun")}
                 </button>
               </form>
             )}
@@ -187,14 +207,14 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
                       : "bg-brand-success hover:bg-brand-success/90"
                   }`}
                 >
-                  <Lock className="h-3.5 w-3.5" /> Lock
+                  <Lock className="h-3.5 w-3.5" /> {t("lockRun")}
                 </button>
               </form>
             )}
             {run.status !== "LOCKED" && run.status !== "CANCELLED" && (
               <form action={async () => { "use server"; await cancelPayrollRunAction(run.id); }}>
                 <button type="submit" className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 px-3 py-1.5 text-xs font-medium text-destructive hover:bg-destructive/5">
-                  <XCircle className="h-3.5 w-3.5" /> Cancel Run
+                  <XCircle className="h-3.5 w-3.5" /> {t("cancelRun")}
                 </button>
               </form>
             )}
@@ -207,7 +227,7 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
           <div className="flex items-start gap-2">
             <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
             <p className="text-[10px] text-blue-600">
-              Note: Tax and social insurance are not calculated in this MVP. All amounts are base calculations from attendance and payroll profiles.
+              {t("taxNote")}
             </p>
           </div>
         </CardContent>
@@ -225,28 +245,28 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
               <div className="flex-1">
                 <p className={`text-xs font-semibold ${lockReadiness.ready ? "text-emerald-700" : "text-amber-700"}`}>
                   {lockReadiness.ready
-                    ? "Payroll run is ready to lock."
-                    : "Resolve these items before locking payroll."}
+                    ? t("lockReady")
+                    : t("resolveItems")}
                 </p>
                 {!lockReadiness.ready && (
                   <div className="mt-1.5 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-[10px]">
                     {lockReadiness.pendingAdjustments > 0 && (
-                      <p className="text-amber-600">Pending adjustments: {lockReadiness.pendingAdjustments}</p>
+                      <p className="text-amber-600">{t("pendingAdjustments")} {lockReadiness.pendingAdjustments}</p>
                     )}
                     {lockReadiness.pendingApprovalRequests > 0 && (
-                      <p className="text-amber-600">Pending approval requests: {lockReadiness.pendingApprovalRequests}</p>
+                      <p className="text-amber-600">{t("pendingApprovalRequests")} {lockReadiness.pendingApprovalRequests}</p>
                     )}
                     {lockReadiness.attendanceRequiresApproval > 0 && (
-                      <p className="text-amber-600">Attendance requiring approval: {lockReadiness.attendanceRequiresApproval}</p>
+                      <p className="text-amber-600">{t("attendanceRequiringApproval")} {lockReadiness.attendanceRequiresApproval}</p>
                     )}
                     {lockReadiness.pendingAttendanceStatuses > 0 && (
-                      <p className="text-amber-600">Missing clock-out / no-schedule: {lockReadiness.pendingAttendanceStatuses}</p>
+                      <p className="text-amber-600">{t("missingClockOut")} {lockReadiness.pendingAttendanceStatuses}</p>
                     )}
                     {lockReadiness.pendingLeaveRequests > 0 && (
-                      <p className="text-amber-600">Pending leave requests: {lockReadiness.pendingLeaveRequests}</p>
+                      <p className="text-amber-600">{t("pendingLeaveRequests")} {lockReadiness.pendingLeaveRequests}</p>
                     )}
                     {lockReadiness.missingPayrollProfiles > 0 && (
-                      <p className="text-amber-600">Missing payroll profiles: {lockReadiness.missingPayrollProfiles}</p>
+                      <p className="text-amber-600">{t("missingPayrollProfiles")} {lockReadiness.missingPayrollProfiles}</p>
                     )}
                   </div>
                 )}
@@ -259,27 +279,27 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
       <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{run.lines.length}</p>
-          <p className="text-xs text-muted-foreground">Employees</p>
+          <p className="text-xs text-muted-foreground">{t("employeesMetric")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{formatCurrency(totalBaseSalary)}</p>
-          <p className="text-xs text-muted-foreground">Base Salary</p>
+          <p className="text-xs text-muted-foreground">{t("baseSalaryMetric")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{totalOvertimeHours.toFixed(1)}h</p>
-          <p className="text-xs text-muted-foreground">Overtime Hours</p>
+          <p className="text-xs text-muted-foreground">{t("overtimeHoursMetric")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-brand-success">{formatCurrency(totalGrossAdditions)}</p>
-          <p className="text-xs text-muted-foreground">Additions</p>
+          <p className="text-xs text-muted-foreground">{t("additionsMetric")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-destructive">{formatCurrency(totalGrossDeductions)}</p>
-          <p className="text-xs text-muted-foreground">Deductions</p>
+          <p className="text-xs text-muted-foreground">{t("deductionsMetric")}</p>
         </Card>
         <Card className="border-border p-4">
           <p className="text-2xl font-bold text-foreground">{formatCurrency(totalNetAmount)}</p>
-          <p className="text-xs text-muted-foreground">Net Amount</p>
+          <p className="text-xs text-muted-foreground">{t("netAmountMetric")}</p>
         </Card>
       </div>
 
@@ -289,7 +309,7 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
             href={`/api/tenant/hr/payroll-runs/${run.id}/excel`}
             className="inline-flex items-center gap-1.5 rounded-md border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/40"
           >
-            <Download className="h-3.5 w-3.5" /> Export Excel
+            <Download className="h-3.5 w-3.5" /> {t("exportExcel")}
           </Link>
         </div>
       )}
@@ -297,33 +317,33 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
       <Card className="border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-foreground">
-            Payroll Lines ({run.lines.length})
+            {t("linesCard", { count: run.lines.length })}
           </CardTitle>
         </CardHeader>
         <CardContent>
           {run.lines.length === 0 ? (
-            <EmptyState title="No payroll lines generated" icon={CreditCard} />
+            <EmptyState title={t("noLines")} icon={CreditCard} />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="border-b border-border text-left text-muted-foreground">
-                    <th className="pb-2 pr-4 font-medium">Employee</th>
-                    <th className="pb-2 pr-4 font-medium">Code</th>
-                    <th className="pb-2 pr-4 font-medium">Branch</th>
-                    <th className="pb-2 pr-4 font-medium">Dept</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Schd</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Pres</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Abs</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Leave</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Off</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Hours</th>
-                    <th className="pb-2 pr-4 font-medium text-right">OT Hrs</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Late</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Base Salary</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Additions</th>
-                    <th className="pb-2 pr-4 font-medium text-right">Deductions</th>
-                    <th className="pb-2 font-medium text-right">Net</th>
+                    <th className="pb-2 pr-4 font-medium">{t("tableEmployee")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("tableCode")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("tableBranch")}</th>
+                    <th className="pb-2 pr-4 font-medium">{t("tableDept")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableSchd")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tablePres")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableAbs")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableLeave")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableOff")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableHours")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableOtHrs")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableLate")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableBaseSalary")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableAdditions")}</th>
+                    <th className="pb-2 pr-4 font-medium text-right">{t("tableDeductions")}</th>
+                    <th className="pb-2 font-medium text-right">{t("tableNet")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/40">
@@ -354,7 +374,7 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
                 </tbody>
                 <tfoot>
                   <tr className="border-t border-border font-medium text-foreground">
-                    <td className="pt-2 pr-4" colSpan={4}>Totals</td>
+                    <td className="pt-2 pr-4" colSpan={4}>{t("totals")}</td>
                     <td className="pt-2 pr-4 text-right tabular-nums">{run.lines.reduce((s, l) => s + l.scheduledDays, 0)}</td>
                     <td className="pt-2 pr-4 text-right tabular-nums">{run.lines.reduce((s, l) => s + l.presentDays, 0)}</td>
                     <td className="pt-2 pr-4 text-right tabular-nums">{run.lines.reduce((s, l) => s + l.absentDays, 0)}</td>
@@ -378,7 +398,7 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
       <Card className="border-border">
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-semibold text-foreground">
-            Adjustments ({run.adjustments.length})
+            {t("adjustmentsCard", { count: run.adjustments.length })}
             {pendingAdjustments.length > 0 && (
               <span className="ml-2 text-[10px] text-amber-600">({pendingAdjustments.length} pending)</span>
             )}
@@ -395,38 +415,38 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
             >
               <input type="hidden" name="payrollRunId" value={run.id} />
               <div className="space-y-1">
-                <Label htmlFor="adj-employeeId" className="text-[10px]">Employee ID</Label>
-                <Input id="adj-employeeId" name="employeeId" required placeholder="Employee ID" className="h-8 text-xs" />
+                <Label htmlFor="adj-employeeId" className="text-[10px]">{t("formEmployeeId")}</Label>
+                <Input id="adj-employeeId" name="employeeId" required placeholder={t("formEmployeeId")} className="h-8 text-xs" />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="adj-type" className="text-[10px]">Type</Label>
+                <Label htmlFor="adj-type" className="text-[10px]">{t("formType")}</Label>
                 <select id="adj-type" name="type" required className="flex h-8 w-full rounded-md border border-input bg-transparent px-2 text-xs">
-                  <option value="BONUS">Bonus</option>
-                  <option value="DEDUCTION">Deduction</option>
-                  <option value="ALLOWANCE">Allowance</option>
-                  <option value="PENALTY">Penalty</option>
-                  <option value="OVERTIME_ADJUSTMENT">OT Adjustment</option>
-                  <option value="MANUAL_CORRECTION">Manual Correction</option>
+                  <option value="BONUS">{t("adjustmentBonus")}</option>
+                  <option value="DEDUCTION">{t("adjustmentDeduction")}</option>
+                  <option value="ALLOWANCE">{t("adjustmentAllowance")}</option>
+                  <option value="PENALTY">{t("adjustmentPenalty")}</option>
+                  <option value="OVERTIME_ADJUSTMENT">{t("adjustmentOT")}</option>
+                  <option value="MANUAL_CORRECTION">{t("adjustmentManual")}</option>
                 </select>
               </div>
               <div className="space-y-1">
-                <Label htmlFor="adj-amount" className="text-[10px]">Amount (EGP)</Label>
+                <Label htmlFor="adj-amount" className="text-[10px]">{t("formAmount")}</Label>
                 <Input id="adj-amount" name="amount" type="number" min="1" required placeholder="0" className="h-8 text-xs" />
               </div>
               <div className="space-y-1">
-                <Label htmlFor="adj-reason" className="text-[10px]">Reason</Label>
-                <Input id="adj-reason" name="reason" required placeholder="Reason" className="h-8 text-xs" />
+                <Label htmlFor="adj-reason" className="text-[10px]">{t("formReason")}</Label>
+                <Input id="adj-reason" name="reason" required placeholder={t("formReason")} className="h-8 text-xs" />
               </div>
               <div>
                 <button type="submit" className="inline-flex items-center gap-1.5 rounded-md bg-brand-accent px-3 py-1.5 text-xs font-medium text-white hover:bg-brand-accent/90">
-                  Add Adjustment
+                  {t("addAdjustment")}
                 </button>
               </div>
             </form>
           )}
 
           {run.adjustments.length === 0 ? (
-            <EmptyState title="No adjustments" icon={CreditCard} />
+            <EmptyState title={t("noAdjustments")} icon={CreditCard} />
           ) : (
             <div className="divide-y divide-border/60">
               {run.adjustments.map((adj) => (
@@ -436,7 +456,7 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
                       {adj.employee.fullName} ({adj.employee.employeeCode})
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {adjustmentTypeLabels[adj.type] ?? adj.type} · {formatCurrency(adj.amount)}
+                      {adjTypeLabel[adj.type] ?? adj.type} · {formatCurrency(adj.amount)}
                       {adj.reason && ` · ${adj.reason}`}
                     </p>
                   </div>
@@ -448,17 +468,17 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
                       <div className="flex gap-1">
                         <form action={async () => { "use server"; await approvePayrollAdjustmentAction(adj.id); }}>
                           <button type="submit" className="inline-flex items-center gap-1 rounded-md bg-brand-success px-2 py-1 text-[10px] font-medium text-white hover:bg-brand-success/90">
-                            <CheckCircle className="h-3 w-3" /> Approve
+                            <CheckCircle className="h-3 w-3" /> {t("approveRun")}
                           </button>
                         </form>
                         <form action={async () => { "use server"; await rejectPayrollAdjustmentAction(adj.id); }}>
                           <button type="submit" className="inline-flex items-center gap-1 rounded-md border border-destructive/30 px-2 py-1 text-[10px] font-medium text-destructive hover:bg-destructive/5">
-                            <XCircle className="h-3 w-3" /> Reject
+                            <XCircle className="h-3 w-3" /> {t("rejectRun")}
                           </button>
                         </form>
                         <form action={async () => { "use server"; await cancelPayrollAdjustmentAction(adj.id); }}>
                           <button type="submit" className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-foreground hover:bg-muted/40">
-                            Cancel
+                            {t("cancelRun")}
                           </button>
                         </form>
                       </div>
