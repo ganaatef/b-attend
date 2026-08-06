@@ -9,6 +9,7 @@ import { Sidebar, type SidebarUser } from "./Sidebar";
 import { Header } from "./Header";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { SubscriptionBanner } from "@/components/banners/SubscriptionBanner";
+import { DemoBanner } from "@/components/DemoBanner";
 
 export interface AppShellSession extends SidebarUser {
   subscriptionStatus?: string;
@@ -31,6 +32,7 @@ export function AppShell({ session, children }: { session: AppShellSession; chil
           <SubscriptionBanner status={session.subscriptionStatus} trialEndsAt={session.trialEndsAt} />
         )}
         <Header user={session} onLogout={handleLogout} />
+        <DemoBanner />
         <main className="flex-1 px-4 py-6 pb-24 sm:px-6 md:pb-6">{children}</main>
         <MobileBottomNav />
       </div>

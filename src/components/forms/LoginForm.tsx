@@ -12,6 +12,7 @@ import { loginSchema, type LoginInput } from "@/lib/validations";
 import { loginAction, type LoginState } from "@/app/(auth)/actions";
 import { LogIn, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import Link from "next/link";
 
 export function LoginForm() {
   const sp = useSearchParams();
@@ -31,6 +32,12 @@ export function LoginForm() {
       password: "",
     },
   });
+
+  useEffect(() => {
+    if (state && state.ok && state.forcePasswordChange) {
+      window.location.href = "/change-password";
+    }
+  }, [state]);
 
   useEffect(() => {
     if (state && !state.ok) {
@@ -80,6 +87,15 @@ export function LoginForm() {
           required
           autoComplete="current-password"
         />
+
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-sm text-primary hover:underline"
+          >
+            Forgot Password?
+          </Link>
+        </div>
 
         {state && !state.ok && state.error && state.error !== "Please fix the highlighted fields." ? (
           <Alert variant="destructive">

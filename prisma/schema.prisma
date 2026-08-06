@@ -254,6 +254,9 @@ model PlatformUser {
   status              PlatformUserStatus @default(ACTIVE)
   forcePasswordChange Boolean            @default(false)
   lastLoginAt         DateTime?
+  failedLoginAttempts Int            @default(0)
+  lockedUntil         DateTime?
+  lastPasswordChangeAt DateTime?
   createdAt           DateTime           @default(now())
   updatedAt           DateTime           @updatedAt
   deletedAt           DateTime?
@@ -263,6 +266,7 @@ model PlatformUser {
   createdLeads      Lead[]      @relation("LeadCreatedBy")
   createdInvoices   Invoice[]   @relation("InvoiceCreatedBy")
   recordedPayments  Payment[]   @relation("PaymentRecordedBy")
+  passwordResetTokens PlatformPasswordResetToken[]
 
   @@index([role])
   @@index([status])
@@ -597,8 +601,12 @@ model User {
   status          TenantUserStatus @default(ACTIVE)
   forcePasswordChange Boolean      @default(false)
   lastLoginAt     DateTime?
+  failedLoginAttempts Int            @default(0)
+  lockedUntil         DateTime?
+  lastPasswordChangeAt DateTime?
   employeeId      String?          @unique
   employee        Employee?         @relation(fields: [employeeId], references: [id])
+  passwordResetTokens PasswordResetToken[]
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   deletedAt       DateTime?
@@ -1828,4 +1836,30 @@ model PayrollAdjustment {
   @@index([employeeId])
   @@index([payrollRunId])
   @@index([status])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model PlatformPasswordResetToken {
+  id        String       @id @default(cuid())
+  userId    String
+  user      PlatformUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime     @default(now())
+
+  @@index([userId])
+  @@index([tokenHash])
 }

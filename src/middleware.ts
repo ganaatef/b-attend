@@ -17,9 +17,23 @@ import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/rate-lim
 const COOKIE_NAME = "battend_session";
 
 // Memoize the encoded secret — avoid re-creating on every request
-const SECRET_KEY = new TextEncoder().encode(
-  process.env.SESSION_SECRET ?? "dev-secret-change-me-in-production-please-use-32+chars"
-);
+function getSecret(): Uint8Array {
+  const raw = process.env.SESSION_SECRET;
+  if (!raw) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error(
+        "SESSION_SECRET must be set in production. Generate a 32+ character secret and set it as an environment variable."
+      );
+    }
+    console.warn(
+      "[middleware] WARNING: SESSION_SECRET is not set. Using an insecure default for development only. Do NOT use in production."
+    );
+    return new TextEncoder().encode("dev-secret-change-me-in-production-please-use-32+chars");
+  }
+  return new TextEncoder().encode(raw);
+}
+
+const SECRET_KEY = getSecret();
 
 const PUBLIC_ROUTES = [
   "/",
@@ -102,6 +116,13 @@ export async function middleware(req: NextRequest) {
       home.pathname = "/";
       return NextResponse.redirect(home);
     }
+    const res = NextResponse.next();
+    res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+    return res;
+  }
+
+  // /change-password allows both platform and tenant sessions
+  if (pathname === "/change-password") {
     const res = NextResponse.next();
     res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
     return res;

@@ -2,7 +2,7 @@
  * B-Attend SaaS — Full seed (Phase 1-3)
  *
  * Creates:
- *  - 4 platform users (super/sales/support/billing @b-attend.app, password demo1234)
+ *  - 4 platform users (super/sales/support/billing @b-attend.app, unique demo passwords)
  *  - 5 plans (Trial/Starter/Growth/Pro/Enterprise) × 14 features each
  *  - System settings singleton
  *  - 3 demo leads
@@ -21,7 +21,19 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const db = new PrismaClient();
-const DEMO_PASSWORD = "demo1234";
+
+// IMPORTANT: These are demo-only passwords. Real users must set their own.
+const DEMO_PASSWORDS: Record<string, string> = {
+  "super@b-attend.app": "Super!2026#Pilot",
+  "sales@b-attend.app": "Sales!2026#Pilot",
+  "support@b-attend.app": "Support!2026#Pilot",
+  "billing@b-attend.app": "Billing!2026#Pilot",
+  "owner@b-attend.app": "Owner!2026#Pilot",
+  "hr@b-attend.app": "HR!2026#Pilot",
+  "manager@b-attend.app": "Manager!2026#Pilot",
+  "manager2@b-attend.app": "Manager2!2026#Pilot",
+  "employee@b-attend.app": "Employee!2026#Pilot",
+};
 
 async function main() {
   // ── Safety guard ─────────────────────────────────────────────
@@ -37,7 +49,6 @@ async function main() {
     return;
   }
   console.log("→ Seeding B-Attend full data...");
-  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
   // ─────────────────────────────────────────────
   // 1. Platform users
@@ -50,10 +61,11 @@ async function main() {
   ];
   const platformUserMap: Record<string, { id: string }> = {};
   for (const u of platformUsers) {
+    const pw = await bcrypt.hash(DEMO_PASSWORDS[u.email], 10);
     const created = await db.platformUser.upsert({
       where: { email: u.email },
-      update: { passwordHash, name: u.name, role: u.role, status: "ACTIVE" },
-      create: { email: u.email, name: u.name, role: u.role, status: "ACTIVE", passwordHash },
+      update: { passwordHash: pw, name: u.name, role: u.role, status: "ACTIVE" },
+      create: { email: u.email, name: u.name, role: u.role, status: "ACTIVE", passwordHash: pw },
     });
     platformUserMap[u.email] = { id: created.id };
     console.log(`  ✓ PlatformUser: ${u.email}`);
@@ -190,9 +202,10 @@ async function main() {
     { email: "employee@b-attend.app", name: "الموظف التجريبي", role: "EMPLOYEE" as const },
   ];
   for (const u of tenantUsers) {
+    const pw = await bcrypt.hash(DEMO_PASSWORDS[u.email], 10);
     const existing = await db.user.findUnique({ where: { companyId_email: { companyId: tenant.id, email: u.email } } });
     if (!existing) {
-      await db.user.create({ data: { companyId: tenant.id, email: u.email, passwordHash, name: u.name, role: u.role, status: "ACTIVE" } });
+      await db.user.create({ data: { companyId: tenant.id, email: u.email, passwordHash: pw, name: u.name, role: u.role, status: "ACTIVE" } });
     }
     console.log(`  ✓ TenantUser: ${u.email} (${u.role})`);
   }
@@ -427,17 +440,17 @@ async function main() {
   console.log(`  ✓ Sample support ticket`);
 
   console.log("\n✅ Seed complete.");
-  console.log("   Platform accounts (password: demo1234):");
-  console.log("     super@b-attend.app    — SUPER_ADMIN");
-  console.log("     sales@b-attend.app    — SALES_ADMIN");
-  console.log("     support@b-attend.app  — SUPPORT_AGENT");
-  console.log("     billing@b-attend.app  — BILLING_ADMIN");
-  console.log("   Tenant accounts (password: demo1234):");
-  console.log("     owner@b-attend.app    — COMPANY_OWNER (مالك الشركة التجريبية)");
-  console.log("     hr@b-attend.app       — HR_ADMIN (مسؤول الموارد البشرية)");
-  console.log("     manager@b-attend.app  — BRANCH_MANAGER (مدير فرع التجمع)");
-  console.log("     manager2@b-attend.app — BRANCH_MANAGER (مدير فرع مدينة نصر)");
-  console.log("     employee@b-attend.app — EMPLOYEE (الموظف التجريبي)");
+  console.log("   Platform accounts:");
+  console.log(`     super@b-attend.app    — SUPER_ADMIN     — ${DEMO_PASSWORDS["super@b-attend.app"]}`);
+  console.log(`     sales@b-attend.app    — SALES_ADMIN     — ${DEMO_PASSWORDS["sales@b-attend.app"]}`);
+  console.log(`     support@b-attend.app  — SUPPORT_AGENT   — ${DEMO_PASSWORDS["support@b-attend.app"]}`);
+  console.log(`     billing@b-attend.app  — BILLING_ADMIN   — ${DEMO_PASSWORDS["billing@b-attend.app"]}`);
+  console.log("   Tenant accounts:");
+  console.log(`     owner@b-attend.app    — COMPANY_OWNER   — ${DEMO_PASSWORDS["owner@b-attend.app"]}`);
+  console.log(`     hr@b-attend.app       — HR_ADMIN        — ${DEMO_PASSWORDS["hr@b-attend.app"]}`);
+  console.log(`     manager@b-attend.app  — BRANCH_MANAGER  — ${DEMO_PASSWORDS["manager@b-attend.app"]}`);
+  console.log(`     manager2@b-attend.app — BRANCH_MANAGER  — ${DEMO_PASSWORDS["manager2@b-attend.app"]}`);
+  console.log(`     employee@b-attend.app — EMPLOYEE        — ${DEMO_PASSWORDS["employee@b-attend.app"]}`);
 }
 
 main()

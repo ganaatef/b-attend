@@ -16,9 +16,18 @@ import { hashPassword, verifyPassword } from "@/lib/auth/password";
 import {
   createSession,
   destroySession,
+  getSession,
   type SessionKind,
 } from "@/lib/auth/session";
 import { logPlatformEvent } from "@/lib/auth/audit";
+import {
+  generateResetToken,
+  generatePlatformResetToken,
+  verifyResetToken,
+  verifyPlatformResetToken,
+  markTokenUsed,
+  markPlatformTokenUsed,
+} from "@/lib/auth/password-reset";
 
 // ─────────────────────────────────────────────
 // Helpers
@@ -58,7 +67,10 @@ const LoginSchema = z.object({
   next: z.string().optional(),
 });
 
-export type LoginState = { ok: false; error?: string } | { ok: true; next?: string };
+export type LoginState =
+  | { ok: false; error?: string }
+  | { ok: true; next?: string; forcePasswordChange?: false }
+  | { ok: true; forcePasswordChange: true };
 
 export async function loginAction(prev: LoginState, formData: FormData): Promise<LoginState> {
   const parsed = LoginSchema.safeParse({
@@ -76,11 +88,20 @@ export async function loginAction(prev: LoginState, formData: FormData): Promise
     where: { email: email.toLowerCase() },
   });
   if (platform && platform.status === "ACTIVE") {
+    // Check account lock
+    if (platform.lockedUntil && platform.lockedUntil > new Date()) {
+      return { ok: false, error: "Account temporarily locked. Try again later." };
+    }
     const ok = await verifyPassword(password, platform.passwordHash);
     if (ok) {
       await db.platformUser.update({
         where: { id: platform.id },
-        data: { lastLoginAt: new Date() },
+        data: {
+          lastLoginAt: new Date(),
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+          lastPasswordChangeAt: platform.lastPasswordChangeAt ?? new Date(),
+        },
       });
       await createSession({
         sub: platform.id,
@@ -97,8 +118,18 @@ export async function loginAction(prev: LoginState, formData: FormData): Promise
         entityId: platform.id,
       });
       revalidatePath("/");
+      if (platform.forcePasswordChange) {
+        return { ok: true, forcePasswordChange: true };
+      }
       redirect(next && next.startsWith("/") ? next : "/admin");
     }
+    // Failed login — increment attempts
+    const newAttempts = platform.failedLoginAttempts + 1;
+    const updateData: Record<string, unknown> = { failedLoginAttempts: newAttempts };
+    if (newAttempts >= 5) {
+      updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    }
+    await db.platformUser.update({ where: { id: platform.id }, data: updateData });
   }
 
   // 2. Try tenant user (Phase 1: only if seeded in Phase 3+)
@@ -107,11 +138,20 @@ export async function loginAction(prev: LoginState, formData: FormData): Promise
     include: { tenant: true },
   });
   if (tenantUser && tenantUser.status === "ACTIVE" && tenantUser.tenant) {
+    // Check account lock
+    if (tenantUser.lockedUntil && tenantUser.lockedUntil > new Date()) {
+      return { ok: false, error: "Account temporarily locked. Try again later." };
+    }
     const ok = await verifyPassword(password, tenantUser.passwordHash);
     if (ok) {
       await db.user.update({
         where: { id: tenantUser.id },
-        data: { lastLoginAt: new Date() },
+        data: {
+          lastLoginAt: new Date(),
+          failedLoginAttempts: 0,
+          lockedUntil: null,
+          lastPasswordChangeAt: tenantUser.lastPasswordChangeAt ?? new Date(),
+        },
       });
       await createSession({
         sub: tenantUser.id,
@@ -137,8 +177,18 @@ export async function loginAction(prev: LoginState, formData: FormData): Promise
         console.error("[audit] tenant LOGIN failed:", e);
       }
       revalidatePath("/");
+      if (tenantUser.forcePasswordChange) {
+        return { ok: true, forcePasswordChange: true };
+      }
       redirect(next && next.startsWith("/") ? next : "/dashboard");
     }
+    // Failed login — increment attempts
+    const newAttempts = tenantUser.failedLoginAttempts + 1;
+    const updateData: Record<string, unknown> = { failedLoginAttempts: newAttempts };
+    if (newAttempts >= 5) {
+      updateData.lockedUntil = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+    }
+    await db.user.update({ where: { id: tenantUser.id }, data: updateData });
   }
 
   return { ok: false, error: "Invalid email or password" };
@@ -413,4 +463,287 @@ export async function demoRequestAction(prev: DemoState, formData: FormData): Pr
   });
 
   return { ok: true };
+}
+
+// ─────────────────────────────────────────────
+// FORGOT PASSWORD
+// ─────────────────────────────────────────────
+
+const ForgotPasswordSchema = z.object({
+  email: z.string().email("Enter a valid email"),
+});
+
+export type ForgotPasswordState =
+  | { ok: false; error?: string }
+  | { ok: true; message: string };
+
+export async function forgotPasswordAction(
+  prev: ForgotPasswordState,
+  formData: FormData,
+): Promise<ForgotPasswordState> {
+  const parsed = ForgotPasswordSchema.safeParse({
+    email: formData.get("email"),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input",
+    };
+  }
+
+  const email = parsed.data.email.toLowerCase();
+  const resetUrlBase = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+  // 1. Check platform users
+  const platformUser = await db.platformUser.findUnique({
+    where: { email },
+  });
+  if (platformUser) {
+    try {
+      const token = await generatePlatformResetToken(platformUser.id);
+      const url = `${resetUrlBase}/reset-password?token=${token}&userId=${platformUser.id}`;
+      console.log(`[DEV] Platform reset URL: ${url}`);
+    } catch (e) {
+      console.error("[forgot-password] Platform token error:", e);
+    }
+    return {
+      ok: true,
+      message:
+        "If an account exists with this email, a reset link has been sent.",
+    };
+  }
+
+  // 2. Check tenant users
+  const tenantUser = await db.user.findFirst({
+    where: { email },
+  });
+  if (tenantUser) {
+    try {
+      const token = await generateResetToken(tenantUser.id);
+      const url = `${resetUrlBase}/reset-password?token=${token}&userId=${tenantUser.id}`;
+      console.log(`[DEV] Tenant reset URL: ${url}`);
+    } catch (e) {
+      console.error("[forgot-password] Tenant token error:", e);
+    }
+    return {
+      ok: true,
+      message:
+        "If an account exists with this email, a reset link has been sent.",
+    };
+  }
+
+  // 3. No user found — return same message (no enumeration)
+  return {
+    ok: true,
+    message:
+      "If an account exists with this email, a reset link has been sent.",
+  };
+}
+
+// ─────────────────────────────────────────────
+// RESET PASSWORD
+// ─────────────────────────────────────────────
+
+const ResetPasswordSchema = z
+  .object({
+    token: z.string().min(1, "Token is required"),
+    userId: z.string().min(1, "User ID is required"),
+    newPassword: z
+      .string()
+      .min(8, "Password must be at least 8 characters"),
+    confirmPassword: z.string().min(1, "Please confirm your password"),
+  })
+  .refine((data) => data.newPassword === data.confirmPassword, {
+    message: "Passwords do not match",
+    path: ["confirmPassword"],
+  });
+
+export type ResetPasswordState =
+  | { ok: false; error?: string }
+  | { ok: true; message: string };
+
+export async function resetPasswordAction(
+  prev: ResetPasswordState,
+  formData: FormData,
+): Promise<ResetPasswordState> {
+  const parsed = ResetPasswordSchema.safeParse({
+    token: formData.get("token"),
+    userId: formData.get("userId"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    return {
+      ok: false,
+      error: parsed.error.issues[0]?.message ?? "Invalid input",
+    };
+  }
+
+  const { token, userId, newPassword } = parsed.data;
+
+  // 1. Try platform user first
+  const platformUser = await db.platformUser.findUnique({
+    where: { id: userId },
+  });
+  if (platformUser) {
+    const result = await verifyPlatformResetToken(token, userId);
+    if (!result.valid) {
+      return { ok: false, error: result.error ?? "Invalid token" };
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await db.platformUser.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        forcePasswordChange: false,
+        lastPasswordChangeAt: new Date(),
+      },
+    });
+
+    if (result.tokenId) {
+      await markPlatformTokenUsed(result.tokenId);
+    }
+
+    await logPlatformEvent({
+      actorId: platformUser.id,
+      actorEmail: platformUser.email,
+      action: "PASSWORD_RESET",
+      entityType: "PlatformUser",
+      entityId: platformUser.id,
+    });
+
+    return { ok: true, message: "Password reset successful. You can now log in." };
+  }
+
+  // 2. Try tenant user
+  const tenantUser = await db.user.findUnique({
+    where: { id: userId },
+  });
+  if (tenantUser) {
+    const result = await verifyResetToken(token, userId);
+    if (!result.valid) {
+      return { ok: false, error: result.error ?? "Invalid token" };
+    }
+
+    const passwordHash = await hashPassword(newPassword);
+    await db.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash,
+        forcePasswordChange: false,
+        lastPasswordChangeAt: new Date(),
+      },
+    });
+
+    if (result.tokenId) {
+      await markTokenUsed(result.tokenId);
+    }
+
+    // Tenant audit
+    try {
+      await db.auditLog.create({
+        data: {
+          companyId: tenantUser.companyId,
+          actorId: tenantUser.id,
+          actorEmail: tenantUser.email,
+          action: "PASSWORD_RESET",
+          entityType: "User",
+          entityId: tenantUser.id,
+        },
+      });
+    } catch (e) {
+      console.error("[audit] tenant PASSWORD_RESET failed:", e);
+    }
+
+    return { ok: true, message: "Password reset successful. You can now log in." };
+  }
+
+  return { ok: false, error: "Invalid user" };
+}
+
+// ─────────────────────────────────────────────
+// CHANGE PASSWORD
+// ─────────────────────────────────────────────
+
+const ChangePasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(8, "Password must be at least 8 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your password"),
+});
+
+export type ChangePasswordState =
+  | { ok: false; error?: string; fieldErrors?: Record<string, string> }
+  | { ok: true };
+
+export async function changePasswordAction(
+  prev: ChangePasswordState,
+  formData: FormData,
+): Promise<ChangePasswordState> {
+  const parsed = ChangePasswordSchema.safeParse({
+    currentPassword: formData.get("currentPassword"),
+    newPassword: formData.get("newPassword"),
+    confirmPassword: formData.get("confirmPassword"),
+  });
+  if (!parsed.success) {
+    const fieldErrors: Record<string, string> = {};
+    for (const issue of parsed.error.issues) {
+      const key = String(issue.path[0] ?? "form");
+      if (!fieldErrors[key]) fieldErrors[key] = issue.message;
+    }
+    return { ok: false, fieldErrors };
+  }
+  const { currentPassword, newPassword, confirmPassword } = parsed.data;
+
+  if (newPassword !== confirmPassword) {
+    return { ok: false, error: "New passwords do not match" };
+  }
+
+  const session = await getSession();
+  if (!session) {
+    return { ok: false, error: "You must be logged in to change your password" };
+  }
+
+  if (session.kind === "platform") {
+    const platform = await db.platformUser.findUnique({ where: { id: session.sub } });
+    if (!platform) {
+      return { ok: false, error: "User not found" };
+    }
+    const valid = await verifyPassword(currentPassword, platform.passwordHash);
+    if (!valid) {
+      return { ok: false, error: "Current password is incorrect" };
+    }
+    const passwordHash = await hashPassword(newPassword);
+    await db.platformUser.update({
+      where: { id: platform.id },
+      data: {
+        passwordHash,
+        forcePasswordChange: false,
+        lastPasswordChangeAt: new Date(),
+      },
+    });
+  } else {
+    const tenantUser = await db.user.findUnique({ where: { id: session.sub } });
+    if (!tenantUser) {
+      return { ok: false, error: "User not found" };
+    }
+    const valid = await verifyPassword(currentPassword, tenantUser.passwordHash);
+    if (!valid) {
+      return { ok: false, error: "Current password is incorrect" };
+    }
+    const passwordHash = await hashPassword(newPassword);
+    await db.user.update({
+      where: { id: tenantUser.id },
+      data: {
+        passwordHash,
+        forcePasswordChange: false,
+        lastPasswordChangeAt: new Date(),
+      },
+    });
+  }
+
+  // Force re-login with new password
+  await destroySession();
+  revalidatePath("/");
+  redirect("/login?reason=loggedout");
 }
