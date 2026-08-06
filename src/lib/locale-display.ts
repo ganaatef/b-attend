@@ -567,3 +567,22 @@ export function displaySupportLevel(level: string, locale?: string): string {
   if (locale === "ar") return supportLevelLabelsAr[level] ?? level.replace(/_/g, " ");
   return supportLevelLabelsEn[level] ?? level.replace(/_/g, " ");
 }
+
+/* ── Sensitive field masking ── */
+export function maskNationalId(value: string | null | undefined): string {
+  if (!value) return "—";
+  if (value.length <= 4) return "****";
+  return "*".repeat(value.length - 4) + value.slice(-4);
+}
+
+export function maskBankAccount(value: string | null | undefined): string {
+  if (!value) return "—";
+  if (value.length <= 4) return "****";
+  return "*".repeat(value.length - 4) + value.slice(-4);
+}
+
+export function maskPhone(value: string | null | undefined): string {
+  if (!value) return "—";
+  if (value.length <= 6) return "***";
+  return value.slice(0, 3) + "***" + value.slice(-3);
+}

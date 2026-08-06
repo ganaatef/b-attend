@@ -7,6 +7,18 @@
 
 import { db } from "@/lib/db";
 
+function redactSensitiveData(data: any): any {
+  if (!data) return data;
+  const redacted = { ...data };
+  const sensitiveKeys = ["passwordHash", "password", "pinCode", "pinHash", "nationalId", "bankAccount", "secretHash"];
+  for (const key of Object.keys(redacted)) {
+    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk.toLowerCase()))) {
+      redacted[key] = "[REDACTED]";
+    }
+  }
+  return redacted;
+}
+
 export async function logPlatformEvent(params: {
   actorId?: string;
   actorEmail: string;
@@ -30,8 +42,8 @@ export async function logPlatformEvent(params: {
         reason: params.reason,
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
-        beforeData: params.beforeData ? JSON.stringify(params.beforeData) : null,
-        afterData: params.afterData ? JSON.stringify(params.afterData) : null,
+        beforeData: params.beforeData ? JSON.stringify(redactSensitiveData(params.beforeData)) : null,
+        afterData: params.afterData ? JSON.stringify(redactSensitiveData(params.afterData)) : null,
       },
     });
   } catch (err) {
@@ -64,8 +76,8 @@ export async function logTenantEvent(params: {
         reason: params.reason,
         ipAddress: params.ipAddress,
         userAgent: params.userAgent,
-        beforeData: params.beforeData ? JSON.stringify(params.beforeData) : null,
-        afterData: params.afterData ? JSON.stringify(params.afterData) : null,
+        beforeData: params.beforeData ? JSON.stringify(redactSensitiveData(params.beforeData)) : null,
+        afterData: params.afterData ? JSON.stringify(redactSensitiveData(params.afterData)) : null,
       },
     });
   } catch (err) {

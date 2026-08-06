@@ -281,6 +281,8 @@ async function main() {
   ];
   const employeeMap: Record<string, { id: string }> = {};
   for (const e of employeeDefs) {
+    const pinValue = String(1000 + Object.keys(employeeMap).length).padStart(4, "0");
+    const pinHash = await bcrypt.hash(pinValue, 10);
     const existing = await db.employee.findUnique({ where: { companyId_employeeCode: { companyId: tenant.id, employeeCode: e.code } } });
     const created = existing ?? await db.employee.create({
       data: {
@@ -297,7 +299,8 @@ async function main() {
         status: "ACTIVE",
         startDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
         defaultShiftPolicyId: policyMap[e.policy].id,
-        pinCode: String(1000 + Object.keys(employeeMap).length).padStart(4, "0"),
+        pinCode: pinValue,
+        pinHash,
       },
     });
     employeeMap[e.code] = { id: created.id };

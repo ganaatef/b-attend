@@ -62,18 +62,22 @@ export async function GET(req: NextRequest) {
   const tenant = await db.tenant.findUnique({ where: { id: tid }, select: { name: true } });
   const activeCount = profiles.filter((p) => p.active).length;
 
+  const canViewSalary = ["HR_ADMIN", "HR_MANAGER", "SUPER_ADMIN"].includes(session.role);
+
   const columns: ExcelColumn[] = [
     { key: "employeeCode", label: "Employee Code", width: 18 },
     { key: "name", label: "Name", width: 25 },
     { key: "branch", label: "Branch", width: 18 },
     { key: "department", label: "Department", width: 18 },
     { key: "salaryType", label: "Salary Type", width: 15 },
-    { key: "baseSalary", label: "Base Salary", width: 14 },
+    ...(canViewSalary ? [{ key: "baseSalary", label: "Base Salary", width: 14 }] : []),
     { key: "currency", label: "Currency", width: 10 },
     { key: "paymentMethod", label: "Payment Method", width: 16 },
-    { key: "dailyRate", label: "Daily Rate", width: 12 },
-    { key: "hourlyRate", label: "Hourly Rate", width: 12 },
-    { key: "otMultiplier", label: "OT Multiplier", width: 14 },
+    ...(canViewSalary ? [
+      { key: "dailyRate", label: "Daily Rate", width: 12 },
+      { key: "hourlyRate", label: "Hourly Rate", width: 12 },
+      { key: "otMultiplier", label: "OT Multiplier", width: 14 },
+    ] : []),
     { key: "lateRule", label: "Late Rule", width: 20 },
     { key: "absenceRule", label: "Absence Rule", width: 20 },
     { key: "active", label: "Active", width: 8 },
@@ -85,12 +89,14 @@ export async function GET(req: NextRequest) {
     branch: profile.employee?.branch?.name ?? "",
     department: profile.employee?.department?.name ?? "",
     salaryType: profile.salaryType ?? "",
-    baseSalary: Number(profile.baseSalary ?? 0),
+    ...(canViewSalary ? {
+      baseSalary: Number(profile.baseSalary ?? 0),
+      dailyRate: Number(profile.dailyRate ?? 0),
+      hourlyRate: Number(profile.hourlyRate ?? 0),
+      otMultiplier: Number(profile.overtimeRateMultiplier ?? 0),
+    } : {}),
     currency: profile.currency ?? "",
     paymentMethod: profile.paymentMethod ?? "",
-    dailyRate: Number(profile.dailyRate ?? 0),
-    hourlyRate: Number(profile.hourlyRate ?? 0),
-    otMultiplier: Number(profile.overtimeRateMultiplier ?? 0),
     lateRule: profile.lateDeductionRule ?? "",
     absenceRule: profile.absenceDeductionRule ?? "",
     active: profile.active ? "Yes" : "No",

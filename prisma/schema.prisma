@@ -317,6 +317,7 @@ model Tenant {
   auditLogs      AuditLog[]
   reportExports  ReportExportLog[]
   supportTickets SupportTicket[]
+  kioskDevices   KioskDevice[]
   // B-Coach AI module relations
   dailyCoachContents  DailyCoachContent[]
   coachTips           CoachTip[]
@@ -669,6 +670,7 @@ model Branch {
   teamCoachSnapshots TeamCoachSnapshot[]
   schedules       Schedule[]
   employees       Employee[]
+  kioskDevices    KioskDevice[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -727,6 +729,7 @@ model Employee {
   defaultShiftPolicyId String?
   defaultShiftPolicy ShiftPolicy?  @relation(fields: [defaultShiftPolicyId], references: [id])
   pinCode           String?
+  pinHash           String?
   userId            String?
   salary            Int?
   notes             String?
@@ -1862,4 +1865,31 @@ model PlatformPasswordResetToken {
 
   @@index([userId])
   @@index([tokenHash])
+}
+
+enum KioskDeviceStatus {
+  ACTIVE
+  REVOKED
+}
+
+model KioskDevice {
+  id              String         @id @default(cuid())
+  companyId       String
+  tenant          Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  branchId        String
+  branch          Branch         @relation(fields: [branchId], references: [id])
+  name            String
+  deviceIdentifier String        @unique
+  secretHash      String
+  status          KioskDeviceStatus @default(ACTIVE)
+  activatedAt     DateTime?
+  revokedAt       DateTime?
+  lastSeenAt      DateTime?
+  createdById     String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([companyId])
+  @@index([branchId])
+  @@index([deviceIdentifier])
 }

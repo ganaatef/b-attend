@@ -88,4 +88,5 @@ export const RATE_LIMITS = {
   general: 120,
   api: 60,
   auth: 10,
+  kiosk: 30,
 } as const;

@@ -10,6 +10,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { haversineMeters, isInsideGeofence, recalculateAttendanceDay } from "@/lib/attendance/engine";
+import { RATE_LIMITS } from "@/lib/rate-limit";
 
 const ClockSchema = z.object({
   employeeId: z.string().min(1),
@@ -134,7 +135,11 @@ const KioskLookupSchema = z.object({
   branchId: z.string().min(1),
   code: z.string().optional(),
   pin: z.string().optional(),
+  deviceIdentifier: z.string().optional(),
 });
+
+// In-memory rate limit buckets for kiosk lookups (keyed by branchId:deviceIdentifier)
+const kioskRateBuckets = new Map<string, { count: number; resetAt: number }>();
 
 export async function kioskLookupAction(prev: any, formData: FormData) {
   try {
@@ -144,13 +149,29 @@ export async function kioskLookupAction(prev: any, formData: FormData) {
       branchId: formData.get("branchId"),
       code: formData.get("code") || undefined,
       pin: formData.get("pin") || undefined,
+      deviceIdentifier: formData.get("deviceIdentifier") || undefined,
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
+
+    // Kiosk rate limiting by branchId + deviceIdentifier
+    const rateKey = `${d.branchId}:${d.deviceIdentifier ?? "unknown"}`;
+    const now = Date.now();
+    let kioskBucket = kioskRateBuckets.get(rateKey);
+    if (!kioskBucket || now > kioskBucket.resetAt) {
+      kioskBucket = { count: 0, resetAt: now + 60_000 };
+      kioskRateBuckets.set(rateKey, kioskBucket);
+    }
+    kioskBucket.count++;
+    if (kioskBucket.count > RATE_LIMITS.kiosk) {
+      return { ok: false, error: "Too many requests. Please wait a moment." };
+    }
     // Verify branch belongs to tenant
     const branch = await db.branch.findFirst({ where: { id: d.branchId, companyId: s.tenantId } });
     if (!branch) return { ok: false, error: "Branch not found" };
     // Find employee
+    // Phase 4 (pilot): PIN verified via direct DB match (plaintext pinCode).
+    // Phase 5: migrate to constant-time bcrypt compare against pinHash.
     const employee = await db.employee.findFirst({
       where: {
         companyId: s.tenantId,
