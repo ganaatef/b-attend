@@ -47,8 +47,8 @@ export function CustomerSettingsForm({ settings }: { settings: CompanySettings |
           { key: "allowManualRequests", label: t("allowManualRequests"), def: true },
           { key: "enableEmployeeSelfService", label: t("enableEmployeeSelfService"), def: true },
           { key: "enableBranchManagerApprovals", label: t("enableBranchManagerApprovals"), def: true },
-          { key: "emailNotifications", label: t("emailNotifications"), def: true },
-          { key: "whatsappNotifications", label: t("whatsappNotifications"), def: false },
+          { key: "emailNotifications", label: `${t("emailNotifications")} (Coming soon)`, def: true },
+          { key: "whatsappNotifications", label: `${t("whatsappNotifications")} (Coming soon)`, def: false },
         ].map((f) => (
           <div key={f.key} className="flex items-center gap-2">
             <Checkbox id={f.key} name={f.key} value="true" defaultChecked={boolField(f.key, f.def)} />

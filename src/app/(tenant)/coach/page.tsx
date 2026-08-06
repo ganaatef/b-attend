@@ -30,6 +30,7 @@ import { generateDailyMotivation } from "@/lib/ai/provider";
 import { canUseAiFeature } from "@/lib/ai/feature-gates";
 import { getTranslations, getLocale } from "next-intl/server";
 import { displayCoachTheme, displayScoreLevel } from "@/lib/locale-display";
+import { getProviderDisplayName } from "@/lib/ai/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -219,6 +220,7 @@ export default async function CoachPage() {
         <div className="flex items-center gap-2">
           <Sparkles className="h-5 w-5 text-brand-accent" />
           <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{getProviderDisplayName()}</span>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>

@@ -141,6 +141,9 @@ export default async function PayrollRunDetailPage({ params }: { params: Promise
 
   return (
     <div className="mx-auto max-w-7xl space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+        Payroll Preparation — This is a payroll-ready calculation tool. All amounts require accountant review before payment. Taxes and social insurance are not calculated.
+      </div>
       <div>
         <Link href="/hr/payroll-runs" className="text-xs text-muted-foreground hover:text-foreground">
           ← {t("backToRuns")}

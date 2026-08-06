@@ -18,6 +18,7 @@ import { canUseAiFeature } from "@/lib/ai/feature-gates";
 import { RegenerateButton } from "./RegenerateButton";
 import { getTranslations, getLocale } from "next-intl/server";
 import { displayScoreLevel } from "@/lib/locale-display";
+import { getProviderDisplayName } from "@/lib/ai/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -100,6 +101,7 @@ export default async function EmployeeCoachDetailPage({ params }: { params: Prom
         <div className="mt-1 flex items-center gap-2">
           <Brain className="h-5 w-5 text-brand-accent" />
           <h1 className="text-lg font-bold text-foreground">{employee.fullName}</h1>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{getProviderDisplayName()}</span>
         </div>
         <p className="text-sm text-muted-foreground">{employee.employeeCode} · {employee.branch?.name ?? "—"} · {employee.department?.name ?? "—"}</p>
       </div>

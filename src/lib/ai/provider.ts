@@ -559,3 +559,7 @@ export function isManagerInsightsEnabled(): boolean {
 export function getActiveProvider(): AiProviderType {
   return getProvider();
 }
+
+export function getProviderDisplayName(): string {
+  return getProvider() === "MOCK" ? "Demo/Rules-Based Coach" : "AI Coach";
+}

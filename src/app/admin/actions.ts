@@ -222,7 +222,7 @@ export async function markInvoicePaidAction(invoiceId: string, paymentMethod: st
   const inv = await db.invoice.findUnique({ where: { id: invoiceId } });
   if (!inv) return { ok: false, error: "Invoice not found" };
   await db.invoice.update({ where: { id: invoiceId }, data: { status: "PAID", paidAt: new Date(), paymentMethod } });
-  await db.payment.create({ data: { tenantId: inv.tenantId, invoiceId, amount: inv.total, currency: inv.currency, provider: "MANUAL", reference: `MANUAL-${Date.now()}`, status: "CONFIRMED", paidAt: new Date(), createdById: s.sub } });
+  await db.payment.create({ data: { tenantId: inv.tenantId, invoiceId, amount: inv.total, currency: inv.currency, provider: "MANUAL", reference: `MANUAL-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, status: "CONFIRMED", paidAt: new Date(), createdById: s.sub } });
   await logPlatformEvent({ actorId: s.sub, actorEmail: s.email, action: "PAYMENT_RECORDED", entityType: "Invoice", entityId: invoiceId, reason: `Marked paid via ${paymentMethod}`, afterData: { status: "PAID" } });
   revalidatePath("/admin/invoices");
   revalidatePath("/admin/payments");

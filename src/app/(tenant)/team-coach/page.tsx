@@ -17,6 +17,7 @@ import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Brain, AlertCircle, TrendingUp, Trophy, Sunrise, ListChecks, Lock } from "lucide-react";
 import { generateTeamCoachSnapshot, type DateRange } from "@/lib/ai/coach-engine";
 import { canUseAiFeature } from "@/lib/ai/feature-gates";
+import { getProviderDisplayName } from "@/lib/ai/provider";
 
 export const dynamic = "force-dynamic";
 
@@ -119,7 +120,7 @@ export default async function TeamCoachPage() {
 
       {/* Summary */}
       <Card>
-        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("teamOverview")}</CardTitle></CardHeader>
+        <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("teamOverview")} <span className="text-xs font-normal text-muted-foreground">· {getProviderDisplayName()}</span></CardTitle></CardHeader>
         <CardContent>
           <p className="text-sm leading-relaxed text-foreground/90">{insights.summary}</p>
           <div className="mt-3 grid grid-cols-3 gap-3">

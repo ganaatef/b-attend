@@ -80,6 +80,9 @@ export default async function PayrollRunsPage({
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
+      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800 mb-4">
+        Payroll Preparation — This is a payroll-ready calculation tool. All amounts require accountant review before payment. Taxes and social insurance are not calculated.
+      </div>
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-lg font-bold text-foreground">{t("title")}</h1>
