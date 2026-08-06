@@ -8,6 +8,7 @@ import { ClipboardList } from "lucide-react";
 import { getTranslations } from "next-intl/server";
 import { getStatusLabel } from "@/lib/status-labels";
 import { getLocaleCode } from "@/lib/locale";
+import { Duration, TimeRange } from "@/components/LtrValue";
 
 export const dynamic = "force-dynamic";
 
@@ -51,8 +52,8 @@ export default async function AttendancePage() {
                 <div>
                   <p className="font-medium text-foreground"><bdi dir="ltr">{new Date(d.date).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", { weekday: "short", month: "short", day: "numeric" })}</bdi></p>
                   <p className="text-xs text-muted-foreground">
-                    <bdi dir="ltr">{d.actualClockIn ? new Date(d.actualClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} – {d.actualClockOut ? new Date(d.actualClockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</bdi>
-                    {" · "}<bdi dir="ltr">{Math.floor(d.workedMinutes / 60)}{locale === "ar" ? "س" : "h"} {d.workedMinutes % 60}{locale === "ar" ? "د" : "m"}</bdi>
+                    <TimeRange start={d.actualClockIn ? new Date(d.actualClockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} end={d.actualClockOut ? new Date(d.actualClockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} />
+                    {" · "}<Duration minutes={d.workedMinutes} locale={locale} />
                   </p>
                 </div>
                 <Badge variant="outline" className="text-xs">{getStatusLabel(d.status, locale)}</Badge>

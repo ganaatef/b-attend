@@ -11,6 +11,7 @@ import { deleteScheduleAction } from "../actions";
 import { DateNavigator } from "./DateNavigator";
 import { getTranslations } from "next-intl/server";
 import { getManagedBranchIds } from "@/lib/hr/permissions";
+import { TimeRange } from "@/components/LtrValue";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +53,11 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
   const prevDate = new Date(date); prevDate.setDate(prevDate.getDate() - 1);
   const nextDate = new Date(date); nextDate.setDate(nextDate.getDate() + 1);
 
+  function formatTime(d: Date | null) {
+    if (!d) return "—";
+    return new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
   return (
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex items-center justify-between">
@@ -87,7 +93,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
                     <td className="px-4 py-3"><Link href={`/employees/${s.employeeId}`} className="font-medium text-foreground hover:text-brand-accent">{s.employee?.fullName}</Link><p className="text-xs text-muted-foreground">{s.employee?.employeeCode}</p></td>
                     <td className="px-4 py-3 text-muted-foreground">{s.branch?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-muted-foreground">{s.shiftPolicy?.name ?? "—"}</td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{s.expectedStart ? new Date(s.expectedStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} → {s.expectedEnd ? new Date(s.expectedEnd).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground"><TimeRange start={formatTime(s.expectedStart)} end={formatTime(s.expectedEnd)} /></td>
                     <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{s.status}</Badge></td>
                     {canManage && (
                       <td className="px-4 py-3">

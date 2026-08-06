@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ import { AlertCircle } from "lucide-react";
 import { useEffect } from "react";
 
 export function ChangePasswordClient() {
+  const t = useTranslations("auth");
   const router = useRouter();
 
   const [state, formAction, pending] = useActionState<ChangePasswordState, FormData>(
@@ -23,12 +25,12 @@ export function ChangePasswordClient() {
 
   useEffect(() => {
     if (state && state.ok) {
-      toast.success("Password changed. Please log in with your new password.");
+      toast.success(t("passwordChangedSuccess"));
       router.push("/login?reason=loggedout");
     } else if (state && !state.ok && state.error) {
       toast.error(state.error);
     }
-  }, [state, router]);
+  }, [state, router, t]);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -41,7 +43,7 @@ export function ChangePasswordClient() {
 
       <div>
         <label htmlFor="currentPassword" className="block text-sm font-medium text-foreground mb-1.5">
-          Current Password
+          {t("currentPassword")}
         </label>
         <input
           id="currentPassword"
@@ -58,7 +60,7 @@ export function ChangePasswordClient() {
 
       <div>
         <label htmlFor="newPassword" className="block text-sm font-medium text-foreground mb-1.5">
-          New Password
+          {t("newPassword")}
         </label>
         <input
           id="newPassword"
@@ -75,7 +77,7 @@ export function ChangePasswordClient() {
 
       <div>
         <label htmlFor="confirmPassword" className="block text-sm font-medium text-foreground mb-1.5">
-          Confirm New Password
+          {t("confirmNewPassword")}
         </label>
         <input
           id="confirmPassword"
@@ -104,7 +106,7 @@ export function ChangePasswordClient() {
         size="lg"
       >
         <KeyRound className="mr-2 h-4 w-4" />
-        {pending ? "Updating..." : "Update Password"}
+        {pending ? t("updating") : t("updatePassword")}
       </Button>
     </form>
   );

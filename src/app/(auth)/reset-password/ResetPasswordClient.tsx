@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +20,7 @@ export function ResetPasswordClient({
   token: string;
   userId: string;
 }) {
+  const t = useTranslations("auth");
   const [state, formAction, pending] = useActionState<
     ResetPasswordState,
     FormData
@@ -30,7 +32,7 @@ export function ResetPasswordClient({
       <input type="hidden" name="userId" value={userId} />
 
       <div className="space-y-2">
-        <Label htmlFor="newPassword">New Password</Label>
+        <Label htmlFor="newPassword">{t("newPassword")}</Label>
         <Input
           id="newPassword"
           name="newPassword"
@@ -42,7 +44,7 @@ export function ResetPasswordClient({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="confirmPassword">Confirm Password</Label>
+        <Label htmlFor="confirmPassword">{t("confirmPassword")}</Label>
         <Input
           id="confirmPassword"
           name="confirmPassword"
@@ -66,7 +68,7 @@ export function ResetPasswordClient({
           <AlertDescription>
             {state.message}{" "}
             <Link href="/login" className="font-medium text-primary hover:underline">
-              Log in
+              {t("login")}
             </Link>
           </AlertDescription>
         </Alert>
@@ -79,7 +81,7 @@ export function ResetPasswordClient({
         size="lg"
       >
         <Lock className="mr-2 h-4 w-4" />
-        {pending ? "Resetting..." : "Reset Password"}
+        {pending ? t("resetting") : t("resetPassword")}
       </Button>
     </form>
   );

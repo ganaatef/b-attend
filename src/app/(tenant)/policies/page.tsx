@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Clock, Plus } from "lucide-react";
 import { PolicyForm } from "./PolicyForm";
 import { getTranslations } from "next-intl/server";
-import { TimeRange } from "@/components/LtrValue";
+import { TimeRange, Duration } from "@/components/LtrValue";
 import { displayWeekendDays, displayShiftName } from "@/lib/locale-display";
 import { getStatusLabel } from "@/lib/status-labels";
 import { getLocaleCode } from "@/lib/locale";
@@ -75,13 +75,13 @@ export default async function PoliciesPage() {
                       <TimeRange start={p.startTime} end={p.endTime} />
                     </td>
                     <td className="hidden px-4 py-3 text-sm text-muted-foreground md:table-cell">
-                      <bdi dir="ltr">{p.breakMinutes} {locale === "ar" ? "دقيقة" : "min"}</bdi>
+                      <Duration minutes={p.breakMinutes} locale={locale} />
                     </td>
                     <td className="hidden px-4 py-3 text-sm text-muted-foreground md:table-cell">
-                      <bdi dir="ltr">{p.lateGraceMinutes} {locale === "ar" ? "دقيقة" : "min"}</bdi>
+                      <Duration minutes={p.lateGraceMinutes} locale={locale} />
                     </td>
                     <td className="hidden px-4 py-3 text-sm text-muted-foreground md:table-cell">
-                      <bdi dir="ltr">{p.overtimeStartsAfterMinutes} {locale === "ar" ? "دقيقة" : "min"}</bdi>
+                      <Duration minutes={p.overtimeStartsAfterMinutes} locale={locale} />
                     </td>
                     <td className="hidden px-4 py-3 text-sm text-muted-foreground md:table-cell">
                       {displayWeekendDays(p.weekendDays ?? "", locale)}

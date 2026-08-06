@@ -10,6 +10,7 @@ import { Clock, LogIn, LogOut, ClipboardList, CheckSquare, CalendarClock, MapPin
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
 import { displayPunchType } from "@/lib/locale-display";
+import { TimeRange, Duration } from "@/components/LtrValue";
 
 export const dynamic = "force-dynamic";
 
@@ -54,14 +55,12 @@ export default async function TodayPage() {
     return new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
-  function calcDuration(start: Date | null, end: Date | null) {
-    if (!start || !end) return null;
+  function calcMins(start: Date | null, end: Date | null) {
+    if (!start || !end) return 0;
     const s = new Date(start); const e = new Date(end);
     let mins = Math.round((e.getTime() - s.getTime()) / 60000);
     if (mins <= 0) mins += 24 * 60;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    return mins;
   }
 
   return (
@@ -80,9 +79,9 @@ export default async function TodayPage() {
               <p className="text-sm font-medium text-foreground">{t("todaysShift", { shift: schedule.shiftPolicy?.name ?? "" })}</p>
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                <span><bdi dir="ltr">{formatTime(schedule.expectedStart)} – {formatTime(schedule.expectedEnd)}</bdi></span>
-                {calcDuration(schedule.expectedStart, schedule.expectedEnd) && (
-                  <span className="text-xs">(<bdi dir="ltr">{calcDuration(schedule.expectedStart, schedule.expectedEnd)}</bdi>)</span>
+                <TimeRange start={formatTime(schedule.expectedStart)} end={formatTime(schedule.expectedEnd)} />
+                {calcMins(schedule.expectedStart, schedule.expectedEnd) > 0 && (
+                  <span className="text-xs">(<Duration minutes={calcMins(schedule.expectedStart, schedule.expectedEnd)} locale={locale} />)</span>
                 )}
               </div>
               {schedule.branch && (
@@ -97,7 +96,7 @@ export default async function TodayPage() {
           {nextSchedule && (
             <div className="mt-2 rounded-md bg-muted/30 px-3 py-2">
               <p className="text-xs font-medium text-foreground">{t("nextShift")}: {nextSchedule.shiftPolicy?.name ?? "—"}</p>
-              <p className="text-xs text-muted-foreground">{new Date(nextSchedule.date).toLocaleDateString()} · <bdi dir="ltr">{formatTime(nextSchedule.expectedStart)} – {formatTime(nextSchedule.expectedEnd)}</bdi></p>
+              <p className="text-xs text-muted-foreground">{new Date(nextSchedule.date).toLocaleDateString()} · <TimeRange start={formatTime(nextSchedule.expectedStart)} end={formatTime(nextSchedule.expectedEnd)} /></p>
             </div>
           )}
           {lastPunch && (

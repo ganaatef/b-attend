@@ -467,6 +467,8 @@ export async function demoRequestAction(prev: DemoState, formData: FormData): Pr
 
 // ─────────────────────────────────────────────
 // FORGOT PASSWORD
+// NOTE: Error/success messages in this action are in English.
+// They should use translation keys in Phase 6.
 // ─────────────────────────────────────────────
 
 const ForgotPasswordSchema = z.object({
@@ -542,6 +544,8 @@ export async function forgotPasswordAction(
 
 // ─────────────────────────────────────────────
 // RESET PASSWORD
+// NOTE: Error/success messages in this action are in English.
+// They should use translation keys in Phase 6.
 // ─────────────────────────────────────────────
 
 const ResetPasswordSchema = z

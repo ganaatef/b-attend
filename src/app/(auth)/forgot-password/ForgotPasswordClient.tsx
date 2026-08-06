@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +14,7 @@ import {
 import { AlertCircle, CheckCircle, Mail } from "lucide-react";
 
 export function ForgotPasswordClient() {
+  const t = useTranslations("auth");
   const [state, formAction, pending] = useActionState<
     ForgotPasswordState,
     FormData
@@ -21,7 +23,7 @@ export function ForgotPasswordClient() {
   return (
     <form action={formAction} className="space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">{t("email")}</Label>
         <Input
           id="email"
           name="email"
@@ -53,7 +55,7 @@ export function ForgotPasswordClient() {
         size="lg"
       >
         <Mail className="mr-2 h-4 w-4" />
-        {pending ? "Sending..." : "Send Reset Link"}
+        {pending ? t("sending") : t("sendResetLink")}
       </Button>
     </form>
   );

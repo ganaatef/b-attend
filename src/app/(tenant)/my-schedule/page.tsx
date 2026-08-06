@@ -9,6 +9,7 @@ import Link from "next/link";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
 import { getStatusLabel } from "@/lib/status-labels";
+import { TimeRange, Duration } from "@/components/LtrValue";
 
 export const dynamic = "force-dynamic";
 
@@ -61,14 +62,12 @@ export default async function MySchedulePage() {
     return new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   }
 
-  function calcDuration(start: Date | null, end: Date | null) {
-    if (!start || !end) return null;
+  function calcMins(start: Date | null, end: Date | null) {
+    if (!start || !end) return 0;
     const s = new Date(start); const e = new Date(end);
     let mins = Math.round((e.getTime() - s.getTime()) / 60000);
     if (mins <= 0) mins += 24 * 60;
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+    return mins;
   }
 
   const dayNames = locale === "ar"
@@ -94,9 +93,9 @@ export default async function MySchedulePage() {
                 <Badge variant="outline" className="text-xs">{getStatusLabel(todaySchedule.status, locale)}</Badge>
               </div>
               <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> <bdi dir="ltr">{formatTime(todaySchedule.expectedStart)} – {formatTime(todaySchedule.expectedEnd)}</bdi></span>
-                {calcDuration(todaySchedule.expectedStart, todaySchedule.expectedEnd) && (
-                  <span className="text-xs">(<bdi dir="ltr">{calcDuration(todaySchedule.expectedStart, todaySchedule.expectedEnd)}</bdi>)</span>
+                <span className="flex items-center gap-1"><Clock className="h-3.5 w-3.5" /> <TimeRange start={formatTime(todaySchedule.expectedStart)} end={formatTime(todaySchedule.expectedEnd)} /></span>
+                {calcMins(todaySchedule.expectedStart, todaySchedule.expectedEnd) > 0 && (
+                  <span className="text-xs">(<Duration minutes={calcMins(todaySchedule.expectedStart, todaySchedule.expectedEnd)} locale={locale} />)</span>
                 )}
               </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -134,9 +133,9 @@ export default async function MySchedulePage() {
                     <p className="text-xs text-muted-foreground">{s.shiftPolicy?.name ?? "—"}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground"><bdi dir="ltr">{formatTime(s.expectedStart)} – {formatTime(s.expectedEnd)}</bdi></p>
-                    {calcDuration(s.expectedStart, s.expectedEnd) && (
-                      <p className="text-xs text-muted-foreground">(<bdi dir="ltr">{calcDuration(s.expectedStart, s.expectedEnd)}</bdi>)</p>
+                    <p className="text-xs text-muted-foreground"><TimeRange start={formatTime(s.expectedStart)} end={formatTime(s.expectedEnd)} /></p>
+                    {calcMins(s.expectedStart, s.expectedEnd) > 0 && (
+                      <p className="text-xs text-muted-foreground">(<Duration minutes={calcMins(s.expectedStart, s.expectedEnd)} locale={locale} />)</p>
                     )}
                   </div>
                 </div>
