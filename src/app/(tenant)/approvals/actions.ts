@@ -12,6 +12,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { recalculateAttendanceDay } from "@/lib/attendance/engine";
+import { getManagedBranchIds } from "@/lib/hr/permissions";
 
 async function requireTenant() {
   const s = await getSession();
@@ -62,6 +63,16 @@ export async function submitRequestAction(prev: any, formData: FormData) {
     // Employees can only submit for themselves
     if (s.role === "EMPLOYEE" && employee.userId !== s.sub) {
       return { ok: false, error: "You can only submit requests for yourself" };
+    }
+
+    // Branch managers can only submit for employees in their managed branches
+    if (s.role === "BRANCH_MANAGER") {
+      const user = await db.user.findUnique({ where: { id: s.sub } });
+      const managedBranches = await db.branch.findMany({ where: { companyId: s.tenantId!, managerId: user?.id }, select: { id: true } });
+      const managedIds = managedBranches.map(b => b.id);
+      if (!managedIds.includes(employee.branchId!)) {
+        return { ok: false, error: "You can only submit requests for employees in your managed branches" };
+      }
     }
 
     const requestedData: any = {};
@@ -123,11 +134,15 @@ export async function decideRequestAction(prev: any, formData: FormData) {
     if (!req) return { ok: false, error: "Request not found" };
     if (req.status !== "PENDING") return { ok: false, error: "Request is no longer pending" };
 
+    // Prevent self-approval
+    if (req.requestedById === s.sub) {
+      return { ok: false, error: "You cannot approve or reject your own request" };
+    }
+
     // Branch managers can only decide on their branch
     if (s.role === "BRANCH_MANAGER") {
-      const user = await db.user.findUnique({ where: { id: s.sub } });
-      const managed = await db.branch.findMany({ where: { companyId: s.tenantId!, managerId: user?.id } });
-      if (!managed.some((b) => b.id === req.branchId)) {
+      const managedBranchIds = await getManagedBranchIds(s.sub, s.tenantId!);
+      if (!req.branchId || !managedBranchIds.includes(req.branchId)) {
         return { ok: false, error: "You can only approve requests for your branch" };
       }
     }
@@ -192,6 +207,7 @@ export async function cancelRequestAction(requestId: string) {
     const s = await requireTenant();
     const req = await db.approvalRequest.findFirst({ where: { id: requestId, companyId: s.tenantId! } });
     if (!req) return { ok: false, error: "Request not found" };
+    if (req.status !== "PENDING") return { ok: false, error: "Only pending requests can be cancelled" };
     if (req.requestedById !== s.sub && s.role !== "COMPANY_OWNER" && s.role !== "HR_ADMIN") {
       return { ok: false, error: "You can only cancel your own requests" };
     }

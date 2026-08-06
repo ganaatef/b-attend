@@ -215,7 +215,12 @@ export async function updateBranchAction(branchId: string, data: Record<string, 
     const s = await requireTenantAdmin();
     const branch = await db.branch.findFirst({ where: { id: branchId, companyId: s.tenantId! } });
     if (!branch) return { ok: false, error: "Branch not found" };
-    await db.branch.update({ where: { id: branchId }, data });
+    const allowed = ["name", "code", "address", "city", "area", "latitude", "longitude", "geofenceRadius", "status"];
+    const safeData: Record<string, any> = {};
+    for (const key of allowed) {
+      if (key in data) safeData[key] = data[key];
+    }
+    await db.branch.update({ where: { id: branchId, companyId: s.tenantId! }, data: safeData });
     await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "BRANCH_EDITED", entityType: "Branch", entityId: branchId });
     revalidatePath("/branches");
     revalidatePath(`/branches/${branchId}`);
@@ -318,6 +323,19 @@ export async function createEmployeeAction(prev: any, formData: FormData) {
     // Unique employee code
     const existing = await db.employee.findUnique({ where: { companyId_employeeCode: { companyId: s.tenantId!, employeeCode: d.employeeCode } } });
     if (existing) return { ok: false, error: "Employee code already exists" };
+    // Validate branch belongs to tenant
+    const branch = await db.branch.findFirst({ where: { id: d.branchId, companyId: s.tenantId!, deletedAt: null } });
+    if (!branch) return { ok: false, error: "Branch not found or does not belong to your company" };
+    // Validate department if provided
+    if (d.departmentId) {
+      const dept = await db.department.findFirst({ where: { id: d.departmentId, companyId: s.tenantId! } });
+      if (!dept) return { ok: false, error: "Department not found or does not belong to your company" };
+    }
+    // Validate shift policy if provided
+    if (d.defaultShiftPolicyId) {
+      const policy = await db.shiftPolicy.findFirst({ where: { id: d.defaultShiftPolicyId, companyId: s.tenantId! } });
+      if (!policy) return { ok: false, error: "Shift policy not found or does not belong to your company" };
+    }
     const emp = await db.employee.create({
       data: {
         companyId: s.tenantId!,
@@ -349,7 +367,16 @@ export async function updateEmployeeAction(employeeId: string, data: Record<stri
     const s = await requireTenantAdmin();
     const emp = await db.employee.findFirst({ where: { id: employeeId, companyId: s.tenantId! } });
     if (!emp) return { ok: false, error: "Employee not found" };
-    await db.employee.update({ where: { id: employeeId }, data });
+    const allowed = ["fullName", "arabicName", "phone", "email", "jobTitle", "branchId", "departmentId", "employmentType", "defaultShiftPolicyId", "pinCode", "status", "employeeCode"];
+    const safeData: Record<string, any> = {};
+    for (const key of allowed) {
+      if (key in data) safeData[key] = data[key];
+    }
+    if (safeData.branchId) {
+      const branch = await db.branch.findFirst({ where: { id: safeData.branchId, companyId: s.tenantId!, deletedAt: null } });
+      if (!branch) return { ok: false, error: "Branch not found or does not belong to your company" };
+    }
+    await db.employee.update({ where: { id: employeeId, companyId: s.tenantId! }, data: safeData });
     await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "EMPLOYEE_EDITED", entityType: "Employee", entityId: employeeId });
     revalidatePath("/employees");
     revalidatePath(`/employees/${employeeId}`);
@@ -363,7 +390,7 @@ export async function updateEmployeeAction(employeeId: string, data: Record<stri
 export async function deleteEmployeeAction(employeeId: string) {
   try {
     const s = await requireTenantAdmin();
-    await db.employee.update({ where: { id: employeeId }, data: { deletedAt: new Date(), status: "LEFT" } });
+    await db.employee.update({ where: { id: employeeId, companyId: s.tenantId! }, data: { deletedAt: new Date(), status: "LEFT" } });
     await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "EMPLOYEE_EDITED", entityType: "Employee", entityId: employeeId, reason: "Deactivated" });
     revalidatePath("/employees");
     return { ok: true };

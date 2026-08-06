@@ -23,6 +23,7 @@ export async function clockAction(prev: any, formData: FormData) {
   try {
     const s = await getSession();
     if (!s) return { ok: false, error: "Not authenticated" };
+    if (s.kind !== "tenant" || !s.tenantId) return { ok: false, error: "Not authenticated" };
 
     const parsed = ClockSchema.safeParse({
       employeeId: formData.get("employeeId"),
@@ -36,15 +37,15 @@ export async function clockAction(prev: any, formData: FormData) {
 
     // Find employee
     const employee = await db.employee.findUnique({
-      where: { id: d.employeeId },
+      where: { id: d.employeeId, companyId: s.tenantId },
       include: { branch: true },
     });
     if (!employee) return { ok: false, error: "Employee not found" };
     if (employee.status !== "ACTIVE") return { ok: false, error: "Employee is not active" };
 
-    // Tenant session must match employee's company (for employee self-service)
-    if (s.kind === "tenant") {
-      if (employee.companyId !== s.tenantId) return { ok: false, error: "Employee does not belong to your company" };
+    // For employee self-clock, ensure employee is clocking themselves
+    if (s.role === "EMPLOYEE" && employee.userId !== s.sub) {
+      return { ok: false, error: "You can only clock for yourself" };
     }
 
     // Find today's schedule
@@ -53,11 +54,6 @@ export async function clockAction(prev: any, formData: FormData) {
     const schedule = await db.schedule.findUnique({
       where: { companyId_employeeId_date: { companyId: employee.companyId, employeeId: employee.id, date: today } },
     });
-
-    // For employee self-clock, ensure employee is clocking themselves
-    if (s.kind === "tenant" && s.role === "EMPLOYEE" && employee.userId !== s.sub) {
-      return { ok: false, error: "You can only clock for yourself" };
-    }
 
     // Geofence check (skip for kiosk — assume inside)
     let distanceMeters = 0;

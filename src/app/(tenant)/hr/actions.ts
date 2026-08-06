@@ -1035,6 +1035,12 @@ export async function assignTrainingAction(prev: any, formData: FormData) {
     const parsed = assignTrainingSchema.safeParse({ employeeId: formData.get("employeeId"), courseId: formData.get("courseId"), dueDate: formData.get("dueDate") || undefined, notes: formData.get("notes") || undefined });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
 
+    const employee = await db.employee.findFirst({ where: { id: parsed.data.employeeId, companyId: s.tenantId, deletedAt: null } });
+    if (!employee) return { ok: false, error: "Employee not found or does not belong to your company" };
+
+    const course = await db.trainingCourse.findFirst({ where: { id: parsed.data.courseId, companyId: s.tenantId } });
+    if (!course) return { ok: false, error: "Training course not found" };
+
     const existing = await db.trainingAssignment.findFirst({ where: { companyId: s.tenantId, employeeId: parsed.data.employeeId, courseId: parsed.data.courseId, status: { in: ["ASSIGNED", "IN_PROGRESS"] } } });
     if (existing) return { ok: false, error: "Employee already has this course assigned" };
 
@@ -1119,6 +1125,9 @@ export async function addEmployeeSkillAction(prev: any, formData: FormData) {
 
     const parsed = skillSchema.safeParse({ employeeId: formData.get("employeeId"), skillName: formData.get("skillName"), level: formData.get("level") });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
+
+    const employee = await db.employee.findFirst({ where: { id: parsed.data.employeeId, companyId: s.tenantId, deletedAt: null } });
+    if (!employee) return { ok: false, error: "Employee not found or does not belong to your company" };
 
     const skill = await db.employeeSkill.create({
       data: { companyId: s.tenantId, employeeId: parsed.data.employeeId, skillName: parsed.data.skillName, level: parsed.data.level as any, verifiedById: s.userId, verifiedAt: new Date() },
@@ -1213,6 +1222,9 @@ export async function assignAssetAction(prev: any, formData: FormData) {
     const asset = await db.asset.findFirst({ where: { id: parsed.data.assetId, companyId: s.tenantId } });
     if (!asset) return { ok: false, error: "Asset not found" };
     if (asset.status !== "AVAILABLE") return { ok: false, error: "Asset is not available for assignment" };
+
+    const employee = await db.employee.findFirst({ where: { id: parsed.data.employeeId, companyId: s.tenantId, deletedAt: null } });
+    if (!employee) return { ok: false, error: "Employee not found or does not belong to your company" };
 
     await db.$transaction(async (tx) => {
       await tx.assetAssignment.create({ data: { companyId: s.tenantId, assetId: parsed.data.assetId, employeeId: parsed.data.employeeId, conditionOnAssign: parsed.data.conditionOnAssign, notes: parsed.data.notes } });
@@ -1334,6 +1346,9 @@ export async function createOnboardingTaskAction(prev: any, formData: FormData) 
     const parsed = onboardingTaskSchema.safeParse({ employeeId: formData.get("employeeId"), title: formData.get("title"), description: formData.get("description") || undefined, dueDate: formData.get("dueDate") || undefined });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
 
+    const employee = await db.employee.findFirst({ where: { id: parsed.data.employeeId, companyId: s.tenantId, deletedAt: null } });
+    if (!employee) return { ok: false, error: "Employee not found or does not belong to your company" };
+
     const task = await db.onboardingTask.create({
       data: { companyId: s.tenantId, employeeId: parsed.data.employeeId, title: parsed.data.title, description: parsed.data.description, dueDate: parsed.data.dueDate ? new Date(parsed.data.dueDate) : undefined, assignedToId: s.userId },
     });
@@ -1408,6 +1423,9 @@ export async function createDefaultOnboardingChecklistAction(employeeId: string)
   try {
     const s = await requireHrSession();
     if (!hasPermission(s.role, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
+
+    const employee = await db.employee.findFirst({ where: { id: employeeId, companyId: s.tenantId, deletedAt: null } });
+    if (!employee) return { ok: false, error: "Employee not found or does not belong to your company" };
 
     const existing = await db.onboardingTask.findMany({ where: { companyId: s.tenantId, employeeId } });
     if (existing.length > 0) return { ok: false, error: "Onboarding checklist already exists" };
@@ -2069,6 +2087,9 @@ export async function createPayrollAdjustmentAction(prev: any, formData: FormDat
       reason: formData.get("reason"),
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+
+    const employee = await db.employee.findFirst({ where: { id: parsed.data.employeeId, companyId: s.tenantId, deletedAt: null } });
+    if (!employee) return { ok: false, error: "Employee not found or does not belong to your company" };
 
     if (parsed.data.payrollRunId) {
       const run = await db.payrollRun.findFirst({ where: { id: parsed.data.payrollRunId, companyId: s.tenantId } });
