@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { CalendarClock, Clock, MapPin } from "lucide-react";
+import Link from "next/link";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
 import { getStatusLabel } from "@/lib/status-labels";
@@ -34,7 +35,7 @@ export default async function MySchedulePage() {
   const weekEnd = new Date(today); weekEnd.setDate(weekEnd.getDate() + 7);
   const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
-  const [todaySchedule, upcomingSchedules, monthlySchedules] = await Promise.all([
+  const [todaySchedule, upcomingSchedules, monthlySchedules, lastPunch] = await Promise.all([
     db.schedule.findUnique({
       where: { companyId_employeeId_date: { companyId: session.tenantId, employeeId: employee.id, date: today } },
       include: { shiftPolicy: true, branch: true },
@@ -48,6 +49,10 @@ export default async function MySchedulePage() {
       where: { companyId: session.tenantId, employeeId: employee.id, date: { gte: new Date(today.getFullYear(), today.getMonth(), 1), lt: monthEnd } },
       include: { shiftPolicy: true },
       orderBy: { date: "asc" },
+    }),
+    db.punch.findFirst({
+      where: { companyId: session.tenantId, employeeId: employee.id },
+      orderBy: { timestamp: "desc" },
     }),
   ]);
 
@@ -96,6 +101,15 @@ export default async function MySchedulePage() {
               </div>
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5" /> {todaySchedule.branch?.name ?? "—"}
+              </div>
+              {lastPunch && (
+                <div className="mt-2 text-sm text-muted-foreground">
+                  Last action: {lastPunch.type === "CLOCK_IN" ? "Clocked in" : "Clocked out"} at{" "}
+                  {new Date(lastPunch.timestamp).toLocaleTimeString(locale === "ar" ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" })}
+                </div>
+              )}
+              <div className="mt-2">
+                <Link href="/clock" className="text-xs font-medium text-brand-accent hover:underline">Go to Clock →</Link>
               </div>
             </div>
           ) : (

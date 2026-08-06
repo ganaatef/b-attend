@@ -5,8 +5,9 @@ import { getSession } from "@/lib/auth/session";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
-import { CalendarClock, Plus } from "lucide-react";
+import { CalendarClock, Plus, Trash2 } from "lucide-react";
 import { ScheduleForm } from "./ScheduleForm";
+import { deleteScheduleAction } from "../actions";
 import { DateNavigator } from "./DateNavigator";
 import { getTranslations } from "next-intl/server";
 import { getManagedBranchIds } from "@/lib/hr/permissions";
@@ -24,6 +25,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
   const next = new Date(date); next.setDate(next.getDate() + 1);
 
   const isBranchManager = session.role === "BRANCH_MANAGER";
+  const canManage = !isBranchManager || session.role === "BRANCH_MANAGER";
   const managedBranchIds = isBranchManager ? await getManagedBranchIds(session.sub, session.tenantId) : [];
 
   const scheduleWhere: any = { companyId: session.tenantId, date: { gte: date, lt: next } };
@@ -76,6 +78,7 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
                   <th className="px-4 py-3 text-left font-medium">{t("shift")}</th>
                   <th className="px-4 py-3 text-left font-medium">{t("expected")}</th>
                   <th className="px-4 py-3 text-left font-medium">{t("status")}</th>
+                  {canManage && <th className="px-4 py-3 text-left font-medium"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -86,6 +89,19 @@ export default async function SchedulesPage({ searchParams }: { searchParams: Pr
                     <td className="px-4 py-3 text-muted-foreground">{s.shiftPolicy?.name ?? "—"}</td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">{s.expectedStart ? new Date(s.expectedStart).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"} → {s.expectedEnd ? new Date(s.expectedEnd).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—"}</td>
                     <td className="px-4 py-3"><Badge variant="outline" className="text-xs">{s.status}</Badge></td>
+                    {canManage && (
+                      <td className="px-4 py-3">
+                        <form action={async () => {
+                          if (confirm("Delete this schedule?")) {
+                            await deleteScheduleAction(s.id);
+                          }
+                        }}>
+                          <button type="submit" className="text-destructive hover:text-destructive/80 p-1">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </form>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

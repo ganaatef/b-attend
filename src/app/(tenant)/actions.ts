@@ -538,6 +538,60 @@ export async function createScheduleAction(prev: any, formData: FormData) {
   }
 }
 
+export async function updateScheduleAction(scheduleId: string, data: { shiftPolicyId?: string; plannedStart?: string; plannedEnd?: string; notes?: string; status?: string }) {
+  try {
+    const s = await requireTenant();
+    const schedule = await db.schedule.findFirst({ where: { id: scheduleId, companyId: s.tenantId! } });
+    if (!schedule) return { ok: false, error: "Schedule not found" };
+
+    if (isManager(s.role!) && schedule.branchId) {
+      const managedBranches = await getManagedBranchIds(s.sub, s.tenantId!);
+      if (!managedBranches.includes(schedule.branchId)) return { ok: false, error: "Cannot edit schedules for branches you don't manage" };
+    }
+
+    const updates: any = {};
+
+    if (data.shiftPolicyId) {
+      const policy = await db.shiftPolicy.findFirst({ where: { id: data.shiftPolicyId, companyId: s.tenantId! } });
+      if (!policy) return { ok: false, error: "Shift policy not found" };
+      updates.shiftPolicyId = data.shiftPolicyId;
+      if (!data.plannedStart && !data.plannedEnd) {
+        const date = new Date(schedule.date);
+        const [sh, sm] = policy.startTime.split(":").map(Number);
+        const [eh, em] = policy.endTime.split(":").map(Number);
+        const expectedStart = new Date(date); expectedStart.setHours(sh, sm, 0, 0);
+        const expectedEnd = new Date(date); expectedEnd.setHours(eh, em, 0, 0);
+        if (expectedEnd <= expectedStart) expectedEnd.setDate(expectedEnd.getDate() + 1);
+        updates.expectedStart = expectedStart;
+        updates.expectedEnd = expectedEnd;
+      }
+    }
+
+    if (data.plannedStart && data.plannedEnd) {
+      const date = new Date(schedule.date);
+      const [psh, psm] = data.plannedStart.split(":").map(Number);
+      const [peh, pem] = data.plannedEnd.split(":").map(Number);
+      const expectedStart = new Date(date); expectedStart.setHours(psh, psm, 0, 0);
+      const expectedEnd = new Date(date); expectedEnd.setHours(peh, pem, 0, 0);
+      if (expectedEnd <= expectedStart) expectedEnd.setDate(expectedEnd.getDate() + 1);
+      updates.expectedStart = expectedStart;
+      updates.expectedEnd = expectedEnd;
+    }
+
+    if (data.notes !== undefined) updates.notes = data.notes;
+    if (data.status) updates.status = data.status;
+
+    await db.schedule.update({ where: { id: scheduleId }, data: updates });
+    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "SCHEDULE_EDITED", entityType: "Schedule", entityId: scheduleId });
+    revalidatePath("/schedules");
+    revalidatePath("/my-schedule");
+    return { ok: true };
+  } catch (e) {
+    console.error("[actions] updateScheduleAction failed:", e);
+    return { ok: false, error: "An unexpected error occurred. Please try again." };
+  }
+}
+
 const BulkScheduleSchema = z.object({
   branchId: z.string().min(1),
   employeeIds: z.string().min(1),
