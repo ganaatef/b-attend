@@ -38,6 +38,7 @@ import {
   AlertTriangle,
   FolderTree,
   Award,
+  Shield,
 } from "lucide-react";
 import { Logo } from "./Logo";
 import { cn } from "@/lib/utils";
@@ -142,6 +143,7 @@ const tenantEmployeeNavKeys: NavItem[] = [
   { href: "/my-assets", labelKey: "myAssets", icon: Package },
   { href: "/my-warnings", labelKey: "myWarnings", icon: AlertTriangle },
   { href: "/coach", labelKey: "myCoachAI", icon: Sparkles },
+  { href: "/privacy", labelKey: "privacy", icon: Shield },
   { href: "/profile", labelKey: "myProfile", icon: UserIcon },
 ];
 

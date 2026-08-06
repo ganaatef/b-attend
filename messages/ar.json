@@ -132,7 +132,8 @@
     "myAssets": "عُهدي",
     "myWarnings": "إنذاراتي",
     "myProfile": "ملفي الشخصي",
-    "mySchedule": "جدولي"
+    "mySchedule": "جدولي",
+    "privacy": "طلب خصوصية"
   },
   "header": {
     "superAdminCenter": "مركز التحكم العام",

@@ -45,6 +45,7 @@ export async function PublicFooter() {
           <ul className="mt-3 space-y-2 text-sm">
             <li><Link href="/legal/privacy" className="text-foreground/80 hover:text-foreground">{t("privacyPolicy")}</Link></li>
             <li><Link href="/legal/terms" className="text-foreground/80 hover:text-foreground">{t("termsOfService")}</Link></li>
+            <li><Link href="/privacy" className="text-foreground/80 hover:text-foreground">Data Requests</Link></li>
           </ul>
         </div>
       </div>

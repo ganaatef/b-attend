@@ -132,7 +132,8 @@
     "myAssets": "My Assets",
     "myWarnings": "My Warnings",
     "myProfile": "My Profile",
-    "mySchedule": "My Schedule"
+    "mySchedule": "My Schedule",
+    "privacy": "Privacy Request"
   },
   "header": {
     "superAdminCenter": "Super Admin Control Center",
