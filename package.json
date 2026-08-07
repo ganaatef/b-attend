@@ -18,6 +18,7 @@
     "seed": "tsx prisma/seed.ts",
     "i18n:check": "tsx scripts/check-missing-translations.ts",
     "test": "vitest run",
+    "test:runtime": "vitest run tests/runtime/",
     "test:watch": "vitest"
   },
   "prisma": {
