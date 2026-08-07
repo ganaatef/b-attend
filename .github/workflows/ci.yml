@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main, release/**]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [20]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Prisma validate
+        run: npx prisma validate
+
+      - name: Prisma generate
+        run: npx prisma generate
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: i18n parity check
+        run: npm run i18n:check
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+        env:
+          SESSION_SECRET: ci-test-secret-for-build-only-32chars!!
+          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+          NEXT_PUBLIC_DEMO_MODE: "true"
