@@ -9,9 +9,13 @@ on:
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+      SESSION_SECRET: ci-test-secret-for-build-only-32chars!!
+      NEXT_PUBLIC_DEMO_MODE: "true"
     strategy:
       matrix:
-        node-version: [20]
+        node-version: [22]
 
     steps:
       - uses: actions/checkout@v4
@@ -45,7 +49,3 @@ jobs:
 
       - name: Build
         run: npm run build
-        env:
-          SESSION_SECRET: ci-test-secret-for-build-only-32chars!!
-          DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
-          NEXT_PUBLIC_DEMO_MODE: "true"
