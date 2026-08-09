@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Hourglass } from "lucide-react";
 import Link from "next/link";
-import { PublicLayout } from "@/components/layout/PublicLayout";
 import type { Plan } from "@prisma/client";
 import { useTranslations, useLocale } from "next-intl";
 import { getStatusLabel } from "@/lib/status-labels";
@@ -202,7 +201,7 @@ export function SignupForm({ plans }: { plans: Plan[] }) {
 export function SignupClient({ plans }: { plans: Plan[] }) {
   const t = useTranslations("signup");
   return (
-    <PublicLayout>
+    <>
       <section className="border-b border-border bg-gradient-to-b from-card to-background">
         <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -218,7 +217,7 @@ export function SignupClient({ plans }: { plans: Plan[] }) {
           <SignupForm plans={plans} />
         </div>
       </section>
-    </PublicLayout>
+    </>
   );
 }
 

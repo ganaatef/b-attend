@@ -3,6 +3,7 @@
  */
 import { db } from "@/lib/db";
 import { PricingClient } from "./PricingClient";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 export const dynamic = "force-dynamic";
 
@@ -12,5 +13,9 @@ export default async function PricingPage() {
     orderBy: { sortOrder: "asc" },
     include: { features: true },
   });
-  return <PricingClient plans={plans} />;
+  return (
+    <PublicLayout>
+      <PricingClient plans={plans} />
+    </PublicLayout>
+  );
 }

@@ -3,6 +3,7 @@
  */
 import { db } from "@/lib/db";
 import { SignupClient } from "./SignupClient";
+import { PublicLayout } from "@/components/layout/PublicLayout";
 
 export const dynamic = "force-dynamic";
 
@@ -11,5 +12,9 @@ export default async function SignupPage() {
     where: { isActive: true },
     orderBy: { sortOrder: "asc" },
   });
-  return <SignupClient plans={plans} />;
+  return (
+    <PublicLayout>
+      <SignupClient plans={plans} />
+    </PublicLayout>
+  );
 }
