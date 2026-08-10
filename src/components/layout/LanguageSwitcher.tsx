@@ -32,12 +32,6 @@ export function LanguageSwitcher() {
     };
   }, [open]);
 
-  function switchTo(next: Locale) {
-    setOpen(false);
-    document.cookie = `NEXT_LOCALE=${next};path=/;max-age=31536000`;
-    router.refresh();
-  }
-
   return (
     <div ref={rootRef} className="relative">
       <button
@@ -62,7 +56,11 @@ export function LanguageSwitcher() {
               type="button"
               role="option"
               aria-selected={l === locale}
-              onClick={() => switchTo(l)}
+              onClick={() => {
+                setOpen(false);
+                document.cookie = `NEXT_LOCALE=${l};path=/;max-age=31536000`;
+                router.refresh();
+              }}
               className={`flex w-full items-center gap-2 px-3 py-2 text-left text-xs font-medium transition-colors first:rounded-t-md last:rounded-b-md hover:bg-muted ${
                 l === locale ? "text-primary bg-muted/50" : "text-foreground"
               }`}

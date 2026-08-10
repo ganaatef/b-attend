@@ -6,6 +6,10 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-test:
     runs-on: ubuntu-latest
@@ -49,3 +53,43 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  # Deploy runs ONLY after build-test succeeds (needs: build-test).
+  # Production is deployed ONLY from main. Release branches deploy to Preview only.
+  deploy:
+    needs: build-test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_Yv5yJW5Al6lnp1tkZSQjGTAo
+      VERCEL_PROJECT_ID: prj_R4yJVc6wBnGiK1zjdeQ3W52w0wIF
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Copy app to git-free staging dir
+        run: |
+          mkdir -p /tmp/b-attend-deploy
+          tar --exclude=.git --exclude=node_modules --exclude=.next -cf - . | tar -xf - -C /tmp/b-attend-deploy
+
+      - name: Deploy to Vercel (Preview) - release branches only
+        if: github.ref != 'refs/heads/main'
+        working-directory: /tmp/b-attend-deploy
+        run: npx vercel deploy --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Vercel (Production) - main only
+        if: github.ref == 'refs/heads/main'
+        working-directory: /tmp/b-attend-deploy
+        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}

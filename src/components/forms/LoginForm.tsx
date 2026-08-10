@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useActionState, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import Link from "next/link";
 
 export function LoginForm() {
   const sp = useSearchParams();
+  const router = useRouter();
   const reason = sp.get("reason");
   const next = sp.get("next");
   const t = useTranslations("auth");
@@ -35,9 +36,9 @@ export function LoginForm() {
 
   useEffect(() => {
     if (state && state.ok && state.forcePasswordChange) {
-      window.location.href = "/change-password";
+      router.push("/change-password");
     }
-  }, [state]);
+  }, [state, router]);
 
   useEffect(() => {
     if (state && !state.ok) {
