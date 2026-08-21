@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2, Hourglass } from "lucide-react";
 import Link from "next/link";
-import { PublicLayout } from "@/components/layout/PublicLayout";
 import type { Plan } from "@prisma/client";
 import { useTranslations, useLocale } from "next-intl";
 import { getStatusLabel } from "@/lib/status-labels";
@@ -156,7 +155,7 @@ export function SignupForm({ plans }: { plans: Plan[] }) {
               <SelectContent>
                 {plans.map((p) => (
                   <SelectItem key={p.id} value={p.id}>
-                    {p.name} — {p.isTrial ? t("freeTrial") : p.isCustom ? t("custom") : t("pricePerMonth", { price: p.priceMonthly })}
+                    {(locale === "ar" && p.nameAr) ? p.nameAr : p.name} — {p.isTrial ? t("freeTrial") : p.isCustom ? t("custom") : t("pricePerMonth", { price: p.priceMonthly })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -190,7 +189,7 @@ export function SignupForm({ plans }: { plans: Plan[] }) {
       <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-xs text-muted-foreground">
           {t("termsAgreement")}{" "}
-          <Link href="/legal/terms" className="font-medium text-brand-accent hover:underline">{t("terms")}</Link> and{" "}
+          <Link href="/legal/terms" className="font-medium text-brand-accent hover:underline">{t("terms")}</Link> {t("and")} {" "}
           <Link href="/legal/privacy" className="font-medium text-brand-accent hover:underline">{t("privacy")}</Link>.
         </p>
         <SubmitButton />
@@ -202,7 +201,7 @@ export function SignupForm({ plans }: { plans: Plan[] }) {
 export function SignupClient({ plans }: { plans: Plan[] }) {
   const t = useTranslations("signup");
   return (
-    <PublicLayout>
+    <>
       <section className="border-b border-border bg-gradient-to-b from-card to-background">
         <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -218,7 +217,7 @@ export function SignupClient({ plans }: { plans: Plan[] }) {
           <SignupForm plans={plans} />
         </div>
       </section>
-    </PublicLayout>
+    </>
   );
 }
 

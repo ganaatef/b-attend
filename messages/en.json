@@ -215,7 +215,16 @@
     "ctaSubtitle": "Start your free trial today. No credit card required.",
     "ctaButton": "Start Free Trial",
     "footer": "Built for operational teams everywhere",
-    "liveAttendance": "Live Attendance"
+    "liveAttendance": "Live Attendance",
+    "operatingSystemLabel": "B-Attend operating system",
+    "operationalEdgeTitle": "Built to close the attendance-to-payroll gap",
+    "operationalEdgeDesc": "Most tools stop at clock-in. B-Attend helps branch managers understand the exception, act on it, and leave a clean audit trail before payroll day.",
+    "edge1Title": "See the staffing risk",
+    "edge1Desc": "Live branch visibility shows who is missing, late, outside the geofence, or still awaiting a decision.",
+    "edge2Title": "Resolve exceptions fast",
+    "edge2Desc": "Manual punches, overtime, leave, and permission requests move through clear approval workflows instead of scattered messages.",
+    "edge3Title": "Export with confidence",
+    "edge3Desc": "Payroll-ready reports and audit history make the final handoff explainable to HR, finance, and managers."
   },
   "pricing": {
     "title": "Simple, transparent pricing",
@@ -2717,6 +2726,7 @@
     "statusLabel": "Status",
     "termsAgreement": "By submitting, you agree to our",
     "terms": "Terms",
+    "and": "and",
     "privacy": "Privacy Policy",
     "selectPlan": "Select a plan",
     "select": "Select",

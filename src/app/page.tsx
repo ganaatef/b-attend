@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Logo } from "@/components/layout/Logo";
-import { db } from "@/lib/db";
+import { getPublicPlans } from "@/lib/public-plans";
 import {
   MapPin,
   Clock,
@@ -21,23 +21,16 @@ import {
   Check,
 } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
-import { getTranslations } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 
 export const dynamic = "force-dynamic";
 
-async function getActivePlans() {
-  return db.plan.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-    include: { features: true },
-  });
-}
-
 export default async function HomePage() {
   const t = await getTranslations("landing");
+  const locale = await getLocale();
   const tPub = await getTranslations("public");
   const tPricing = await getTranslations("pricing");
-  const plans = await getActivePlans();
+  const plans = await getPublicPlans();
   const previewPlans = plans.filter((p) => !p.isCustom).slice(0, 4);
 
   return (
@@ -61,7 +54,7 @@ export default async function HomePage() {
               {t("heroSubtitle")}
             </p>
             <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground sm:text-lg">
-              {t("heroSubtitle")}
+              {t("costDesc2")}
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
@@ -133,6 +126,33 @@ export default async function HomePage() {
         </div>
       </section>
 
+      {/* OPERATIONAL EDGE */}
+      <section className="border-b border-border bg-brand-navy text-white">
+        <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
+          <div className="max-w-3xl">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-accent">{t("operatingSystemLabel")}</p>
+            <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">{t("operationalEdgeTitle")}</h2>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-base">{t("operationalEdgeDesc")}</p>
+          </div>
+          <div className="mt-10 grid gap-5 md:grid-cols-3">
+            {[
+              { icon: Users, title: t("edge1Title"), body: t("edge1Desc") },
+              { icon: Bell, title: t("edge2Title"), body: t("edge2Desc") },
+              { icon: ShieldCheck, title: t("edge3Title"), body: t("edge3Desc") },
+            ].map((edge) => {
+              const Icon = edge.icon;
+              return (
+                <div key={edge.title} className="rounded-xl border border-white/10 bg-white/5 p-5">
+                  <Icon className="h-5 w-5 text-brand-accent" />
+                  <h3 className="mt-4 text-sm font-semibold">{edge.title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-white/70">{edge.body}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* FEATURES */}
       <section className="border-b border-border bg-background">
         <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
@@ -179,7 +199,7 @@ export default async function HomePage() {
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {previewPlans.map((p) => (
               <div key={p.id} className="flex flex-col rounded-lg border border-border bg-background p-5">
-                <h3 className="text-sm font-semibold text-foreground">{p.name}</h3>
+                <h3 className="text-sm font-semibold text-foreground">{locale === "ar" && p.nameAr ? p.nameAr : p.name}</h3>
                 <p className="mt-1 text-xs text-muted-foreground line-clamp-2 min-h-[2rem]">{p.description}</p>
                 <div className="mt-3">
                   {p.isTrial ? (

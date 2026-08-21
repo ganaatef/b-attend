@@ -2,7 +2,6 @@
 
 import { useActionState } from "react";
 import { useFormStatus } from "react-dom";
-import { PublicLayout } from "@/components/layout/PublicLayout";
 import { demoRequestAction, type DemoState } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -139,7 +138,7 @@ export function DemoForm() {
 export default function RequestDemoPage() {
   const t = useTranslations("demo");
   return (
-    <PublicLayout>
+    <>
       <section className="border-b border-border bg-gradient-to-b from-card to-background">
         <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -157,6 +156,6 @@ export default function RequestDemoPage() {
           </div>
         </div>
       </section>
-    </PublicLayout>
+    </>
   );
 }

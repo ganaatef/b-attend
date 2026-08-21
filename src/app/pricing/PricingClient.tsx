@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { PublicLayout } from "@/components/layout/PublicLayout";
 import { Check, X, ArrowRight } from "lucide-react";
 import type { Plan, PlanFeature } from "@prisma/client";
 import { formatNumber } from "@/lib/utils";
@@ -50,7 +49,7 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
   };
 
   return (
-    <PublicLayout>
+    <>
       <section className="border-b border-border bg-gradient-to-b from-card to-background">
         <div className="mx-auto max-w-3xl px-4 py-14 text-center sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
@@ -111,7 +110,7 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
                       <p className="text-2xl font-bold text-foreground">
                         {formatNumber(price)}{" "}
                         <span className="text-xs font-normal text-muted-foreground">
-                          EGP/{annual ? t("perYear") : t("perMonth")}
+                          EGP {annual ? t("perYear") : t("perMonth")}
                         </span>
                       </p>
                     )}
@@ -197,6 +196,6 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
           </div>
         </div>
       </section>
-    </PublicLayout>
+    </>
   );
 }
