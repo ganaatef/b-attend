@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "prisma generate && next build && node scripts/postbuild.js",
+    "build": "node scripts/prisma-migrate-if-enabled.mjs && prisma generate && next build && node scripts/postbuild.js",
     "start": "node .next/standalone/server.js",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
