@@ -24,3 +24,7 @@ The language switch successfully changed `/signup` to Arabic and the layout to R
 ## Final marketing check
 
 The final Arabic homepage check confirms that the new operational-differentiation section renders in RTL, the section label is localized, and the pricing preview uses Arabic plan names. The page continues to render without a PostgreSQL connection through the public-plan fallback.
+
+## Production standalone smoke test
+
+The `start` script was corrected from `next start` to `node .next/standalone/server.js`, matching `output: "standalone"`. After rebuilding, the standalone server was started on a clean port and returned HTTP 200 for `/`, `/pricing`, `/contact`, `/request-demo`, and `/signup`. PostgreSQL was intentionally unavailable in the sandbox, and the public-plan fallback handled that condition without turning these routes into 500 responses.
