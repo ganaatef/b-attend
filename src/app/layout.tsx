@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Cairo, Inter } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { NextIntlClientProvider } from "next-intl";
@@ -84,6 +85,7 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
           <Toaster />
+          <Analytics />
         </NextIntlClientProvider>
       </body>
     </html>
