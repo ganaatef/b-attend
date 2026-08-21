@@ -12,8 +12,12 @@ const securityHeaders = [
   { key: "X-XSS-Protection", value: "1; mode=block" },
 ];
 
+const isVercelBuild = process.env.VERCEL === "1" || process.env.VERCEL === "true";
+
 const nextConfig: NextConfig = {
-  output: "standalone",
+  // Vercel packages native Next.js output itself. Standalone is kept only for
+  // self-hosted Node/Docker builds and avoids the Vercel NFT packaging clash.
+  ...(isVercelBuild ? {} : { output: "standalone" as const }),
   reactStrictMode: true,
   typescript: {
     ignoreBuildErrors: false,
