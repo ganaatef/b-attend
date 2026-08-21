@@ -5,18 +5,13 @@
 // Handlers, or Server Actions ONLY (they read cookies via next/headers).
 // Never call from client components.
 //
-// Phase 1 scope:
-//   - requireSession / getSession work fully.
-//   - requirePlatformRole is enforced.
-//   - getTenantId returns session.tenantId (or throws).
-//   - requireActiveSubscription is a STUB that returns true — real
-//     enforcement arrives in Phase 2/7 per spec.
-//   - requireTenantRole / requirePermission are STUBS — define the
-//     capability set but defer enforcement to later phases.
+// Authentication, tenant scope, subscription state, role, and capability
+// checks are enforced here for server-side callers.
 // ===================================================================
 
 import { redirect } from "next/navigation";
 import { getSession, type SessionData } from "./session";
+import { requireActiveSubscription as checkTenantSubscription } from "./tenant";
 import type { PlatformRole } from "@prisma/client";
 
 // ---- Capabilities (spec lines 664-682) ---------------------------
@@ -90,14 +85,9 @@ export async function requirePlatformRole(
   return s;
 }
 
-// ---- Tenant helpers (Phase 1: scaffolding only) ------------------
+// ---- Tenant helpers ----------------------------------------------
 
-/**
- * Returns the current tenant companyId from the session, or throws.
- * For Phase 1, tenant logins are NOT wired up (no tenant User auth
- * yet — that arrives in Phase 3). This helper exists so Phase 2+
- * code can rely on it.
- */
+/** Returns the current tenant companyId from the authenticated session. */
 export async function getTenantId(): Promise<string> {
   const s = await requireSession();
   if (s.kind !== "tenant" || !s.tenantId) {
@@ -106,33 +96,29 @@ export async function getTenantId(): Promise<string> {
   return s.tenantId;
 }
 
-/**
- * Phase 1 STUB. Returns true always. Real enforcement arrives in
- * Phase 7 per spec (subscription gating). Logs a TODO via console
- * once per process is not desirable; instead we annotate here.
- *
- * TODO(Phase 7): check subscription.status ∈ {TRIALING, ACTIVE,
- * GRACE_PERIOD} and currentPeriodEnd > now for operational routes.
- */
-export async function requireActiveSubscription(
-  _tenantId: string,
-): Promise<boolean> {
-  return true;
+/** Checks the tenant subscription state before an operational mutation. */
+export async function requireActiveSubscription(tenantId: string): Promise<boolean> {
+  return checkTenantSubscription(tenantId);
 }
 
-/**
- * Phase 1 STUB. Real role-based tenant enforcement arrives Phase 5+.
- * For now returns true.
- */
-export async function requireTenantRole(..._roles: string[]): Promise<boolean> {
-  return true;
+/** Checks that the current authenticated session is a tenant with one of the supplied roles. */
+export async function requireTenantRole(...roles: string[]): Promise<boolean> {
+  const s = await requireSession();
+  return s.kind === "tenant" && (roles.length === 0 || roles.includes(s.role));
 }
 
-/**
- * Phase 1 STUB. Real capability checks arrive Phase 5+.
- */
-export async function requirePermission(_cap: Capability): Promise<boolean> {
-  return true;
+const ROLE_CAPABILITIES: Record<string, readonly Capability[]> = {
+  COMPANY_OWNER: CAPABILITIES,
+  HR_ADMIN: CAPABILITIES.filter((cap) => cap !== "MANAGE_BILLING" && cap !== "MANAGE_ROLES"),
+  BRANCH_MANAGER: ["VIEW_DASHBOARD", "CLOCK_SELF", "USE_KIOSK", "VIEW_LIVE_ATTENDANCE", "MANAGE_APPROVALS", "VIEW_REPORTS"],
+  EMPLOYEE: ["VIEW_DASHBOARD", "CLOCK_SELF"],
+};
+
+/** Checks the current tenant role against the server-side capability map. */
+export async function requirePermission(capability: Capability): Promise<boolean> {
+  const s = await requireSession();
+  if (s.kind !== "tenant") return false;
+  return ROLE_CAPABILITIES[s.role]?.includes(capability) ?? false;
 }
 
 // ---- Audit helper ------------------------------------------------

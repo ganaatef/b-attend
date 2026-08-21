@@ -61,3 +61,11 @@ B-Attend أصبح أقوى من النسخة السابقة، لكنه **ليس 
 [2]: https://upstash.com/docs/redis/sdks/ts/pipelining/pipeline-transaction "Upstash Redis pipeline and transaction documentation"
 
 [3]: https://github.com/ganaatef/b-attend "B-Attend source repository"
+
+## فحص preflight للإنتاج
+
+أُضيف الأمر `npm run preflight:production`. تشغيله داخل بيئة التدقيق أعاد فشلًا مقصودًا بسبب غياب `DATABASE_URL` و`DIRECT_URL` و`APP_URL` و`SESSION_SECRET` وSMTP وRedis ومزود دفع حقيقي. هذا يمنع نشر نسخة ناقصة بالخطأ. تفاصيل الخطوات المختصرة موجودة في `RELEASE_RUNBOOK_AR.md`.
+
+## ما بقي خارج الكود
+
+لا يمكن إنشاء قاعدة PostgreSQL أو حساب Redis أو SMTP أو بوابة دفع حقيقية دون حسابات وبيانات يملكها صاحب المنتج. بعد توفيرها، يجب تشغيل migrations وpreflight وload test على staging، ثم Pilot محدود قبل فتح الاشتراكات العامة.

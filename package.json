@@ -17,7 +17,8 @@
     "db:seed:demo": "tsx prisma/seed.ts",
     "seed": "tsx prisma/seed.ts",
     "i18n:check": "tsx scripts/check-missing-translations.ts",
-    "test:load": "tsx scripts/load-test.ts"
+    "test:load": "tsx scripts/load-test.ts",
+    "preflight:production": "node scripts/preflight-production.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
