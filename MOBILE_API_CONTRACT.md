@@ -8,7 +8,8 @@ The B-Attend Staff app calls only the `/api/mobile/*` namespace. Browser cookies
 | `GET /api/mobile/dashboard` | Returns the employee profile summary, assigned branch, today's schedule, next attendance action, and last ten punches. | Employee bearer token, tenant and employee ownership checks. |
 | `POST /api/mobile/clock` | Records a verified `CLOCK_IN` or `CLOCK_OUT` with location and accuracy. | Employee bearer token, subscription, mobile-clock setting, shift policy, sequencing, and geofence checks. |
 | `GET /api/mobile/schedule` | Returns up to 31 days of the authenticated employee's schedule. | Employee bearer token and ownership filters. |
-| `GET /api/mobile/requests` | Returns current-year leave balances and the employee's own leave requests. | Employee bearer token and ownership filters. |
+| `GET /api/mobile/requests` | Returns active leave types, current-year leave balances, and the employee's own leave requests. | Employee bearer token and ownership filters. |
+| `POST /api/mobile/requests` | Creates a leave request with dates and a short reason. | Employee bearer token, active leave feature, tenant-owned leave type, balance updates, and audit log. |
 
 The attendance mutation validates position server-side against the employee branch and stores mobile operations with source `MOBILE_APP`. Operations outside the allowed geofence become `NEEDS_APPROVAL` when the company setting requires approval. The client sends a UUID idempotency key; the server stores it in the audited device metadata and its state machine rejects duplicate same-day clock sequences.
 
