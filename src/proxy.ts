@@ -62,7 +62,7 @@ export async function proxy(req: NextRequest) {
 
   // ── Rate limiting ──
   let rateLimit: number = RATE_LIMITS.general;
-  if (pathname.startsWith("/api/auth/")) rateLimit = RATE_LIMITS.auth;
+  if (pathname.startsWith("/api/auth/") || pathname.startsWith("/api/mobile/auth/")) rateLimit = RATE_LIMITS.auth;
   else if (pathname.startsWith("/api/")) rateLimit = RATE_LIMITS.api;
 
   const loadTestBypass = ALLOW_LOAD_TEST_BYPASS
@@ -89,6 +89,12 @@ export async function proxy(req: NextRequest) {
 
   // Allow /api/auth/* (login, logout handlers)
   if (pathname.startsWith("/api/auth/")) {
+    return NextResponse.next();
+  }
+
+  // Native routes authenticate their own bearer token and must never be
+  // redirected to a browser login page by the proxy.
+  if (pathname.startsWith("/api/mobile/")) {
     return NextResponse.next();
   }
 

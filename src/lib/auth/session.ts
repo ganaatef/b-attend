@@ -13,6 +13,7 @@ import { cookies } from "next/headers";
 
 const COOKIE_NAME = "battend_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
+const MOBILE_TOKEN_AUDIENCE = "battend-staff-mobile";
 
 const secret = new TextEncoder().encode(
   process.env.SESSION_SECRET ?? "dev-secret-change-me-in-production-please-use-32+chars"
@@ -47,6 +48,27 @@ async function sign(payload: SessionPayload): Promise<string> {
 async function verify(token: string): Promise<SessionTokenPayload | null> {
   try {
     const { payload } = await jwtVerify(token, secret);
+    return payload as unknown as SessionTokenPayload;
+  } catch {
+    return null;
+  }
+}
+
+/** Issues a bearer token for the native employee application, never a browser cookie. */
+export async function createMobileSessionToken(payload: SessionPayload): Promise<string> {
+  return new SignJWT({ ...payload, channel: "mobile" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setAudience(MOBILE_TOKEN_AUDIENCE)
+    .setIssuedAt()
+    .setExpirationTime(`${MAX_AGE_SECONDS}s`)
+    .sign(secret);
+}
+
+/** Verifies that a token was issued specifically for B-Attend Staff. */
+export async function verifyMobileSessionToken(token: string): Promise<SessionTokenPayload | null> {
+  try {
+    const { payload } = await jwtVerify(token, secret, { audience: MOBILE_TOKEN_AUDIENCE });
+    if (payload.channel !== "mobile") return null;
     return payload as unknown as SessionTokenPayload;
   } catch {
     return null;

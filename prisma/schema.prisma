@@ -175,6 +175,7 @@ enum PunchType {
 
 enum PunchSource {
   MOBILE_WEB
+  MOBILE_APP
   KIOSK
   MANUAL_ADJUSTMENT
   ADMIN
