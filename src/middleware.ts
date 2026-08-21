@@ -48,6 +48,8 @@ async function verifyToken(token: string): Promise<{ kind: string; role: string;
   }
 }
 
+const ALLOW_LOAD_TEST_BYPASS = process.env.ALLOW_LOAD_TEST_BYPASS === "true" && process.env.APP_ENV !== "production";
+
 function getClientIp(req: NextRequest): string {
   return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim()
     || req.headers.get("x-real-ip")
@@ -63,7 +65,12 @@ export async function middleware(req: NextRequest) {
   if (pathname.startsWith("/api/auth/")) rateLimit = RATE_LIMITS.auth;
   else if (pathname.startsWith("/api/")) rateLimit = RATE_LIMITS.api;
 
-  const rl = checkRateLimit(ip, pathname, rateLimit);
+  const loadTestBypass = ALLOW_LOAD_TEST_BYPASS
+    && Boolean(process.env.LOAD_TEST_TOKEN)
+    && req.headers.get("x-load-test-token") === process.env.LOAD_TEST_TOKEN;
+  const rl = loadTestBypass
+    ? { allowed: true, remaining: rateLimit, retryAfterMs: 0 }
+    : await checkRateLimit(ip, pathname, rateLimit);
   if (!rl.allowed) {
     return new NextResponse(JSON.stringify({ error: "Too many requests. Please try again later." }), {
       status: 429,

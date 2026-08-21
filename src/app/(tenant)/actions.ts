@@ -12,6 +12,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { logTenantEvent } from "@/lib/auth/audit";
+import { withPlanLimit } from "@/lib/auth/tenant";
 
 async function requireTenant() {
   const s = await getSession();
@@ -195,12 +196,11 @@ export async function createBranchAction(prev: any, formData: FormData) {
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
-    const tenant = await db.tenant.findUnique({ where: { id: s.tenantId! }, include: { subscription: { include: { plan: true } } } });
-    if (tenant?.subscription?.plan) {
-      const count = await db.branch.count({ where: { companyId: s.tenantId!, deletedAt: null } });
-      if (count >= tenant.subscription.plan.maxBranches) return { ok: false, error: `Plan limit reached (${tenant.subscription.plan.maxBranches} branches).` };
-    }
-    const branch = await db.branch.create({ data: { companyId: s.tenantId!, ...d, status: "ACTIVE" } });
+    const branchResult = await withPlanLimit(s.tenantId!, "branches", (tx) => tx.branch.create({
+      data: { companyId: s.tenantId!, ...d, status: "ACTIVE" },
+    }));
+    if (!branchResult.ok) return branchResult;
+    const branch = branchResult.value;
     await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "BRANCH_CREATED", entityType: "Branch", entityId: branch.id });
     revalidatePath("/branches");
     return { ok: true };
@@ -309,16 +309,10 @@ export async function createEmployeeAction(prev: any, formData: FormData) {
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
-    // Plan limit
-    const tenant = await db.tenant.findUnique({ where: { id: s.tenantId! }, include: { subscription: { include: { plan: true } } } });
-    if (tenant?.subscription?.plan) {
-      const count = await db.employee.count({ where: { companyId: s.tenantId!, deletedAt: null } });
-      if (count >= tenant.subscription.plan.maxEmployees) return { ok: false, error: `Plan limit reached (${tenant.subscription.plan.maxEmployees} employees).` };
-    }
     // Unique employee code
     const existing = await db.employee.findUnique({ where: { companyId_employeeCode: { companyId: s.tenantId!, employeeCode: d.employeeCode } } });
     if (existing) return { ok: false, error: "Employee code already exists" };
-    const emp = await db.employee.create({
+    const employeeResult = await withPlanLimit(s.tenantId!, "employees", (tx) => tx.employee.create({
       data: {
         companyId: s.tenantId!,
         employeeCode: d.employeeCode,
@@ -334,7 +328,9 @@ export async function createEmployeeAction(prev: any, formData: FormData) {
         status: "ACTIVE",
         startDate: new Date(),
       },
-    });
+    }));
+    if (!employeeResult.ok) return employeeResult;
+    const emp = employeeResult.value;
     await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "EMPLOYEE_CREATED", entityType: "Employee", entityId: emp.id });
     revalidatePath("/employees");
     return { ok: true };

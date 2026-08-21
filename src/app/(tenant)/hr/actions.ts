@@ -1815,10 +1815,12 @@ export async function recalculatePayrollRunAction(runId: string) {
     const lines = await db.payrollRunLine.findMany({ where: { payrollRunId: runId } });
     const { recalculateSingleLine } = await import("@/lib/hr/payroll");
 
+    const concurrency = Math.max(1, Math.min(25, Number(process.env.PAYROLL_RECALC_CONCURRENCY ?? 10)));
     let recalculated = 0;
-    for (const line of lines) {
-      const result = await recalculateSingleLine(line.id, s.tenantId);
-      if (result.ok) recalculated++;
+    for (let offset = 0; offset < lines.length; offset += concurrency) {
+      const batch = lines.slice(offset, offset + concurrency);
+      const results = await Promise.all(batch.map((line) => recalculateSingleLine(line.id, s.tenantId)));
+      recalculated += results.filter((result) => result.ok).length;
     }
 
     await logTenantEvent({ companyId: s.tenantId, actorId: s.userId, actorEmail: s.email, action: "PAYROLL_RUN_RECALCULATED", entityType: "PayrollRun", entityId: runId, reason: `${recalculated} lines recalculated` });

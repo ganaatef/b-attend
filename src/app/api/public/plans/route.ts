@@ -2,15 +2,23 @@
  * GET /api/public/plans — returns active plans for client-side selects.
  */
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { getPublicPlans } from "@/lib/public-plans";
 
 export async function GET() {
   try {
-    const plans = await db.plan.findMany({
-      where: { isActive: true },
-      orderBy: { sortOrder: "asc" },
-      select: { id: true, name: true, slug: true, priceMonthly: true, priceAnnual: true, currency: true, isTrial: true, isCustom: true },
-    });
+    const plans = (await getPublicPlans()).map((plan) => ({
+      id: plan.id,
+      name: plan.name,
+      nameAr: plan.nameAr,
+      slug: plan.slug,
+      priceMonthly: plan.priceMonthly,
+      priceAnnual: plan.priceAnnual,
+      currency: plan.currency,
+      isTrial: plan.isTrial,
+      isCustom: plan.isCustom,
+      maxBranches: plan.maxBranches,
+      maxEmployees: plan.maxEmployees,
+    }));
     return NextResponse.json({ plans }, {
       headers: {
         "Cache-Control": "public, max-age=300, stale-while-revalidate=600",

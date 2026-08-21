@@ -13,17 +13,25 @@ import { getStatusLabel } from "@/lib/status-labels";
 
 export const dynamic = "force-dynamic";
 
-export default async function EmployeesPage() {
+export default async function EmployeesPage({ searchParams }: { searchParams: Promise<{ page?: string }> }) {
   const t = await getTranslations("employees");
   const locale = await getLocale();
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role === "EMPLOYEE") return null;
-  const [employees, branches, departments, policies] = await Promise.all([
+  const params = await searchParams;
+  const requestedPage = Number.parseInt(params.page ?? "1", 10);
+  const page = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+  const pageSize = 50;
+  const employeeWhere = { companyId: session.tenantId, deletedAt: null };
+  const [employeeCount, employees, branches, departments, policies] = await Promise.all([
+    db.employee.count({ where: employeeWhere }),
     db.employee.findMany({
-      where: { companyId: session.tenantId, deletedAt: null },
+      where: employeeWhere,
       include: { branch: true, department: true },
       orderBy: { employeeCode: "asc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
     }),
     db.branch.findMany({ where: { companyId: session.tenantId, deletedAt: null } }),
     db.department.findMany({ where: { companyId: session.tenantId } }),
@@ -33,7 +41,7 @@ export default async function EmployeesPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-4">
       <div className="flex items-center justify-between">
-        <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("count", { count: employees.length })}</p></div>
+        <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("count", { count: employeeCount })}</p></div>
         <Link href="/employees/new" className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground hover:bg-primary/90"><Plus className="h-3.5 w-3.5" /> {t("newEmployee")}</Link>
       </div>
       <Card className="border-border p-4">
@@ -70,6 +78,15 @@ export default async function EmployeesPage() {
           </div>
         )}
       </Card>
+      {employeeCount > pageSize ? (
+        <div className="flex items-center justify-between rounded-lg border border-border bg-card px-4 py-3 text-sm">
+          <span className="text-muted-foreground">{t("pageOf", { page, pages: Math.ceil(employeeCount / pageSize) })}</span>
+          <div className="flex items-center gap-2">
+            {page > 1 ? <Link href={`/employees?page=${page - 1}`} className="rounded-md border border-border px-3 py-1.5 hover:bg-muted">{t("previous")}</Link> : null}
+            {page < Math.ceil(employeeCount / pageSize) ? <Link href={`/employees?page=${page + 1}`} className="rounded-md border border-border px-3 py-1.5 hover:bg-muted">{t("next")}</Link> : null}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
