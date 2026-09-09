@@ -5,13 +5,13 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { replyToTicketAction } from "../../settings/actions";
+import { replyToSupportTicketAction } from "../actions";
 import { Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export function TicketReplyForm({ ticketId }: { ticketId: string }) {
   const t = useTranslations("support");
-  const [state, formAction] = useActionState(replyToTicketAction, { ok: false });
+  const [state, formAction] = useActionState(replyToSupportTicketAction, { ok: false });
   const { pending } = useFormStatus();
   return (
     <form action={formAction} className="space-y-3">

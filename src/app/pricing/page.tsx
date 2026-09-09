@@ -1,18 +1,14 @@
 /**
- * /pricing — server component fetches plans from DB, passes to PricingClient.
+ * /pricing — resilient public pricing page.
  */
-import { db } from "@/lib/db";
 import { PricingClient } from "./PricingClient";
 import { PublicLayout } from "@/components/layout/PublicLayout";
+import { getPublicPlans } from "@/lib/public-plans";
 
 export const dynamic = "force-dynamic";
 
 export default async function PricingPage() {
-  const plans = await db.plan.findMany({
-    where: { isActive: true },
-    orderBy: { sortOrder: "asc" },
-    include: { features: true },
-  });
+  const plans = await getPublicPlans();
   return (
     <PublicLayout>
       <PricingClient plans={plans} />

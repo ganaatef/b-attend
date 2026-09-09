@@ -1,24 +1,18 @@
 /**
- * B-Attend tenant scoping & feature gate helpers.
- *
- * Phase 1: scaffolding only. Real enforcement arrives in Phases 2-7.
- * Every helper is intentionally side-effect-free and safe to call from RSC.
+ * Tenant access, subscription, feature, and plan-limit helpers.
+ * These checks are server-only and should guard billable tenant resources.
  */
 
+import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireTenantSession } from "./session";
+import { isTenantOperationalState } from "./subscription-state";
 
-/**
- * Returns the authenticated tenant's companyId, throwing if not a tenant session.
- */
 export async function getTenantId(): Promise<string> {
-  const s = await requireTenantSession();
-  return s.tenantId as string;
+  const session = await requireTenantSession();
+  return session.tenantId as string;
 }
 
-/**
- * Returns the tenant row with its subscription & plan, or null.
- */
 export async function getTenantContext(tenantId: string) {
   return db.tenant.findUnique({
     where: { id: tenantId },
@@ -30,34 +24,81 @@ export async function getTenantContext(tenantId: string) {
 
 export type TenantContext = Awaited<ReturnType<typeof getTenantContext>>;
 
-/**
- * Phase 1 stub. Returns true for now.
- * Phase 2+ will enforce: PENDING_ACTIVATION, SUSPENDED, CANCELLED → block operational routes.
- */
-export async function requireActiveSubscription(_tenantId: string): Promise<boolean> {
-  // TODO Phase 2: enforce subscription status gates
-  return true;
+export async function requireActiveSubscription(tenantId: string): Promise<boolean> {
+  const tenant = await getTenantContext(tenantId);
+  return !!tenant && isTenantOperationalState(tenant);
 }
 
-/**
- * Phase 1 stub. Returns true for now.
- * Phase 2+ will check PlanFeature.enabled for the given key.
- */
-export async function canUseFeature(
-  _tenantId: string,
-  _featureKey: string
-): Promise<boolean> {
-  // TODO Phase 2: look up PlanFeature by tenant → subscription → plan → feature key
-  return true;
+export async function canUseFeature(tenantId: string, featureKey: string): Promise<boolean> {
+  const tenant = await getTenantContext(tenantId);
+  if (!tenant || !isTenantOperationalState(tenant) || !tenant.subscription) return false;
+  return tenant.subscription.plan.features.some((feature) => feature.key === featureKey && feature.enabled);
 }
 
-/**
- * Check plan limits (maxBranches, maxEmployees, etc.). Phase 1 stub.
- */
+async function countPlanResource(
+  tx: Prisma.TransactionClient,
+  tenantId: string,
+  resource: "branches" | "employees" | "managers" | "kiosks",
+) {
+  if (resource === "branches") return tx.branch.count({ where: { companyId: tenantId, deletedAt: null } });
+  if (resource === "employees") return tx.employee.count({ where: { companyId: tenantId, deletedAt: null } });
+  if (resource === "managers") {
+    return tx.user.count({
+      where: {
+        companyId: tenantId,
+        deletedAt: null,
+        status: { in: ["ACTIVE", "INVITED"] },
+        role: { in: ["COMPANY_OWNER", "HR_ADMIN", "BRANCH_MANAGER"] },
+      },
+    });
+  }
+  return tx.kioskDevice.count({ where: { companyId: tenantId, status: "ACTIVE" } });
+}
+
+function planLimitForResource(
+  plan: { maxBranches: number; maxEmployees: number; maxManagers: number; maxKiosks: number },
+  resource: "branches" | "employees" | "managers" | "kiosks",
+) {
+  if (resource === "branches") return plan.maxBranches;
+  if (resource === "employees") return plan.maxEmployees;
+  if (resource === "managers") return plan.maxManagers;
+  return plan.maxKiosks;
+}
+
 export async function checkPlanLimit(
-  _tenantId: string,
-  _resource: "branches" | "employees" | "managers" | "kiosks"
+  tenantId: string,
+  resource: "branches" | "employees" | "managers" | "kiosks",
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
-  // TODO Phase 2: count existing rows and compare to plan limit
-  return { allowed: true, used: 0, limit: 999 };
+  const tenant = await getTenantContext(tenantId);
+  const plan = tenant?.subscription?.plan;
+  if (!tenant || !plan || !isTenantOperationalState(tenant)) return { allowed: false, used: 0, limit: 0 };
+  const used = await countPlanResource(db, tenantId, resource);
+  const limit = planLimitForResource(plan, resource);
+  return { allowed: used < limit, used, limit };
 }
+
+export async function withPlanLimit<T>(
+  tenantId: string,
+  resource: "branches" | "employees" | "managers" | "kiosks",
+  action: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<{ ok: true; value: T } | { ok: false; error: string }> {
+  return db.$transaction(async (tx) => {
+    const tenant = await tx.tenant.findUnique({
+      where: { id: tenantId },
+      include: { subscription: { include: { plan: true } } },
+    });
+    const plan = tenant?.subscription?.plan;
+    if (!tenant || !plan || !isTenantOperationalState(tenant)) {
+      return { ok: false, error: "An active subscription is required." } as const;
+    }
+
+    const used = await countPlanResource(tx, tenantId, resource);
+    const limit = planLimitForResource(plan, resource);
+    if (used >= limit) return { ok: false, error: `Plan limit reached (${limit} ${resource}).` } as const;
+
+    const value = await action(tx);
+    return { ok: true, value } as const;
+  }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+}
+
+export type TenantPrismaClient = PrismaClient;

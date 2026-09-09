@@ -1,13 +1,6 @@
 /**
  * B-Attend middleware — protects authenticated routes, routes by role, and rate limits.
- *
- * Rate limits (per IP, sliding window 1 min):
- * - General: 120 req/min
- * - API routes: 60 req/min
- * - Auth routes: 10 req/min (brute-force protection)
- *
- * Verification of the JWT happens here using jose. We do NOT fetch the DB on
- * every request — the session cookie is the source of truth.
+ * JWT verification stays stateless; subscription state is enforced by server actions/helpers.
  */
 
 import { NextResponse, type NextRequest } from "next/server";
@@ -16,18 +9,13 @@ import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/rate-lim
 
 const COOKIE_NAME = "battend_session";
 
-// Memoize the encoded secret — avoid re-creating on every request
 function getSecret(): Uint8Array {
   const raw = process.env.SESSION_SECRET;
   if (!raw) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error(
-        "SESSION_SECRET must be set in production. Generate a 32+ character secret and set it as an environment variable."
-      );
+      throw new Error("SESSION_SECRET must be set in production. Generate a 32+ character secret and set it as an environment variable.");
     }
-    console.warn(
-      "[middleware] WARNING: SESSION_SECRET is not set. Using an insecure default for development only. Do NOT use in production."
-    );
+    console.warn("[middleware] WARNING: SESSION_SECRET is not set. Using an insecure development default.");
     return new TextEncoder().encode("dev-secret-change-me-in-production-please-use-32+chars");
   }
   return new TextEncoder().encode(raw);
@@ -43,6 +31,8 @@ const PUBLIC_ROUTES = [
   "/request-demo",
   "/signup",
   "/login",
+  "/forgot-password",
+  "/reset-password",
   "/legal/privacy",
   "/legal/terms",
 ];
@@ -68,16 +58,25 @@ function getClientIp(req: NextRequest): string {
     || "unknown";
 }
 
+function rateLimitForPath(pathname: string) {
+  if (
+    pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/reset-password" ||
+    pathname.startsWith("/api/auth/")
+  ) return RATE_LIMITS.auth;
+  if (pathname === "/kiosk" || pathname.startsWith("/kiosk/") || pathname.startsWith("/api/kiosk/")) return RATE_LIMITS.kiosk;
+  if (pathname.startsWith("/api/")) return RATE_LIMITS.api;
+  return RATE_LIMITS.general;
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getClientIp(req);
+  const rateLimit = rateLimitForPath(pathname);
+  const rl = await checkRateLimit(ip, pathname, rateLimit);
 
-  // ── Rate limiting ──
-  let rateLimit: number = RATE_LIMITS.general;
-  if (pathname.startsWith("/api/auth/")) rateLimit = RATE_LIMITS.auth;
-  else if (pathname.startsWith("/api/")) rateLimit = RATE_LIMITS.api;
-
-  const rl = checkRateLimit(ip, pathname, rateLimit);
   if (!rl.allowed) {
     return new NextResponse(JSON.stringify({ error: "Too many requests. Please try again later." }), {
       status: 429,
@@ -89,14 +88,16 @@ export async function middleware(req: NextRequest) {
     });
   }
 
-  // Allow public routes
-  if (PUBLIC_ROUTES.includes(pathname) || PUBLIC_PREFIXES.some((p) => pathname.startsWith(p))) {
-    return NextResponse.next();
+  if (PUBLIC_ROUTES.includes(pathname) || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
+    const response = NextResponse.next();
+    response.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+    return response;
   }
 
-  // Allow /api/auth/* (login, logout handlers)
   if (pathname.startsWith("/api/auth/")) {
-    return NextResponse.next();
+    const response = NextResponse.next();
+    response.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+    return response;
   }
 
   const token = req.cookies.get(COOKIE_NAME)?.value;
@@ -109,44 +110,34 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // /admin/* requires platform session
   if (pathname.startsWith("/admin")) {
     if (session.kind !== "platform") {
       const home = req.nextUrl.clone();
       home.pathname = "/";
       return NextResponse.redirect(home);
     }
-    const res = NextResponse.next();
-    res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
-    return res;
+    const response = NextResponse.next();
+    response.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+    return response;
   }
 
-  // /change-password allows both platform and tenant sessions
   if (pathname === "/change-password") {
-    const res = NextResponse.next();
-    res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
-    return res;
+    const response = NextResponse.next();
+    response.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+    return response;
   }
 
-  // All other protected routes require tenant session
   if (session.kind !== "tenant" || !session.tenantId) {
     const home = req.nextUrl.clone();
     home.pathname = "/";
     return NextResponse.redirect(home);
   }
 
-  const res = NextResponse.next();
-  res.headers.set("X-RateLimit-Remaining", String(rl.remaining));
-  return res;
+  const response = NextResponse.next();
+  response.headers.set("X-RateLimit-Remaining", String(rl.remaining));
+  return response;
 }
 
 export const config = {
-  matcher: [
-    /*
-     * Match everything except:
-     * - _next/static, _next/image, favicon
-     * - public assets
-     */
-    "/((?!_next/static|_next/image|favicon.ico|logo.svg|robots.txt).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|logo.svg|robots.txt).*)"],
 };

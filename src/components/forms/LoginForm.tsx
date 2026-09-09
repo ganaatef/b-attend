@@ -9,7 +9,7 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Form, TextField } from "@/components/forms/fields";
 import { loginSchema, type LoginInput } from "@/lib/validations";
-import { loginAction, type LoginState } from "@/app/(auth)/actions";
+import { launchLoginAction, type LaunchLoginState } from "@/app/(auth)/launch-actions";
 import { LogIn, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import Link from "next/link";
@@ -21,8 +21,8 @@ export function LoginForm() {
   const next = sp.get("next");
   const t = useTranslations("auth");
 
-  const [state, formAction, pending] = useActionState<LoginState, FormData>(
-    loginAction,
+  const [state, formAction, pending] = useActionState<LaunchLoginState, FormData>(
+    launchLoginAction,
     { ok: false },
   );
 

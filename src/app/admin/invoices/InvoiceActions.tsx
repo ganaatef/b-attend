@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { markInvoicePaidAction, voidInvoiceAction } from "@/app/admin/actions";
+import { voidInvoiceAction } from "@/app/admin/actions";
+import { markInvoicePaidAndActivateAction } from "@/app/admin/launch-billing-actions";
 import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 export function InvoiceActions({ invoiceId }: { invoiceId: string }) {
@@ -31,7 +32,7 @@ export function InvoiceActions({ invoiceId }: { invoiceId: string }) {
         disabled={loading === "paid"}
         onClick={async () => {
           setLoading("paid");
-          const r = await markInvoicePaidAction(invoiceId, method);
+          const r = await markInvoicePaidAndActivateAction(invoiceId, method);
           if (!r.ok) alert(r.error);
           router.refresh();
           setLoading(null);

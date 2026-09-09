@@ -1,48 +1,58 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { checkRateLimit, getRateLimitHeaders, RATE_LIMITS } from "@/lib/rate-limit";
 
 describe("checkRateLimit", () => {
   const ip = "192.168.1.1";
 
-  it("allows requests within limit", () => {
-    const result = checkRateLimit(ip, "/api/something", 10, 60_000);
+  it("allows requests within limit", async () => {
+    const result = await checkRateLimit(ip, "/api/something", 10, 60_000);
     expect(result.allowed).toBe(true);
     expect(result.remaining).toBe(9);
   });
 
-  it("blocks requests exceeding limit", () => {
+  it("blocks requests exceeding limit", async () => {
     const ip2 = "192.168.1.2";
     for (let i = 0; i < 10; i++) {
-      checkRateLimit(ip2, "/api/something", 10, 60_000);
+      await checkRateLimit(ip2, "/api/something", 10, 60_000);
     }
-    const result = checkRateLimit(ip2, "/api/something", 10, 60_000);
+    const result = await checkRateLimit(ip2, "/api/something", 10, 60_000);
     expect(result.allowed).toBe(false);
     expect(result.remaining).toBe(0);
     expect(result.retryAfterMs).toBeGreaterThan(0);
   });
 
-  it("classifies auth routes correctly", () => {
-    const result = checkRateLimit("10.0.0.1", "/api/auth/login", 10, 60_000);
+  it("classifies API auth routes correctly", async () => {
+    const result = await checkRateLimit("10.0.0.1", "/api/auth/login", 10, 60_000);
     expect(result.allowed).toBe(true);
   });
 
-  it("classifies general routes correctly", () => {
-    const result = checkRateLimit("10.0.0.2", "/dashboard", 120, 60_000);
+  it("classifies public login/signup as auth rather than general traffic", async () => {
+    const authIp = "10.0.0.20";
+    await checkRateLimit(authIp, "/signup", 1, 60_000);
+    const blockedSignup = await checkRateLimit(authIp, "/signup", 1, 60_000);
+    const separateGeneral = await checkRateLimit(authIp, "/dashboard", 1, 60_000);
+
+    expect(blockedSignup.allowed).toBe(false);
+    expect(separateGeneral.allowed).toBe(true);
+  });
+
+  it("classifies general routes correctly", async () => {
+    const result = await checkRateLimit("10.0.0.2", "/dashboard", 120, 60_000);
     expect(result.allowed).toBe(true);
   });
 
-  it("different IPs have separate buckets", () => {
-    const r1 = checkRateLimit("10.0.0.3", "/api/test", 5, 60_000);
-    const r2 = checkRateLimit("10.0.0.4", "/api/test", 5, 60_000);
+  it("different IPs have separate buckets", async () => {
+    const r1 = await checkRateLimit("10.0.0.3", "/api/test", 5, 60_000);
+    const r2 = await checkRateLimit("10.0.0.4", "/api/test", 5, 60_000);
     expect(r1.remaining).toBe(4);
     expect(r2.remaining).toBe(4);
   });
 
-  it("different categories have separate buckets", () => {
+  it("different categories have separate buckets", async () => {
     const ip3 = "10.0.0.5";
-    checkRateLimit(ip3, "/api/test", 2, 60_000);
-    checkRateLimit(ip3, "/api/test", 2, 60_000);
-    const authResult = checkRateLimit(ip3, "/api/auth/login", 10, 60_000);
+    await checkRateLimit(ip3, "/api/test", 2, 60_000);
+    await checkRateLimit(ip3, "/api/test", 2, 60_000);
+    const authResult = await checkRateLimit(ip3, "/api/auth/login", 10, 60_000);
     expect(authResult.allowed).toBe(true);
   });
 });

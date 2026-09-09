@@ -7,13 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { createTicketAction } from "../settings/actions";
+import { createSupportTicketAction } from "./actions";
 import { Loader2, Send } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export function TicketForm() {
   const t = useTranslations("support");
-  const [state, formAction] = useActionState(createTicketAction, { ok: false });
+  const [state, formAction] = useActionState(createSupportTicketAction, { ok: false });
   const { pending } = useFormStatus();
   return (
     <form action={formAction} className="space-y-3">

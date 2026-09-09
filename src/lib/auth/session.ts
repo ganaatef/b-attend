@@ -6,11 +6,15 @@
  *   - role: PlatformRole | TenantUserRole
  *   - sessionVersion: bumped to invalidate all sessions
  *
- * Lifetime: 7 days.
+ * Lifetime: 7 days. Tenant sessions are also checked against current tenant +
+ * subscription state on every server-side getSession() call so cancellation,
+ * suspension, expiry, or past-due state revokes operational access immediately.
  */
 
 import { SignJWT, jwtVerify } from "jose";
 import { cookies } from "next/headers";
+import { db } from "@/lib/db";
+import { isTenantOperationalState } from "@/lib/auth/subscription-state";
 
 const COOKIE_NAME = "battend_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -74,6 +78,36 @@ async function verify(token: string): Promise<SessionTokenPayload | null> {
   }
 }
 
+async function readVerifiedCookie(): Promise<SessionTokenPayload | null> {
+  const c = await cookies();
+  const token = c.get(COOKIE_NAME)?.value;
+  if (!token) return null;
+  return verify(token);
+}
+
+async function isOperationalTenantSession(session: SessionTokenPayload): Promise<boolean> {
+  if (session.kind !== "tenant") return true;
+  if (!session.tenantId) return false;
+
+  const tenant = await db.tenant.findUnique({
+    where: { id: session.tenantId },
+    select: {
+      deletedAt: true,
+      status: true,
+      subscription: {
+        select: {
+          status: true,
+          trialEndsAt: true,
+          graceEndsAt: true,
+          currentPeriodEnd: true,
+        },
+      },
+    },
+  });
+
+  return !!tenant && isTenantOperationalState(tenant);
+}
+
 export async function createSession(payload: SessionPayload): Promise<void> {
   const token = await sign(payload);
   const c = await cookies();
@@ -91,11 +125,24 @@ export async function destroySession(): Promise<void> {
   c.delete(COOKIE_NAME);
 }
 
+/**
+ * Verified session for normal product access.
+ * Tenant sessions are rejected when the tenant/subscription is not operational.
+ */
 export async function getSession(): Promise<SessionTokenPayload | null> {
-  const c = await cookies();
-  const token = c.get(COOKIE_NAME)?.value;
-  if (!token) return null;
-  return verify(token);
+  const session = await readVerifiedCookie();
+  if (!session) return null;
+  if (!(await isOperationalTenantSession(session))) return null;
+  return session;
+}
+
+/**
+ * Verified cookie without the operational subscription gate.
+ * Use ONLY for recovery surfaces that must remain available when billing is
+ * pending/past-due/suspended, currently Billing and Support.
+ */
+export async function getSessionAllowInactive(): Promise<SessionTokenPayload | null> {
+  return readVerifiedCookie();
 }
 
 export async function requireSession(): Promise<SessionTokenPayload> {

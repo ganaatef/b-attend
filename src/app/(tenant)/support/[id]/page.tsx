@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth/session";
+import { getSessionAllowInactive } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { TicketReplyForm } from "./TicketReplyForm";
@@ -15,8 +15,8 @@ export const dynamic = "force-dynamic";
 
 export default async function TicketDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const t = await getTranslations("support");
-  const session = await getSession();
-  if (!session?.tenantId) return null;
+  const session = await getSessionAllowInactive();
+  if (!session?.tenantId || session.kind !== "tenant") return null;
   const locale = await getLocaleCode();
   const { id } = await params;
   const ticket = await db.supportTicket.findFirst({ where: { id, companyId: session.tenantId }, include: { messages: { orderBy: { createdAt: "asc" } } } });
