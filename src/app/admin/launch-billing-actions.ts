@@ -50,7 +50,13 @@ export async function markInvoicePaidAndActivateAction(invoiceId: string, paymen
     if (invoice.status !== "PAID") {
       await tx.invoice.update({
         where: { id: invoice.id },
-        data: { status: "PAID", paidAt, paymentMethod: parsedMethod.data },
+        data: {
+          status: "PAID",
+          paidAt,
+          paymentMethod: parsedMethod.data,
+          billingPeriodStart: paidAt,
+          billingPeriodEnd: periodEnd,
+        },
       });
 
       await tx.payment.create({
