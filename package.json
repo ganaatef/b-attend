@@ -4,10 +4,11 @@
   "private": true,
   "scripts": {
     "dev": "next dev -p 3000",
-    "build": "next build && node scripts/postbuild.js",
+    "build": "node scripts/prisma-migrate-if-enabled.mjs && prisma generate && next build && node scripts/postbuild.js",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
+    "preflight:production": "node scripts/preflight-production.mjs",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
