@@ -172,13 +172,28 @@ export async function launchLoginAction(
   redirect(next && next.startsWith("/") ? next : "/dashboard");
 }
 
+const BusinessTypeSchema = z.enum([
+  "RESTAURANT",
+  "CAFE",
+  "CLOUD_KITCHEN",
+  "CENTRAL_KITCHEN",
+  "RETAIL_CHAIN",
+  "GYM",
+  "CLINIC",
+  "WAREHOUSE",
+  "SECURITY_COMPANY",
+  "CLEANING_COMPANY",
+  "MULTI_BRANCH_OPS",
+  "OTHER",
+]);
+
 const SignupSchema = z.object({
   fullName: z.string().min(2, "Enter your full name"),
   email: z.string().email("Enter a valid email"),
   phone: z.string().min(6, "Enter a valid phone"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   companyName: z.string().min(2, "Enter your company name"),
-  businessType: z.string().min(1, "Select a business type"),
+  businessType: BusinessTypeSchema,
   employeesCount: z.coerce.number().int().min(0).max(100000),
   branchesCount: z.coerce.number().int().min(0).max(10000),
   preferredPlanSlug: z.string().min(1, "Select a plan"),
@@ -189,7 +204,7 @@ const SignupSchema = z.object({
 
 export type LaunchSignupState =
   | { ok: false; error?: string; fieldErrors?: Record<string, string> }
-  | { ok: true; tenantId: string; status: string; canLogin: boolean; planSlug: string };
+  | { ok: true; tenantId: string; status: string; canLogin: boolean; planSlug: string; invoiceNumber?: string };
 
 export async function launchSignupAction(
   _prev: LaunchSignupState,
@@ -225,6 +240,9 @@ export async function launchSignupAction(
   if (!plan || !plan.isActive) return { ok: false, error: "Selected plan is not available." };
   if (plan.isCustom) return { ok: false, error: "Enterprise plans require a sales-assisted setup. Please contact sales." };
 
+  const selectedAmount = input.billingCycle === "ANNUAL" ? plan.priceAnnual : plan.priceMonthly;
+  if (!plan.isTrial && selectedAmount <= 0) return { ok: false, error: "Selected paid plan has an invalid price." };
+
   if (!plan.isTrial && (input.employeesCount > plan.maxEmployees || input.branchesCount > plan.maxBranches)) {
     return {
       ok: false,
@@ -232,15 +250,21 @@ export async function launchSignupAction(
     };
   }
 
-  const existing = await db.tenant.findFirst({
-    where: {
-      ownerEmail: email,
-      deletedAt: null,
-      status: { notIn: ["CANCELLED", "REJECTED"] },
-    },
-    select: { id: true },
-  });
-  if (existing) return { ok: false, error: "An account with this email already exists or is awaiting activation." };
+  const [existingTenant, existingUser, existingPlatformUser] = await Promise.all([
+    db.tenant.findFirst({
+      where: {
+        ownerEmail: email,
+        deletedAt: null,
+        status: { notIn: ["CANCELLED", "REJECTED"] },
+      },
+      select: { id: true },
+    }),
+    db.user.findFirst({ where: { email, deletedAt: null }, select: { id: true } }),
+    db.platformUser.findUnique({ where: { email }, select: { id: true } }),
+  ]);
+  if (existingTenant || existingUser || existingPlatformUser) {
+    return { ok: false, error: "An account with this email already exists or is awaiting activation." };
+  }
 
   const settings = await db.systemSetting.findUnique({ where: { isMain: true } });
   const trialDays = Math.max(1, settings?.defaultTrialDays ?? 14);
@@ -257,7 +281,7 @@ export async function launchSignupAction(
         ownerEmail: email,
         ownerName: input.fullName,
         ownerPhone: input.phone,
-        businessType: input.businessType as never,
+        businessType: input.businessType,
         employeesCount: input.employeesCount,
         branchesCount: input.branchesCount,
         city: input.city || null,
@@ -269,7 +293,7 @@ export async function launchSignupAction(
       },
     });
 
-    await tx.subscription.create({
+    const subscription = await tx.subscription.create({
       data: {
         tenantId: tenant.id,
         planId: plan.id,
@@ -303,7 +327,7 @@ export async function launchSignupAction(
         company: input.companyName,
         phone: input.phone,
         email,
-        businessType: input.businessType as never,
+        businessType: input.businessType,
         employeesCount: input.employeesCount,
         branchesCount: input.branchesCount,
         message: input.message || null,
@@ -313,7 +337,28 @@ export async function launchSignupAction(
       },
     });
 
-    return { tenant, owner };
+    let invoiceNumber: string | undefined;
+    if (!plan.isTrial) {
+      invoiceNumber = `INV-${tenant.slug.toUpperCase()}-001`;
+      await tx.invoice.create({
+        data: {
+          tenantId: tenant.id,
+          subscriptionId: subscription.id,
+          planId: plan.id,
+          number: invoiceNumber,
+          subtotal: selectedAmount,
+          discount: 0,
+          tax: 0,
+          total: selectedAmount,
+          currency: plan.currency,
+          status: "PENDING_PAYMENT",
+          dueDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
+          notes: "Created automatically from public signup.",
+        },
+      });
+    }
+
+    return { tenant, owner, invoiceNumber };
   });
 
   await logPlatformEvent({
@@ -327,6 +372,7 @@ export async function launchSignupAction(
       slug,
       planId: plan.id,
       ownerUserId: result.owner.id,
+      invoiceNumber: result.invoiceNumber ?? null,
       selfActivatedTrial: plan.isTrial,
     },
   });
@@ -337,5 +383,6 @@ export async function launchSignupAction(
     status: result.tenant.status,
     canLogin: plan.isTrial,
     planSlug: plan.slug,
+    invoiceNumber: result.invoiceNumber,
   };
 }
