@@ -1,10 +1,14 @@
 /**
  * (tenant)/layout — wraps all customer pages with AppShell.
- * Enforces tenant session and shows subscription banner.
+ *
+ * The layout verifies the signed tenant identity even when billing is inactive so
+ * recovery surfaces such as /billing and /support can still render. Normal
+ * operational pages/actions call getSession(), which applies the live
+ * subscription gate centrally.
  */
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth/session";
+import { getSessionAllowInactive } from "@/lib/auth/session";
 import { AppShell, type AppShellSession } from "@/components/layout/AppShell";
 import { Suspense } from "react";
 import { getTranslations, getLocale } from "next-intl/server";
@@ -13,7 +17,7 @@ import { getStatusLabel } from "@/lib/status-labels";
 export const dynamic = "force-dynamic";
 
 export default async function TenantLayout({ children }: { children: React.ReactNode }) {
-  const session = await getSession();
+  const session = await getSessionAllowInactive();
   if (!session || session.kind !== "tenant" || !session.tenantId) {
     redirect("/login?next=/dashboard");
   }
@@ -29,7 +33,7 @@ export default async function TenantLayout({ children }: { children: React.React
 
   const currentUser = await db.user.findUnique({ where: { id: session.sub } });
 
-  if (tenant.status === "PENDING_ACTIVATION" || tenant.status === "REJECTED") {
+  if (tenant.status === "REJECTED") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background p-6">
         <div className="max-w-md rounded-xl border border-border bg-card p-8 text-center shadow-sm">
