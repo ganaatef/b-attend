@@ -52,27 +52,19 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
     <>
       <section className="border-b border-border bg-gradient-to-b from-card to-background">
         <div className="mx-auto max-w-3xl px-4 py-14 text-center sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-            {t("plansForTeams")}
-          </h1>
-          <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-            {t("pricesInEGP")}
-          </p>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">{t("plansForTeams")}</h1>
+          <p className="mt-3 text-sm text-muted-foreground sm:text-base">{t("pricesInEGP")}</p>
 
           <div className="mt-6 inline-flex items-center rounded-lg border border-border bg-card p-1">
             <button
               onClick={() => setAnnual(false)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                !annual ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${!annual ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
               {t("monthlyLabel")}
             </button>
             <button
               onClick={() => setAnnual(true)}
-              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
-                annual ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
-              }`}
+              className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${annual ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
             >
               {t("annualLabel")} <span className="ml-1 text-xs text-brand-success">{t("save2Months")}</span>
             </button>
@@ -87,12 +79,11 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
               const price = annual ? p.priceAnnual : p.priceMonthly;
               const isCustom = p.isCustom;
               const isTrial = p.isTrial;
+              const cycle = annual ? "ANNUAL" : "MONTHLY";
               return (
                 <div
                   key={p.id}
-                  className={`relative flex flex-col rounded-xl border bg-card p-5 ${
-                    p.slug === "growth" ? "border-brand-accent shadow-md ring-1 ring-brand-accent/20" : "border-border"
-                  }`}
+                  className={`relative flex flex-col rounded-xl border bg-card p-5 ${p.slug === "growth" ? "border-brand-accent shadow-md ring-1 ring-brand-accent/20" : "border-border"}`}
                 >
                   {p.slug === "growth" && (
                     <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-brand-accent px-3 py-0.5 text-xs font-bold uppercase tracking-wider text-white">
@@ -109,13 +100,11 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
                     ) : (
                       <p className="text-2xl font-bold text-foreground">
                         {formatNumber(price)}{" "}
-                        <span className="text-xs font-normal text-muted-foreground">
-                          EGP/{annual ? t("perYear") : t("perMonth")}
-                        </span>
+                        <span className="text-xs font-normal text-muted-foreground">EGP/{annual ? t("perYear") : t("perMonth")}</span>
                       </p>
                     )}
                   </div>
-                  <p className="mt-2 text-xs text-muted-foreground min-h-[2.5rem]">{p.description}</p>
+                  <p className="mt-2 min-h-[2.5rem] text-xs text-muted-foreground">{p.description}</p>
                   <div className="mt-3 space-y-1 text-xs text-muted-foreground">
                     <p>{p.maxBranches === 100 ? t("custom") : p.maxBranches} {p.maxBranches === 1 ? t("branch") : t("branches")}</p>
                     <p>{p.maxEmployees === 5000 ? t("custom") : p.maxEmployees} {t("employeesPlural")}</p>
@@ -128,15 +117,12 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
 
                   <div className="mt-5">
                     {isCustom ? (
-                      <Link
-                        href="/contact"
-                        className="block w-full rounded-md border border-border bg-background px-3 py-2 text-center text-sm font-semibold text-foreground hover:bg-muted"
-                      >
+                      <Link href="/contact" className="block w-full rounded-md border border-border bg-background px-3 py-2 text-center text-sm font-semibold text-foreground hover:bg-muted">
                         {t("contactSales")}
                       </Link>
                     ) : (
                       <Link
-                        href={`/signup?plan=${p.slug}`}
+                        href={`/signup?plan=${encodeURIComponent(p.slug)}&cycle=${cycle}`}
                         className="block w-full rounded-md bg-primary px-3 py-2 text-center text-sm font-semibold text-primary-foreground hover:bg-primary/90"
                       >
                         {isTrial ? t("startTrial") : t("choosePlan", { plan: p.name })}
@@ -153,11 +139,7 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
               <thead>
                 <tr className="border-b border-border">
                   <th className="py-3 text-left font-semibold text-foreground">{t("featureLabel")}</th>
-                  {plans.map((p) => (
-                    <th key={p.id} className="px-3 py-3 text-center font-semibold text-foreground">
-                      {p.name}
-                    </th>
-                  ))}
+                  {plans.map((p) => <th key={p.id} className="px-3 py-3 text-center font-semibold text-foreground">{p.name}</th>)}
                 </tr>
               </thead>
               <tbody>
@@ -167,15 +149,10 @@ export function PricingClient({ plans }: { plans: PlanWithFeatures[] }) {
                     <tr key={key} className="border-b border-border/60">
                       <td className="py-2.5 text-foreground/90">{label}</td>
                       {plans.map((p) => {
-                        const f = p.features.find((x) => x.key === key);
-                        const on = f?.enabled;
+                        const feature = p.features.find((item) => item.key === key);
                         return (
                           <td key={p.id} className="px-3 py-2.5 text-center">
-                            {on ? (
-                              <Check className="mx-auto h-4 w-4 text-brand-success" />
-                            ) : (
-                              <X className="mx-auto h-4 w-4 text-muted-foreground/40" />
-                            )}
+                            {feature?.enabled ? <Check className="mx-auto h-4 w-4 text-brand-success" /> : <X className="mx-auto h-4 w-4 text-muted-foreground/40" />}
                           </td>
                         );
                       })}
