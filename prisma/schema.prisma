@@ -147,6 +147,20 @@ enum TenantUserStatus {
   LEFT
 }
 
+enum AccessScopeType {
+  TENANT
+  BRANCH
+  DEPARTMENT
+  SELF
+}
+
+enum UserInvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
 enum BranchStatus {
   ACTIVE
   INACTIVE
@@ -175,6 +189,7 @@ enum PunchType {
 
 enum PunchSource {
   MOBILE_WEB
+  MOBILE_APP
   KIOSK
   MANUAL_ADJUSTMENT
   ADMIN
@@ -246,26 +261,26 @@ enum TicketStatus {
 // ============================================================
 
 model PlatformUser {
-  id                  String             @id @default(cuid())
-  email               String             @unique
-  passwordHash        String
-  name                String
-  role                PlatformRole       @default(SUPPORT_AGENT)
-  status              PlatformUserStatus @default(ACTIVE)
-  forcePasswordChange Boolean            @default(false)
-  lastLoginAt         DateTime?
-  failedLoginAttempts Int            @default(0)
-  lockedUntil         DateTime?
+  id                   String             @id @default(cuid())
+  email                String             @unique
+  passwordHash         String
+  name                 String
+  role                 PlatformRole       @default(SUPPORT_AGENT)
+  status               PlatformUserStatus @default(ACTIVE)
+  forcePasswordChange  Boolean            @default(false)
+  lastLoginAt          DateTime?
+  failedLoginAttempts  Int                @default(0)
+  lockedUntil          DateTime?
   lastPasswordChangeAt DateTime?
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  deletedAt           DateTime?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  deletedAt            DateTime?
 
-  assignedLeads     Lead[]      @relation("LeadAssignedTo")
-  auditActions      PlatformAuditLog[] @relation("AuditActor")
-  createdLeads      Lead[]      @relation("LeadCreatedBy")
-  createdInvoices   Invoice[]   @relation("InvoiceCreatedBy")
-  recordedPayments  Payment[]   @relation("PaymentRecordedBy")
+  assignedLeads       Lead[]                       @relation("LeadAssignedTo")
+  auditActions        PlatformAuditLog[]           @relation("AuditActor")
+  createdLeads        Lead[]                       @relation("LeadCreatedBy")
+  createdInvoices     Invoice[]                    @relation("InvoiceCreatedBy")
+  recordedPayments    Payment[]                    @relation("PaymentRecordedBy")
   passwordResetTokens PlatformPasswordResetToken[]
 
   @@index([role])
@@ -273,78 +288,83 @@ model PlatformUser {
 }
 
 model Tenant {
-  id              String         @id @default(cuid())
+  id              String       @id @default(cuid())
   name            String
   nameAr          String?
-  slug            String         @unique
+  slug            String       @unique
   ownerEmail      String
   ownerName       String
   ownerPhone      String
-  businessType    BusinessType   @default(OTHER)
-  employeesCount  Int            @default(0)
-  branchesCount   Int            @default(0)
+  businessType    BusinessType @default(OTHER)
+  employeesCount  Int          @default(0)
+  branchesCount   Int          @default(0)
   city            String?
-  status          TenantStatus   @default(PENDING_ACTIVATION)
+  status          TenantStatus @default(PENDING_ACTIVATION)
   preferredPlanId String?
-  preferredPlan   Plan?          @relation("TenantPreferredPlan", fields: [preferredPlanId], references: [id])
-  billingCycle    BillingCycle   @default(MONTHLY)
+  preferredPlan   Plan?        @relation("TenantPreferredPlan", fields: [preferredPlanId], references: [id])
+  billingCycle    BillingCycle @default(MONTHLY)
   message         String?
   activatedAt     DateTime?
   suspendedAt     DateTime?
   cancelledAt     DateTime?
   rejectedAt      DateTime?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
   deletedAt       DateTime?
 
-  subscription   Subscription?
-  invoices       Invoice[]
-  payments       Payment[]
-  leads          Lead[]
+  subscription Subscription?
+  invoices     Invoice[]
+  payments     Payment[]
+  leads        Lead[]
 
   // Tenant-side relations (stubs — populated in later phases)
-  users          User[]
-  settings       CompanySettings?
-  branches       Branch[]
-  departments    Department[]
-  employees      Employee[]
-  shiftPolicies  ShiftPolicy[]
-  schedules      Schedule[]
-  punches        Punch[]
-  attendanceDays AttendanceDay[]
-  approvals      ApprovalRequest[]
-  notifications  Notification[]
-  auditLogs      AuditLog[]
-  reportExports  ReportExportLog[]
-  supportTickets SupportTicket[]
-  kioskDevices   KioskDevice[]
+  users                  User[]
+  tenantRoles            TenantRole[]
+  tenantRolePermissions  TenantRolePermission[]
+  userRoleAssignments    UserRoleAssignment[]
+  userInvitations        UserInvitation[]
+  userInvitationRoles    UserInvitationRole[]
+  settings               CompanySettings?
+  branches               Branch[]
+  departments            Department[]
+  employees              Employee[]
+  shiftPolicies          ShiftPolicy[]
+  schedules              Schedule[]
+  punches                Punch[]
+  attendanceDays         AttendanceDay[]
+  approvals              ApprovalRequest[]
+  notifications          Notification[]
+  auditLogs              AuditLog[]
+  reportExports          ReportExportLog[]
+  supportTickets         SupportTicket[]
+  kioskDevices           KioskDevice[]
   // B-Coach AI module relations
-  dailyCoachContents  DailyCoachContent[]
-  coachTips           CoachTip[]
+  dailyCoachContents     DailyCoachContent[]
+  coachTips              CoachTip[]
   employeeCoachSnapshots EmployeeCoachSnapshot[]
-  teamCoachSnapshots  TeamCoachSnapshot[]
-  aiUsageLogs         AiUsageLog[]
-  tenantAiSetting     TenantAiSetting?
+  teamCoachSnapshots     TeamCoachSnapshot[]
+  aiUsageLogs            AiUsageLog[]
+  tenantAiSetting        TenantAiSetting?
   // HR module relations
-  jobTitles           JobTitle[]
-  employeeContracts   EmployeeContract[]
-  employeeDocuments   EmployeeDocument[]
-  leaveTypes          LeaveType[]
-  leavePolicies       LeavePolicy[]
-  leaveBalances       LeaveBalance[]
-  leaveRequests       LeaveRequest[]
-  employeeWarnings    EmployeeWarning[]
-  trainingCourses     TrainingCourse[]
-  trainingAssignments TrainingAssignment[]
-  employeeSkills      EmployeeSkill[]
-  assets              Asset[]
-  assetAssignments    AssetAssignment[]
-  onboardingTasks     OnboardingTask[]
-  offboardingTasks    OffboardingTask[]
-  payrollProfiles     PayrollProfile[]
-  payrollRuns         PayrollRun[]
-  payrollRunLines     PayrollRunLine[]
-  payrollAdjustments  PayrollAdjustment[]
+  jobTitles              JobTitle[]
+  employeeContracts      EmployeeContract[]
+  employeeDocuments      EmployeeDocument[]
+  leaveTypes             LeaveType[]
+  leavePolicies          LeavePolicy[]
+  leaveBalances          LeaveBalance[]
+  leaveRequests          LeaveRequest[]
+  employeeWarnings       EmployeeWarning[]
+  trainingCourses        TrainingCourse[]
+  trainingAssignments    TrainingAssignment[]
+  employeeSkills         EmployeeSkill[]
+  assets                 Asset[]
+  assetAssignments       AssetAssignment[]
+  onboardingTasks        OnboardingTask[]
+  offboardingTasks       OffboardingTask[]
+  payrollProfiles        PayrollProfile[]
+  payrollRuns            PayrollRun[]
+  payrollRunLines        PayrollRunLine[]
+  payrollAdjustments     PayrollAdjustment[]
 
   @@index([status])
   @@index([businessType])
@@ -352,32 +372,32 @@ model Tenant {
 }
 
 model Plan {
-  id                String        @id @default(cuid())
-  slug              String        @unique
-  name              String
-  nameAr            String?
-  description       String?
-  priceMonthly      Int           @default(0)
-  priceAnnual       Int           @default(0)
-  currency          String        @default("EGP")
-  maxBranches       Int           @default(1)
-  maxEmployees      Int           @default(10)
-  maxManagers       Int           @default(1)
-  maxKiosks         Int           @default(1)
-  reportsLevel      ReportsLevel  @default(BASIC)
+  id                 String       @id @default(cuid())
+  slug               String       @unique
+  name               String
+  nameAr             String?
+  description        String?
+  priceMonthly       Int          @default(0)
+  priceAnnual        Int          @default(0)
+  currency           String       @default("EGP")
+  maxBranches        Int          @default(1)
+  maxEmployees       Int          @default(10)
+  maxManagers        Int          @default(1)
+  maxKiosks          Int          @default(1)
+  reportsLevel       ReportsLevel @default(BASIC)
   auditRetentionDays Int          @default(30)
-  supportLevel      SupportLevel  @default(SELF_SERVICE)
-  isCustom          Boolean       @default(false)
-  isTrial           Boolean       @default(false)
-  sortOrder         Int           @default(0)
-  isActive          Boolean       @default(true)
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  supportLevel       SupportLevel @default(SELF_SERVICE)
+  isCustom           Boolean      @default(false)
+  isTrial            Boolean      @default(false)
+  sortOrder          Int          @default(0)
+  isActive           Boolean      @default(true)
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
 
-  features        PlanFeature[]
-  subscriptions   Subscription[]
-  tenantsPreferred Tenant[]      @relation("TenantPreferredPlan")
-  invoices        Invoice[]
+  features                  PlanFeature[]
+  subscriptions             Subscription[]
+  tenantsPreferred          Tenant[]        @relation("TenantPreferredPlan")
+  invoices                  Invoice[]
   systemSettingsDefaultPlan SystemSetting[] @relation("SystemSettingDefaultPlan")
 
   @@index([isActive])
@@ -385,12 +405,12 @@ model Plan {
 }
 
 model PlanFeature {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   planId    String
-  plan      Plan    @relation(fields: [planId], references: [id], onDelete: Cascade)
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
   key       String
   label     String
-  enabled   Boolean @default(false)
+  enabled   Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@unique([planId, key])
@@ -398,27 +418,27 @@ model PlanFeature {
 }
 
 model Subscription {
-  id                  String              @id @default(cuid())
-  tenantId            String              @unique
-  tenant              Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  planId              String
-  plan                Plan                @relation(fields: [planId], references: [id])
-  status              SubscriptionStatus  @default(PENDING_PAYMENT)
-  billingCycle        BillingCycle        @default(MONTHLY)
-  currentPeriodStart  DateTime?
-  currentPeriodEnd    DateTime?
-  trialEndsAt         DateTime?
-  graceEndsAt         DateTime?
-  monthlyAmount       Int                 @default(0)
-  annualAmount        Int                 @default(0)
-  currency            String              @default("EGP")
-  notes               String?
+  id                 String             @id @default(cuid())
+  tenantId           String             @unique
+  tenant             Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  planId             String
+  plan               Plan               @relation(fields: [planId], references: [id])
+  status             SubscriptionStatus @default(PENDING_PAYMENT)
+  billingCycle       BillingCycle       @default(MONTHLY)
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  trialEndsAt        DateTime?
+  graceEndsAt        DateTime?
+  monthlyAmount      Int                @default(0)
+  annualAmount       Int                @default(0)
+  currency           String             @default("EGP")
+  notes              String?
   // B-Coach AI add-on
-  bcoachAddOnEnabled  Boolean             @default(false)
-  bcoachAddOnTier     String?             // "TIER_25" | "TIER_75" | "CUSTOM"
-  bcoachAddOnPrice    Int                 @default(0)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  bcoachAddOnEnabled Boolean            @default(false)
+  bcoachAddOnTier    String? // "TIER_25" | "TIER_75" | "CUSTOM"
+  bcoachAddOnPrice   Int                @default(0)
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
 
   invoices Invoice[]
 
@@ -454,47 +474,47 @@ model Lead {
 }
 
 model SystemSetting {
-  id                      String                @id @default(cuid())
-  isMain                  Boolean               @default(true) @unique
-  defaultTrialDays        Int                   @default(14)
-  defaultGracePeriodDays  Int                   @default(7)
-  defaultCurrency         String                @default("EGP")
-  manualActivationMode    Boolean               @default(true)
-  supportEmail            String                @default("support@b-attend.app")
-  billingEmail            String                @default("billing@b-attend.app")
-  maintenanceMode         Boolean               @default(false)
-  defaultPlanId           String?
-  defaultPlan             Plan?                 @relation("SystemSettingDefaultPlan", fields: [defaultPlanId], references: [id])
-  paymentProviderMode     PaymentProviderMode   @default(MANUAL)
+  id                                String              @id @default(cuid())
+  isMain                            Boolean             @unique @default(true)
+  defaultTrialDays                  Int                 @default(14)
+  defaultGracePeriodDays            Int                 @default(7)
+  defaultCurrency                   String              @default("EGP")
+  manualActivationMode              Boolean             @default(true)
+  supportEmail                      String              @default("support@b-attend.app")
+  billingEmail                      String              @default("billing@b-attend.app")
+  maintenanceMode                   Boolean             @default(false)
+  defaultPlanId                     String?
+  defaultPlan                       Plan?               @relation("SystemSettingDefaultPlan", fields: [defaultPlanId], references: [id])
+  paymentProviderMode               PaymentProviderMode @default(MANUAL)
   // B-Coach AI module settings
-  aiModuleEnabled         Boolean               @default(true)
-  aiProvider              AiProvider            @default(MOCK)
-  aiDailyCoachEnabled     Boolean               @default(true)
-  aiEmployeeInsightsEnabled Boolean             @default(true)
-  aiManagerInsightsEnabled Boolean              @default(true)
-  allowOpenaiProvider     Boolean               @default(false)
-  mockProviderEnabled     Boolean               @default(true)
-  maxAiGenerationsPerTenantPerMonth Int         @default(1000)
-  aiDefaultLanguage       String                @default("EN")
-  aiPrivacyModeEnabled    Boolean               @default(true)
-  createdAt               DateTime              @default(now())
-  updatedAt               DateTime              @updatedAt
+  aiModuleEnabled                   Boolean             @default(true)
+  aiProvider                        AiProvider          @default(MOCK)
+  aiDailyCoachEnabled               Boolean             @default(true)
+  aiEmployeeInsightsEnabled         Boolean             @default(true)
+  aiManagerInsightsEnabled          Boolean             @default(true)
+  allowOpenaiProvider               Boolean             @default(false)
+  mockProviderEnabled               Boolean             @default(true)
+  maxAiGenerationsPerTenantPerMonth Int                 @default(1000)
+  aiDefaultLanguage                 String              @default("EN")
+  aiPrivacyModeEnabled              Boolean             @default(true)
+  createdAt                         DateTime            @default(now())
+  updatedAt                         DateTime            @updatedAt
 }
 
 model PlatformAuditLog {
-  id          String   @id @default(cuid())
-  actorId     String?
-  actor       PlatformUser? @relation("AuditActor", fields: [actorId], references: [id])
-  actorEmail  String
-  action      String
-  entityType  String?
-  entityId    String?
-  reason      String?
-  ipAddress   String?
-  userAgent   String?
-  beforeData  String?
-  afterData   String?
-  createdAt   DateTime @default(now())
+  id         String        @id @default(cuid())
+  actorId    String?
+  actor      PlatformUser? @relation("AuditActor", fields: [actorId], references: [id])
+  actorEmail String
+  action     String
+  entityType String?
+  entityId   String?
+  reason     String?
+  ipAddress  String?
+  userAgent  String?
+  beforeData String?
+  afterData  String?
+  createdAt  DateTime      @default(now())
 
   @@index([actorId])
   @@index([action])
@@ -503,47 +523,47 @@ model PlatformAuditLog {
 }
 
 model Coupon {
-  id          String   @id @default(cuid())
-  code        String   @unique
-  description String?
-  discountType String  @default("PERCENT")
-  discountValue Int    @default(0)
-  currency    String   @default("EGP")
+  id             String    @id @default(cuid())
+  code           String    @unique
+  description    String?
+  discountType   String    @default("PERCENT")
+  discountValue  Int       @default(0)
+  currency       String    @default("EGP")
   maxRedemptions Int?
-  redeemedCount Int    @default(0)
-  validFrom   DateTime?
-  validTo     DateTime?
-  isActive    Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  redeemedCount  Int       @default(0)
+  validFrom      DateTime?
+  validTo        DateTime?
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Invoice {
-  id                  String        @id @default(cuid())
-  tenantId            String
-  tenant              Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  subscriptionId      String?
-  subscription        Subscription? @relation(fields: [subscriptionId], references: [id])
-  planId              String?
-  plan                Plan?         @relation(fields: [planId], references: [id])
-  number              String        @unique
-  billingPeriodStart  DateTime?
-  billingPeriodEnd    DateTime?
-  subtotal            Int           @default(0)
-  discount            Int           @default(0)
-  tax                 Int           @default(0)
-  total               Int           @default(0)
-  currency            String        @default("EGP")
-  status              InvoiceStatus @default(DRAFT)
-  dueDate             DateTime?
-  paidAt              DateTime?
-  paymentMethod       String?
-  notes               String?
-  pdfUrl              String?
-  createdById         String?
-  createdBy           PlatformUser? @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
+  id                 String        @id @default(cuid())
+  tenantId           String
+  tenant             Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  subscriptionId     String?
+  subscription       Subscription? @relation(fields: [subscriptionId], references: [id])
+  planId             String?
+  plan               Plan?         @relation(fields: [planId], references: [id])
+  number             String        @unique
+  billingPeriodStart DateTime?
+  billingPeriodEnd   DateTime?
+  subtotal           Int           @default(0)
+  discount           Int           @default(0)
+  tax                Int           @default(0)
+  total              Int           @default(0)
+  currency           String        @default("EGP")
+  status             InvoiceStatus @default(DRAFT)
+  dueDate            DateTime?
+  paidAt             DateTime?
+  paymentMethod      String?
+  notes              String?
+  pdfUrl             String?
+  createdById        String?
+  createdBy          PlatformUser? @relation("InvoiceCreatedBy", fields: [createdById], references: [id])
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
 
   payments Payment[]
 
@@ -553,22 +573,22 @@ model Invoice {
 }
 
 model Payment {
-  id           String          @id @default(cuid())
-  tenantId     String
-  tenant       Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  invoiceId    String?
-  invoice      Invoice?        @relation(fields: [invoiceId], references: [id])
-  amount       Int             @default(0)
-  currency     String          @default("EGP")
-  provider     PaymentProvider @default(MANUAL)
-  reference    String?
-  status       PaymentStatus   @default(PENDING)
-  paidAt       DateTime?
-  proofUrl     String?
-  createdById  String?
-  createdBy    PlatformUser?   @relation("PaymentRecordedBy", fields: [createdById], references: [id])
-  createdAt    DateTime        @default(now())
-  updatedAt    DateTime        @updatedAt
+  id          String          @id @default(cuid())
+  tenantId    String
+  tenant      Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invoiceId   String?
+  invoice     Invoice?        @relation(fields: [invoiceId], references: [id])
+  amount      Int             @default(0)
+  currency    String          @default("EGP")
+  provider    PaymentProvider @default(MANUAL)
+  reference   String?
+  status      PaymentStatus   @default(PENDING)
+  paidAt      DateTime?
+  proofUrl    String?
+  createdById String?
+  createdBy   PlatformUser?   @relation("PaymentRecordedBy", fields: [createdById], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   @@index([tenantId])
   @@index([invoiceId])
@@ -576,11 +596,11 @@ model Payment {
 }
 
 model BillingEvent {
-  id          String   @id @default(cuid())
-  tenantId    String
-  eventType   String
-  payload     String?
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  tenantId  String
+  eventType String
+  payload   String?
+  createdAt DateTime @default(now())
 
   @@index([tenantId])
   @@index([eventType])
@@ -592,25 +612,26 @@ model BillingEvent {
 // ============================================================
 
 model User {
-  id              String           @id @default(cuid())
-  companyId       String
-  tenant          Tenant           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  email           String
-  passwordHash    String
-  name            String
-  role            TenantUserRole   @default(EMPLOYEE)
-  status          TenantUserStatus @default(ACTIVE)
-  forcePasswordChange Boolean      @default(false)
-  lastLoginAt     DateTime?
-  failedLoginAttempts Int            @default(0)
-  lockedUntil         DateTime?
+  id                   String               @id @default(cuid())
+  companyId            String
+  tenant               Tenant               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email                String
+  passwordHash         String
+  name                 String
+  role                 TenantUserRole       @default(EMPLOYEE)
+  status               TenantUserStatus     @default(ACTIVE)
+  forcePasswordChange  Boolean              @default(false)
+  lastLoginAt          DateTime?
+  failedLoginAttempts  Int                  @default(0)
+  lockedUntil          DateTime?
   lastPasswordChangeAt DateTime?
-  employeeId      String?          @unique
-  employee        Employee?         @relation(fields: [employeeId], references: [id])
-  passwordResetTokens PasswordResetToken[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
-  deletedAt       DateTime?
+  employeeId           String?              @unique
+  employee             Employee?            @relation(fields: [employeeId], references: [id])
+  passwordResetTokens  PasswordResetToken[]
+  roleAssignments      UserRoleAssignment[]
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  deletedAt            DateTime?
 
   @@unique([companyId, email])
   @@index([companyId])
@@ -619,58 +640,58 @@ model User {
 }
 
 model CompanySettings {
-  id                          String   @id @default(cuid())
-  companyId                   String   @unique
-  tenant                      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  industry                    String?
-  timezone                    String   @default("Africa/Cairo")
-  currency                    String   @default("EGP")
-  defaultLanguage             String   @default("en")
-  defaultGeofenceRadius       Int      @default(150)
-  defaultGraceMinutes         Int      @default(10)
-  defaultOvertimeThresholdMinutes Int  @default(480)
-  enableMobileClock           Boolean  @default(true)
-  enableKioskClock            Boolean  @default(true)
-  requireApprovalOutsideGeofence Boolean @default(true)
-  requireApprovalOvertime     Boolean  @default(true)
-  allowNoScheduleClockIn      Boolean  @default(false)
-  allowManualRequests         Boolean  @default(true)
-  enableEmployeeSelfService   Boolean  @default(true)
-  enableBranchManagerApprovals Boolean @default(true)
-  payrollIntegration          String?
-  whatsappNotifications       Boolean  @default(false)
-  emailNotifications          Boolean  @default(true)
-  createdAt                   DateTime @default(now())
-  updatedAt                   DateTime @updatedAt
+  id                              String   @id @default(cuid())
+  companyId                       String   @unique
+  tenant                          Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  industry                        String?
+  timezone                        String   @default("Africa/Cairo")
+  currency                        String   @default("EGP")
+  defaultLanguage                 String   @default("en")
+  defaultGeofenceRadius           Int      @default(150)
+  defaultGraceMinutes             Int      @default(10)
+  defaultOvertimeThresholdMinutes Int      @default(480)
+  enableMobileClock               Boolean  @default(true)
+  enableKioskClock                Boolean  @default(true)
+  requireApprovalOutsideGeofence  Boolean  @default(true)
+  requireApprovalOvertime         Boolean  @default(true)
+  allowNoScheduleClockIn          Boolean  @default(false)
+  allowManualRequests             Boolean  @default(true)
+  enableEmployeeSelfService       Boolean  @default(true)
+  enableBranchManagerApprovals    Boolean  @default(true)
+  payrollIntegration              String?
+  whatsappNotifications           Boolean  @default(false)
+  emailNotifications              Boolean  @default(true)
+  createdAt                       DateTime @default(now())
+  updatedAt                       DateTime @updatedAt
 }
 
 model Branch {
-  id              String       @id @default(cuid())
-  companyId       String
-  tenant          Tenant       @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name            String
-  code            String?
-  address         String?
-  city            String?
-  area            String?
-  latitude        Float?
-  longitude       Float?
-  geofenceRadius  Int          @default(150)
-  managerId       String?
-  status          BranchStatus @default(ACTIVE)
-  openingHours    String?
-  notes           String?
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
-  deletedAt       DateTime?
+  id             String       @id @default(cuid())
+  companyId      String
+  tenant         Tenant       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name           String
+  code           String?
+  address        String?
+  city           String?
+  area           String?
+  latitude       Float?
+  longitude      Float?
+  geofenceRadius Int          @default(150)
+  managerId      String?
+  status         BranchStatus @default(ACTIVE)
+  openingHours   String?
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  deletedAt      DateTime?
 
-  punches         Punch[]
-  attendanceDays  AttendanceDay[]
-  approvalRequests ApprovalRequest[]
+  punches            Punch[]
+  attendanceDays     AttendanceDay[]
+  approvalRequests   ApprovalRequest[]
   teamCoachSnapshots TeamCoachSnapshot[]
-  schedules       Schedule[]
-  employees       Employee[]
-  kioskDevices    KioskDevice[]
+  schedules          Schedule[]
+  employees          Employee[]
+  kioskDevices       KioskDevice[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -678,87 +699,88 @@ model Branch {
 }
 
 model Department {
-  id          String   @id @default(cuid())
-  companyId   String
-  tenant      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name        String
-  code        String?
-  active      Boolean  @default(true)
-  employees   Employee[]
-  jobTitles   JobTitle[]
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String     @id @default(cuid())
+  companyId String
+  tenant    Tenant     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  code      String?
+  active    Boolean    @default(true)
+  employees Employee[]
+  jobTitles JobTitle[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@unique([companyId, name])
   @@index([companyId])
 }
 
 model Employee {
-  id                String         @id @default(cuid())
-  companyId         String
-  tenant            Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeCode      String
-  fullName          String
-  arabicName        String?
-  phone             String?
-  email             String?
-  nationalId        String?
-  dateOfBirth       DateTime?
-  gender            String?
-  maritalStatus     String?
-  address           String?
+  id                    String         @id @default(cuid())
+  companyId             String
+  tenant                Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeCode          String
+  fullName              String
+  arabicName            String?
+  phone                 String?
+  email                 String?
+  nationalId            String?
+  dateOfBirth           DateTime?
+  gender                String?
+  maritalStatus         String?
+  address               String?
   emergencyContactName  String?
   emergencyContactPhone String?
-  photoUrl          String?
-  jobTitle          String?
-  jobTitleId        String?
-  jobTitleRef       JobTitle?      @relation(fields: [jobTitleId], references: [id])
-  grade             String?
-  departmentId      String?
-  department        Department?    @relation(fields: [departmentId], references: [id])
-  branchId          String?
-  branch            Branch?        @relation(fields: [branchId], references: [id])
-  managerId         String?
-  employmentType    EmploymentType @default(FULL_TIME)
-  status            EmployeeStatus @default(ACTIVE)
-  startDate         DateTime?
-  endDate           DateTime?
-  probationEndDate DateTime?
-  contractType      String?
-  workLocation      String?
-  defaultShiftPolicyId String?
-  defaultShiftPolicy ShiftPolicy?  @relation(fields: [defaultShiftPolicyId], references: [id])
-  pinCode           String?
-  pinHash           String?
-  userId            String?
-  salary            Int?
-  notes             String?
-  onboardingStatus  String         @default("PENDING")
-  offboardingStatus String         @default("NONE")
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
-  deletedAt         DateTime?
+  photoUrl              String?
+  jobTitle              String?
+  jobTitleId            String?
+  jobTitleRef           JobTitle?      @relation(fields: [jobTitleId], references: [id])
+  grade                 String?
+  departmentId          String?
+  department            Department?    @relation(fields: [departmentId], references: [id])
+  branchId              String?
+  branch                Branch?        @relation(fields: [branchId], references: [id])
+  managerId             String?
+  employmentType        EmploymentType @default(FULL_TIME)
+  status                EmployeeStatus @default(ACTIVE)
+  startDate             DateTime?
+  endDate               DateTime?
+  probationEndDate      DateTime?
+  contractType          String?
+  workLocation          String?
+  defaultShiftPolicyId  String?
+  defaultShiftPolicy    ShiftPolicy?   @relation(fields: [defaultShiftPolicyId], references: [id])
+  pinCode               String?
+  pinHash               String?
+  userId                String?
+  salary                Int?
+  notes                 String?
+  onboardingStatus      String         @default("PENDING")
+  offboardingStatus     String         @default("NONE")
+  createdAt             DateTime       @default(now())
+  updatedAt             DateTime       @updatedAt
+  deletedAt             DateTime?
 
-  punches           Punch[]
-  attendanceDays    AttendanceDay[]
-  approvalRequests  ApprovalRequest[]
-  coachSnapshots    EmployeeCoachSnapshot[]
-  schedules         Schedule[]
-  user              User?
+  punches             Punch[]
+  attendanceDays      AttendanceDay[]
+  approvalRequests    ApprovalRequest[]
+  coachSnapshots      EmployeeCoachSnapshot[]
+  schedules           Schedule[]
+  user                User?
+  accessInvitations   UserInvitation[]
   // HR relations
-  contracts         EmployeeContract[]
-  documents         EmployeeDocument[]
-  leaveBalances     LeaveBalance[]
-  leaveRequests     LeaveRequest[]
-  warnings          EmployeeWarning[]
+  contracts           EmployeeContract[]
+  documents           EmployeeDocument[]
+  leaveBalances       LeaveBalance[]
+  leaveRequests       LeaveRequest[]
+  warnings            EmployeeWarning[]
   trainingAssignments TrainingAssignment[]
-  skills            EmployeeSkill[]
-  assetAssignments  AssetAssignment[]
-  onboardingTasks   OnboardingTask[]
-  offboardingTasks  OffboardingTask[]
-  payrollProfile    PayrollProfile?
-  payrollRunLines   PayrollRunLine[]
-  payrollAdjustments PayrollAdjustment[]
+  skills              EmployeeSkill[]
+  assetAssignments    AssetAssignment[]
+  onboardingTasks     OnboardingTask[]
+  offboardingTasks    OffboardingTask[]
+  payrollProfile      PayrollProfile?
+  payrollRunLines     PayrollRunLine[]
+  payrollAdjustments  PayrollAdjustment[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -768,50 +790,50 @@ model Employee {
 }
 
 model ShiftPolicy {
-  id                       String   @id @default(cuid())
-  companyId                String
-  tenant                   Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name                     String
-  startTime                String
-  endTime                  String
-  breakMinutes             Int      @default(0)
-  lateGraceMinutes         Int      @default(10)
-  earlyLeaveGraceMinutes   Int      @default(0)
-  overtimeStartsAfterMinutes Int    @default(480)
-  weekendDays              String   @default("FRIDAY,SATURDAY")
-  requiresOvertimeApproval Boolean  @default(true)
-  allowsMobileClockIn      Boolean  @default(true)
-  allowsKioskClockIn       Boolean  @default(true)
-  allowNoScheduleClockIn   Boolean  @default(false)
-  status                   String   @default("ACTIVE")
-  employees                Employee[]
-  schedules                Schedule[]
-  createdAt                DateTime @default(now())
-  updatedAt                DateTime @updatedAt
+  id                         String     @id @default(cuid())
+  companyId                  String
+  tenant                     Tenant     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                       String
+  startTime                  String
+  endTime                    String
+  breakMinutes               Int        @default(0)
+  lateGraceMinutes           Int        @default(10)
+  earlyLeaveGraceMinutes     Int        @default(0)
+  overtimeStartsAfterMinutes Int        @default(480)
+  weekendDays                String     @default("FRIDAY,SATURDAY")
+  requiresOvertimeApproval   Boolean    @default(true)
+  allowsMobileClockIn        Boolean    @default(true)
+  allowsKioskClockIn         Boolean    @default(true)
+  allowNoScheduleClockIn     Boolean    @default(false)
+  status                     String     @default("ACTIVE")
+  employees                  Employee[]
+  schedules                  Schedule[]
+  createdAt                  DateTime   @default(now())
+  updatedAt                  DateTime   @updatedAt
 
   @@index([companyId])
 }
 
 model Schedule {
-  id              String         @id @default(cuid())
-  companyId       String
-  tenant          Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId      String
-  employee        Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  branchId        String?
-  branch          Branch?         @relation(fields: [branchId], references: [id])
-  date            DateTime
-  shiftPolicyId   String?
-  shiftPolicy     ShiftPolicy?   @relation(fields: [shiftPolicyId], references: [id])
-  expectedStart   DateTime?
-  expectedEnd     DateTime?
-  status          ScheduleStatus @default(SCHEDULED)
-  notes           String?
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  id            String         @id @default(cuid())
+  companyId     String
+  tenant        Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branchId      String?
+  branch        Branch?        @relation(fields: [branchId], references: [id])
+  date          DateTime
+  shiftPolicyId String?
+  shiftPolicy   ShiftPolicy?   @relation(fields: [shiftPolicyId], references: [id])
+  expectedStart DateTime?
+  expectedEnd   DateTime?
+  status        ScheduleStatus @default(SCHEDULED)
+  notes         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
-  punches         Punch[]
-  attendanceDays  AttendanceDay[]
+  punches        Punch[]
+  attendanceDays AttendanceDay[]
 
   @@unique([companyId, employeeId, date])
   @@index([companyId, date])
@@ -821,27 +843,27 @@ model Schedule {
 }
 
 model Punch {
-  id              String      @id @default(cuid())
-  companyId       String
-  tenant          Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId      String
-  employee        Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  branchId        String?
-  branch          Branch?     @relation(fields: [branchId], references: [id])
-  scheduleId      String?
-  schedule        Schedule?   @relation(fields: [scheduleId], references: [id])
-  type            PunchType
-  timestamp       DateTime
-  latitude        Float?
-  longitude       Float?
-  distanceMeters  Int?
-  insideGeofence  Boolean     @default(true)
-  source          PunchSource @default(MOBILE_WEB)
-  status          PunchStatus @default(ACCEPTED)
-  deviceInfo      String?
-  ipAddress       String?
-  userAgent       String?
-  createdAt       DateTime    @default(now())
+  id             String      @id @default(cuid())
+  companyId      String
+  tenant         Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branchId       String?
+  branch         Branch?     @relation(fields: [branchId], references: [id])
+  scheduleId     String?
+  schedule       Schedule?   @relation(fields: [scheduleId], references: [id])
+  type           PunchType
+  timestamp      DateTime
+  latitude       Float?
+  longitude      Float?
+  distanceMeters Int?
+  insideGeofence Boolean     @default(true)
+  source         PunchSource @default(MOBILE_WEB)
+  status         PunchStatus @default(ACCEPTED)
+  deviceInfo     String?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime    @default(now())
 
   @@index([companyId, employeeId])
   @@index([companyId, timestamp])
@@ -850,33 +872,33 @@ model Punch {
 }
 
 model AttendanceDay {
-  id                  String              @id @default(cuid())
-  companyId           String
-  tenant              Tenant              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId          String
-  employee            Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  branchId            String?
-  branch              Branch?             @relation(fields: [branchId], references: [id])
-  scheduleId          String?
-  schedule            Schedule?           @relation(fields: [scheduleId], references: [id])
-  date                DateTime
-  scheduledStart      DateTime?
-  scheduledEnd        DateTime?
-  actualClockIn       DateTime?
-  actualClockOut      DateTime?
-  lateMinutes         Int                 @default(0)
-  earlyLeaveMinutes   Int                 @default(0)
-  breakMinutes        Int                 @default(0)
-  workedMinutes       Int                 @default(0)
-  overtimeMinutes     Int                 @default(0)
-  status              AttendanceDayStatus @default(ON_TIME)
-  exceptionFlags      String?
-  requiresApproval    Boolean             @default(false)
-  finalized           Boolean             @default(false)
-  payrollLocked       Boolean             @default(false)
-  notes               String?
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  id                String              @id @default(cuid())
+  companyId         String
+  tenant            Tenant              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId        String
+  employee          Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branchId          String?
+  branch            Branch?             @relation(fields: [branchId], references: [id])
+  scheduleId        String?
+  schedule          Schedule?           @relation(fields: [scheduleId], references: [id])
+  date              DateTime
+  scheduledStart    DateTime?
+  scheduledEnd      DateTime?
+  actualClockIn     DateTime?
+  actualClockOut    DateTime?
+  lateMinutes       Int                 @default(0)
+  earlyLeaveMinutes Int                 @default(0)
+  breakMinutes      Int                 @default(0)
+  workedMinutes     Int                 @default(0)
+  overtimeMinutes   Int                 @default(0)
+  status            AttendanceDayStatus @default(ON_TIME)
+  exceptionFlags    String?
+  requiresApproval  Boolean             @default(false)
+  finalized         Boolean             @default(false)
+  payrollLocked     Boolean             @default(false)
+  notes             String?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
 
   @@unique([companyId, employeeId, date])
   @@index([companyId, date])
@@ -885,28 +907,28 @@ model AttendanceDay {
 }
 
 model ApprovalRequest {
-  id              String        @id @default(cuid())
-  companyId       String
-  tenant          Tenant        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId      String
-  employee        Employee      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  branchId        String?
-  branch          Branch?       @relation(fields: [branchId], references: [id])
-  date            DateTime?
-  type            ApprovalType
-  originalData    String?
-  requestedData   String?
-  reason          String?
-  status          ApprovalStatus @default(PENDING)
-  requestedById   String?
-  approvedById    String?
-  approvedAt      DateTime?
-  rejectedById    String?
-  rejectedAt      DateTime?
-  managerNotes    String?
-  relatedPunchId  String?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             String         @id @default(cuid())
+  companyId      String
+  tenant         Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branchId       String?
+  branch         Branch?        @relation(fields: [branchId], references: [id])
+  date           DateTime?
+  type           ApprovalType
+  originalData   String?
+  requestedData  String?
+  reason         String?
+  status         ApprovalStatus @default(PENDING)
+  requestedById  String?
+  approvedById   String?
+  approvedAt     DateTime?
+  rejectedById   String?
+  rejectedAt     DateTime?
+  managerNotes   String?
+  relatedPunchId String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@index([companyId])
   @@index([status])
@@ -917,16 +939,16 @@ model ApprovalRequest {
 }
 
 model Notification {
-  id          String              @id @default(cuid())
-  companyId   String
-  tenant      Tenant              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  userId      String?
-  channel     NotificationChannel @default(IN_APP)
-  title       String
-  body        String
-  eventType   String?
-  isRead      Boolean             @default(false)
-  createdAt   DateTime            @default(now())
+  id        String              @id @default(cuid())
+  companyId String
+  tenant    Tenant              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId    String?
+  channel   NotificationChannel @default(IN_APP)
+  title     String
+  body      String
+  eventType String?
+  isRead    Boolean             @default(false)
+  createdAt DateTime            @default(now())
 
   @@index([companyId])
   @@index([userId])
@@ -935,20 +957,20 @@ model Notification {
 }
 
 model AuditLog {
-  id          String   @id @default(cuid())
-  companyId   String
-  tenant      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  actorId     String?
-  actorEmail  String
-  action      String
-  entityType  String?
-  entityId    String?
-  reason      String?
-  ipAddress   String?
-  userAgent   String?
-  beforeData  String?
-  afterData   String?
-  createdAt   DateTime @default(now())
+  id         String   @id @default(cuid())
+  companyId  String
+  tenant     Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  actorId    String?
+  actorEmail String
+  action     String
+  entityType String?
+  entityId   String?
+  reason     String?
+  ipAddress  String?
+  userAgent  String?
+  beforeData String?
+  afterData  String?
+  createdAt  DateTime @default(now())
 
   @@index([companyId])
   @@index([action])
@@ -957,16 +979,16 @@ model AuditLog {
 }
 
 model ReportExportLog {
-  id          String   @id @default(cuid())
-  companyId   String
-  tenant      Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  reportType  String
-  filters     String?
-  rowCount    Int      @default(0)
-  fileName    String?
-  exportedById String?
+  id              String   @id @default(cuid())
+  companyId       String
+  tenant          Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  reportType      String
+  filters         String?
+  rowCount        Int      @default(0)
+  fileName        String?
+  exportedById    String?
   exportedByEmail String?
-  createdAt   DateTime @default(now())
+  createdAt       DateTime @default(now())
 
   @@index([companyId])
   @@index([reportType])
@@ -974,20 +996,20 @@ model ReportExportLog {
 }
 
 model SupportTicket {
-  id          String       @id @default(cuid())
-  companyId   String?
-  tenant      Tenant?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  subject     String
-  category    String?
-  message     String
-  priority    String       @default("NORMAL")
-  status      TicketStatus @default(OPEN)
-  attachmentUrl String?
-  createdById String?
+  id             String       @id @default(cuid())
+  companyId      String?
+  tenant         Tenant?      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  subject        String
+  category       String?
+  message        String
+  priority       String       @default("NORMAL")
+  status         TicketStatus @default(OPEN)
+  attachmentUrl  String?
+  createdById    String?
   createdByEmail String?
-  assignedToId String?
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  assignedToId   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
 
   messages SupportMessage[]
 
@@ -997,15 +1019,15 @@ model SupportTicket {
 }
 
 model SupportMessage {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   ticketId    String
   ticket      SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   authorId    String?
   authorEmail String
   authorRole  String
   body        String
-  isInternal  Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  isInternal  Boolean       @default(false)
+  createdAt   DateTime      @default(now())
 
   @@index([ticketId])
 }
@@ -1083,18 +1105,18 @@ enum AiUsageStatus {
 }
 
 model DailyCoachContent {
-  id            String         @id @default(cuid())
-  companyId     String?
-  tenant        Tenant?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  date          DateTime
-  title         String
-  body          String
-  theme         CoachTheme     @default(GENERAL)
-  language      CoachLanguage  @default(EN)
-  audience      CoachAudience  @default(ALL_EMPLOYEES)
-  createdByAi   Boolean        @default(true)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+  id          String        @id @default(cuid())
+  companyId   String?
+  tenant      Tenant?       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  date        DateTime
+  title       String
+  body        String
+  theme       CoachTheme    @default(GENERAL)
+  language    CoachLanguage @default(EN)
+  audience    CoachAudience @default(ALL_EMPLOYEES)
+  createdByAi Boolean       @default(true)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
 
   @@unique([companyId, date, audience, language])
   @@index([companyId, date])
@@ -1103,18 +1125,18 @@ model DailyCoachContent {
 }
 
 model CoachTip {
-  id              String         @id @default(cuid())
+  id              String        @id @default(cuid())
   companyId       String?
-  tenant          Tenant?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant          Tenant?       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   title           String
   body            String
-  theme           CoachTheme     @default(GENERAL)
-  roleTarget      CoachAudience  @default(ALL_EMPLOYEES)
-  language        CoachLanguage  @default(EN)
-  isSystemDefault Boolean        @default(false)
-  active          Boolean        @default(true)
-  createdAt       DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  theme           CoachTheme    @default(GENERAL)
+  roleTarget      CoachAudience @default(ALL_EMPLOYEES)
+  language        CoachLanguage @default(EN)
+  isSystemDefault Boolean       @default(false)
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   @@index([companyId])
   @@index([theme])
@@ -1123,23 +1145,23 @@ model CoachTip {
 }
 
 model EmployeeCoachSnapshot {
-  id                String            @id @default(cuid())
-  companyId         String
-  tenant            Tenant            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId        String
-  employee          Employee          @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  periodStart       DateTime
-  periodEnd         DateTime
-  score             Int               @default(100)
-  level             ConsistencyLevel  @default(GOOD)
-  positiveSummary   String
-  improvementAreas  String
-  practicalAdvice   String
-  tomorrowAction    String
-  riskLevel         RiskLevel         @default(LOW)
-  tags              String
-  generatedBy       String            @default("mock")
-  createdAt         DateTime          @default(now())
+  id               String           @id @default(cuid())
+  companyId        String
+  tenant           Tenant           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId       String
+  employee         Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  periodStart      DateTime
+  periodEnd        DateTime
+  score            Int              @default(100)
+  level            ConsistencyLevel @default(GOOD)
+  positiveSummary  String
+  improvementAreas String
+  practicalAdvice  String
+  tomorrowAction   String
+  riskLevel        RiskLevel        @default(LOW)
+  tags             String
+  generatedBy      String           @default("mock")
+  createdAt        DateTime         @default(now())
 
   @@index([companyId, employeeId])
   @@index([companyId, periodStart])
@@ -1170,18 +1192,18 @@ model TeamCoachSnapshot {
 }
 
 model AiUsageLog {
-  id           String         @id @default(cuid())
+  id           String        @id @default(cuid())
   companyId    String?
-  tenant       Tenant?        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant       Tenant?       @relation(fields: [companyId], references: [id], onDelete: Cascade)
   userId       String?
   feature      AiFeature
-  provider     AiProvider     @default(MOCK)
+  provider     AiProvider    @default(MOCK)
   tokensIn     Int?
   tokensOut    Int?
   costEstimate Float?
-  status       AiUsageStatus  @default(SUCCESS)
+  status       AiUsageStatus @default(SUCCESS)
   errorMessage String?
-  createdAt    DateTime       @default(now())
+  createdAt    DateTime      @default(now())
 
   @@index([companyId])
   @@index([feature])
@@ -1388,18 +1410,18 @@ enum HrFeature {
 
 // ── Job Title ──
 model JobTitle {
-  id            String   @id @default(cuid())
-  companyId     String
-  tenant        Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  title         String
-  departmentId  String?
-  department    Department? @relation(fields: [departmentId], references: [id])
-  description   String?
-  grade         String?
-  active        Boolean  @default(true)
-  employees     Employee[]
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id           String      @id @default(cuid())
+  companyId    String
+  tenant       Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title        String
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+  description  String?
+  grade        String?
+  active       Boolean     @default(true)
+  employees    Employee[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
   @@unique([companyId, title])
   @@index([companyId])
@@ -1408,22 +1430,22 @@ model JobTitle {
 
 // ── Employee Contract ──
 model EmployeeContract {
-  id                String         @id @default(cuid())
-  companyId         String
-  tenant            Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId        String
-  employee          Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  contractNumber    String
-  contractType      ContractType   @default(FULL_TIME)
-  startDate         DateTime
-  endDate           DateTime?
+  id               String         @id @default(cuid())
+  companyId        String
+  tenant           Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId       String
+  employee         Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  contractNumber   String
+  contractType     ContractType   @default(FULL_TIME)
+  startDate        DateTime
+  endDate          DateTime?
   probationEndDate DateTime?
-  status            ContractStatus @default(DRAFT)
-  salaryReference   Int?
-  fileUrl           String?
-  notes             String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  status           ContractStatus @default(DRAFT)
+  salaryReference  Int?
+  fileUrl          String?
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -1434,20 +1456,20 @@ model EmployeeContract {
 
 // ── Employee Document ──
 model EmployeeDocument {
-  id            String          @id @default(cuid())
-  companyId     String
-  tenant        Tenant          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId    String
-  employee      Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  documentType  DocumentType
+  id             String         @id @default(cuid())
+  companyId      String
+  tenant         Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  documentType   DocumentType
   documentNumber String?
-  issueDate     DateTime?
-  expiryDate    DateTime?
-  status        DocumentStatus  @default(MISSING)
-  fileUrl       String?
-  notes         String?
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
+  issueDate      DateTime?
+  expiryDate     DateTime?
+  status         DocumentStatus @default(MISSING)
+  fileUrl        String?
+  notes          String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -1458,21 +1480,21 @@ model EmployeeDocument {
 
 // ── Leave Type ──
 model LeaveType {
-  id                    String  @id @default(cuid())
-  companyId             String
-  tenant                Tenant  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name                  String
-  code                  String
-  paid                  Boolean @default(true)
-  requiresApproval      Boolean @default(true)
-  annualAllowanceDays   Int     @default(0)
-  carryForwardAllowed   Boolean @default(false)
-  active                Boolean @default(true)
-  createdAt             DateTime @default(now())
-  updatedAt             DateTime @updatedAt
+  id                  String   @id @default(cuid())
+  companyId           String
+  tenant              Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                String
+  code                String
+  paid                Boolean  @default(true)
+  requiresApproval    Boolean  @default(true)
+  annualAllowanceDays Int      @default(0)
+  carryForwardAllowed Boolean  @default(false)
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
-  balances              LeaveBalance[]
-  requests              LeaveRequest[]
+  balances LeaveBalance[]
+  requests LeaveRequest[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1481,38 +1503,38 @@ model LeaveType {
 
 // ── Leave Policy ──
 model LeavePolicy {
-  id                              String   @id @default(cuid())
-  companyId                       String
-  tenant                          Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  name                            String
-  description                     String?
-  defaultAnnualDays               Int      @default(21)
-  allowNegativeBalance            Boolean  @default(false)
-  requiresAttachmentForSickLeave  Boolean  @default(true)
-  active                          Boolean  @default(true)
-  createdAt                       DateTime @default(now())
-  updatedAt                       DateTime @updatedAt
+  id                             String   @id @default(cuid())
+  companyId                      String
+  tenant                         Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name                           String
+  description                    String?
+  defaultAnnualDays              Int      @default(21)
+  allowNegativeBalance           Boolean  @default(false)
+  requiresAttachmentForSickLeave Boolean  @default(true)
+  active                         Boolean  @default(true)
+  createdAt                      DateTime @default(now())
+  updatedAt                      DateTime @updatedAt
 
   @@index([companyId])
 }
 
 // ── Leave Balance ──
 model LeaveBalance {
-  id              String   @id @default(cuid())
-  companyId       String
-  tenant          Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId      String
-  employee        Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  leaveTypeId     String
-  leaveType       LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
-  year            Int
-  openingBalance  Int       @default(0)
-  accrued         Int       @default(0)
-  used            Int       @default(0)
-  pending         Int       @default(0)
-  remaining       Int       @default(0)
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  companyId      String
+  tenant         Tenant    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId     String
+  employee       Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  leaveTypeId    String
+  leaveType      LeaveType @relation(fields: [leaveTypeId], references: [id], onDelete: Cascade)
+  year           Int
+  openingBalance Int       @default(0)
+  accrued        Int       @default(0)
+  used           Int       @default(0)
+  pending        Int       @default(0)
+  remaining      Int       @default(0)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   @@unique([companyId, employeeId, leaveTypeId, year])
   @@index([companyId, employeeId])
@@ -1553,24 +1575,24 @@ model LeaveRequest {
 
 // ── Employee Warning ──
 model EmployeeWarning {
-  id                    String          @id @default(cuid())
-  companyId             String
-  tenant                Tenant          @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId            String
-  employee              Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  branchId              String?
-  type                  WarningType
-  severity              WarningSeverity @default(MEDIUM)
-  date                  DateTime
-  reason                String
-  actionTaken           String?
-  issuedById            String?
-  acknowledgedByEmployee Boolean        @default(false)
-  acknowledgedAt        DateTime?
-  status                WarningStatus   @default(OPEN)
-  notes                 String?
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
+  id                     String          @id @default(cuid())
+  companyId              String
+  tenant                 Tenant          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId             String
+  employee               Employee        @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branchId               String?
+  type                   WarningType
+  severity               WarningSeverity @default(MEDIUM)
+  date                   DateTime
+  reason                 String
+  actionTaken            String?
+  issuedById             String?
+  acknowledgedByEmployee Boolean         @default(false)
+  acknowledgedAt         DateTime?
+  status                 WarningStatus   @default(OPEN)
+  notes                  String?
+  createdAt              DateTime        @default(now())
+  updatedAt              DateTime        @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -1581,19 +1603,19 @@ model EmployeeWarning {
 
 // ── Training Course ──
 model TrainingCourse {
-  id                  String             @id @default(cuid())
+  id                  String           @id @default(cuid())
   companyId           String
-  tenant              Tenant             @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant              Tenant           @relation(fields: [companyId], references: [id], onDelete: Cascade)
   title               String
   description         String?
-  category            TrainingCategory   @default(OTHER)
+  category            TrainingCategory @default(OTHER)
   requiredForJobTitle String?
   validityMonths      Int?
-  active              Boolean            @default(true)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
+  active              Boolean          @default(true)
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
-  assignments         TrainingAssignment[]
+  assignments TrainingAssignment[]
 
   @@index([companyId])
   @@index([category])
@@ -1602,21 +1624,21 @@ model TrainingCourse {
 
 // ── Training Assignment ──
 model TrainingAssignment {
-  id          String           @id @default(cuid())
+  id          String         @id @default(cuid())
   companyId   String
-  tenant      Tenant           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant      Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   employeeId  String
-  employee    Employee         @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employee    Employee       @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   courseId    String
-  course      TrainingCourse   @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  assignedAt  DateTime         @default(now())
+  course      TrainingCourse @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  assignedAt  DateTime       @default(now())
   dueDate     DateTime?
   completedAt DateTime?
-  status      TrainingStatus   @default(ASSIGNED)
+  status      TrainingStatus @default(ASSIGNED)
   score       Int?
   notes       String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -1627,17 +1649,17 @@ model TrainingAssignment {
 
 // ── Employee Skill ──
 model EmployeeSkill {
-  id          String      @id @default(cuid())
-  companyId   String
-  tenant      Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId  String
-  employee    Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  skillName   String
-  level       SkillLevel  @default(BEGINNER)
+  id           String     @id @default(cuid())
+  companyId    String
+  tenant       Tenant     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  skillName    String
+  level        SkillLevel @default(BEGINNER)
   verifiedById String?
-  verifiedAt  DateTime?
-  createdAt   DateTime    @default(now())
-  updatedAt   DateTime    @updatedAt
+  verifiedAt   DateTime?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -1645,19 +1667,19 @@ model EmployeeSkill {
 
 // ── Asset ──
 model Asset {
-  id           String     @id @default(cuid())
+  id           String      @id @default(cuid())
   companyId    String
-  tenant       Tenant     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant       Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
   name         String
-  type         AssetType  @default(OTHER)
+  type         AssetType   @default(OTHER)
   code         String?
   status       AssetStatus @default(AVAILABLE)
   purchaseDate DateTime?
   notes        String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
 
-  assignments  AssetAssignment[]
+  assignments AssetAssignment[]
 
   @@unique([companyId, code])
   @@index([companyId])
@@ -1667,21 +1689,21 @@ model Asset {
 
 // ── Asset Assignment ──
 model AssetAssignment {
-  id                 String     @id @default(cuid())
-  companyId          String
-  tenant             Tenant     @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  assetId            String
-  asset              Asset      @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  employeeId         String
-  employee           Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  assignedAt         DateTime   @default(now())
-  returnedAt         DateTime?
-  status             String     @default("ASSIGNED")
-  conditionOnAssign  String?
-  conditionOnReturn  String?
-  notes              String?
-  createdAt          DateTime   @default(now())
-  updatedAt          DateTime   @updatedAt
+  id                String    @id @default(cuid())
+  companyId         String
+  tenant            Tenant    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assetId           String
+  asset             Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  employeeId        String
+  employee          Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  assignedAt        DateTime  @default(now())
+  returnedAt        DateTime?
+  status            String    @default("ASSIGNED")
+  conditionOnAssign String?
+  conditionOnReturn String?
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   @@index([companyId])
   @@index([assetId])
@@ -1691,20 +1713,20 @@ model AssetAssignment {
 
 // ── Onboarding Task ──
 model OnboardingTask {
-  id           String               @id @default(cuid())
-  companyId    String
-  tenant       Tenant               @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId   String
-  employee     Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  title        String
-  description  String?
-  dueDate      DateTime?
-  status       OnboardingTaskStatus @default(PENDING)
-  assignedToId String?
+  id            String               @id @default(cuid())
+  companyId     String
+  tenant        Tenant               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  dueDate       DateTime?
+  status        OnboardingTaskStatus @default(PENDING)
+  assignedToId  String?
   completedById String?
-  completedAt  DateTime?
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt
+  completedAt   DateTime?
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -1713,20 +1735,20 @@ model OnboardingTask {
 
 // ── Offboarding Task ──
 model OffboardingTask {
-  id           String                @id @default(cuid())
-  companyId    String
-  tenant       Tenant                @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId   String
-  employee     Employee              @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  title        String
-  description  String?
-  dueDate      DateTime?
-  status       OffboardingTaskStatus @default(PENDING)
-  assignedToId String?
+  id            String                @id @default(cuid())
+  companyId     String
+  tenant        Tenant                @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId    String
+  employee      Employee              @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  title         String
+  description   String?
+  dueDate       DateTime?
+  status        OffboardingTaskStatus @default(PENDING)
+  assignedToId  String?
   completedById String?
-  completedAt  DateTime?
-  createdAt    DateTime              @default(now())
-  updatedAt    DateTime              @updatedAt
+  completedAt   DateTime?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -1735,26 +1757,26 @@ model OffboardingTask {
 
 // ── Payroll Profile ──
 model PayrollProfile {
-  id                     String      @id @default(cuid())
+  id                     String     @id @default(cuid())
   companyId              String
-  tenant                 Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId             String      @unique
-  employee               Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  baseSalary             Int         @default(0)
-  salaryType             SalaryType  @default(MONTHLY)
-  currency               String      @default("EGP")
-  paymentMethod          String      @default("BANK_TRANSFER")
+  tenant                 Tenant     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId             String     @unique
+  employee               Employee   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  baseSalary             Int        @default(0)
+  salaryType             SalaryType @default(MONTHLY)
+  currency               String     @default("EGP")
+  paymentMethod          String     @default("BANK_TRANSFER")
   bankName               String?
   bankAccount            String?
   walletNumber           String?
   dailyRate              Int?
   hourlyRate             Int?
-  overtimeRateMultiplier Float       @default(1.5)
+  overtimeRateMultiplier Float      @default(1.5)
   lateDeductionRule      String?
   absenceDeductionRule   String?
-  active                 Boolean     @default(true)
-  createdAt              DateTime    @default(now())
-  updatedAt              DateTime    @updatedAt
+  active                 Boolean    @default(true)
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
 
   @@unique([companyId, employeeId])
   @@index([companyId])
@@ -1762,19 +1784,19 @@ model PayrollProfile {
 
 // ── Payroll Run ──
 model PayrollRun {
-  id         String            @id @default(cuid())
-  companyId  String
-  tenant     Tenant            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  month      Int
-  year       Int
-  status     PayrollRunStatus  @default(DRAFT)
-  createdById String?
+  id           String           @id @default(cuid())
+  companyId    String
+  tenant       Tenant           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  month        Int
+  year         Int
+  status       PayrollRunStatus @default(DRAFT)
+  createdById  String?
   approvedById String?
-  approvedAt DateTime?
-  lockedAt   DateTime?
-  notes      String?
-  createdAt  DateTime          @default(now())
-  updatedAt  DateTime          @updatedAt
+  approvedAt   DateTime?
+  lockedAt     DateTime?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
 
   lines       PayrollRunLine[]
   adjustments PayrollAdjustment[]
@@ -1786,30 +1808,30 @@ model PayrollRun {
 
 // ── Payroll Run Line ──
 model PayrollRunLine {
-  id                  String              @id @default(cuid())
-  companyId           String
-  tenant              Tenant              @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  payrollRunId        String
-  payrollRun          PayrollRun          @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
-  employeeId          String
-  employee            Employee            @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  scheduledDays       Int                 @default(0)
-  presentDays         Int                 @default(0)
-  absentDays          Int                 @default(0)
-  leaveDays           Int                 @default(0)
-  offDays             Int                 @default(0)
-  workedHours         Float               @default(0)
-  overtimeHours       Float               @default(0)
-  lateMinutes         Int                 @default(0)
-  earlyLeaveMinutes   Int                 @default(0)
-  baseSalary          Int                 @default(0)
-  grossAdditions      Int                 @default(0)
-  grossDeductions     Int                 @default(0)
-  netAmount           Int                 @default(0)
-  notes               String?
-  status              PayrollRunLineStatus @default(DRAFT)
-  createdAt           DateTime            @default(now())
-  updatedAt           DateTime            @updatedAt
+  id                String               @id @default(cuid())
+  companyId         String
+  tenant            Tenant               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  payrollRunId      String
+  payrollRun        PayrollRun           @relation(fields: [payrollRunId], references: [id], onDelete: Cascade)
+  employeeId        String
+  employee          Employee             @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  scheduledDays     Int                  @default(0)
+  presentDays       Int                  @default(0)
+  absentDays        Int                  @default(0)
+  leaveDays         Int                  @default(0)
+  offDays           Int                  @default(0)
+  workedHours       Float                @default(0)
+  overtimeHours     Float                @default(0)
+  lateMinutes       Int                  @default(0)
+  earlyLeaveMinutes Int                  @default(0)
+  baseSalary        Int                  @default(0)
+  grossAdditions    Int                  @default(0)
+  grossDeductions   Int                  @default(0)
+  netAmount         Int                  @default(0)
+  notes             String?
+  status            PayrollRunLineStatus @default(DRAFT)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
   @@index([companyId])
   @@index([payrollRunId])
@@ -1819,21 +1841,21 @@ model PayrollRunLine {
 
 // ── Payroll Adjustment ──
 model PayrollAdjustment {
-  id          String                  @id @default(cuid())
-  companyId   String
-  tenant      Tenant                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId  String
-  employee    Employee                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  id           String                  @id @default(cuid())
+  companyId    String
+  tenant       Tenant                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId   String
+  employee     Employee                @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   payrollRunId String?
-  payrollRun  PayrollRun?             @relation(fields: [payrollRunId], references: [id])
-  type        PayrollAdjustmentType
-  amount      Int
-  reason      String?
-  createdById String?
+  payrollRun   PayrollRun?             @relation(fields: [payrollRunId], references: [id])
+  type         PayrollAdjustmentType
+  amount       Int
+  reason       String?
+  createdById  String?
   approvedById String?
-  status      PayrollAdjustmentStatus @default(PENDING)
-  createdAt   DateTime                @default(now())
-  updatedAt   DateTime                @updatedAt
+  status       PayrollAdjustmentStatus @default(PENDING)
+  createdAt    DateTime                @default(now())
+  updatedAt    DateTime                @updatedAt
 
   @@index([companyId])
   @@index([employeeId])
@@ -1842,13 +1864,13 @@ model PayrollAdjustment {
 }
 
 model PasswordResetToken {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash String
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 
   @@index([userId])
   @@index([tokenHash])
@@ -1873,26 +1895,128 @@ enum KioskDeviceStatus {
 }
 
 model KioskDevice {
-  id                String         @id @default(cuid())
+  id                String            @id @default(cuid())
   companyId         String
-  tenant            Tenant         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tenant            Tenant            @relation(fields: [companyId], references: [id], onDelete: Cascade)
   branchId          String
-  branch            Branch         @relation(fields: [branchId], references: [id])
+  branch            Branch            @relation(fields: [branchId], references: [id])
   name              String
-  deviceIdentifier  String         @unique
+  deviceIdentifier  String            @unique
   secretHash        String
   status            KioskDeviceStatus @default(ACTIVE)
   activatedAt       DateTime?
   revokedAt         DateTime?
   rotatedAt         DateTime?
   lastSeenAt        DateTime?
-  failedPinAttempts Int            @default(0)
+  failedPinAttempts Int               @default(0)
   lockedUntil       DateTime?
   createdById       String?
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   @@index([companyId])
   @@index([branchId])
   @@index([deviceIdentifier])
+}
+
+// ============================================================
+// TENANT IDENTITY & ACCESS MANAGEMENT
+// ============================================================
+
+model TenantRole {
+  id          String    @id @default(cuid())
+  companyId   String
+  tenant      Tenant    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  code        String
+  name        String
+  description String?
+  isSystem    Boolean   @default(false)
+  isEditable  Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  permissions     TenantRolePermission[]
+  assignments     UserRoleAssignment[]
+  invitationRoles UserInvitationRole[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([isSystem])
+}
+
+model TenantRolePermission {
+  id            String     @id @default(cuid())
+  companyId     String
+  tenant        Tenant     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  roleId        String
+  role          TenantRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permissionKey String
+  createdAt     DateTime   @default(now())
+
+  @@unique([roleId, permissionKey])
+  @@index([companyId, permissionKey])
+}
+
+model UserRoleAssignment {
+  id              String          @id @default(cuid())
+  companyId       String
+  tenant          Tenant          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  userId          String
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId          String
+  role            TenantRole      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  scopeType       AccessScopeType @default(TENANT)
+  scopeId         String?
+  scopeKey        String          @default("*")
+  grantedByUserId String?
+  expiresAt       DateTime?
+  revokedAt       DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@unique([userId, roleId, scopeType, scopeKey])
+  @@index([companyId, userId])
+  @@index([roleId])
+}
+
+model UserInvitation {
+  id               String               @id @default(cuid())
+  companyId        String
+  tenant           Tenant               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  email            String
+  name             String
+  employeeId       String?
+  employee         Employee?            @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  tokenHash        String               @unique
+  status           UserInvitationStatus @default(PENDING)
+  expiresAt        DateTime
+  invitedByUserId  String
+  acceptedByUserId String?
+  acceptedAt       DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  roles UserInvitationRole[]
+
+  @@index([companyId, email, status])
+  @@index([expiresAt])
+}
+
+model UserInvitationRole {
+  id           String          @id @default(cuid())
+  companyId    String
+  tenant       Tenant          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invitationId String
+  invitation   UserInvitation  @relation(fields: [invitationId], references: [id], onDelete: Cascade)
+  roleId       String
+  role         TenantRole      @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  scopeType    AccessScopeType @default(TENANT)
+  scopeId      String?
+  scopeKey     String          @default("*")
+  createdAt    DateTime        @default(now())
+
+  @@unique([invitationId, roleId, scopeType, scopeKey])
+  @@index([companyId])
 }
