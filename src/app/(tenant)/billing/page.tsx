@@ -1,7 +1,7 @@
 /** /billing — customer-facing billing page */
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth/session";
+import { getSessionAllowInactive } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { SubscriptionBadge, PlanBadge, InvoiceBadge } from "@/components/badges/StatusBadges";
@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 function money(amount: number, currency = "EGP") { return `${formatNumber(amount)} ${currency}`; }
 
 export default async function BillingPage() {
-  const session = await getSession();
+  const session = await getSessionAllowInactive();
   if (!session?.tenantId || session.kind !== "tenant") return null;
   if (session.role !== "COMPANY_OWNER") return null;
   const t = await getTranslations("billing");
@@ -27,15 +27,22 @@ export default async function BillingPage() {
       db.branch.count({ where: { companyId: session.tenantId, deletedAt: null } }),
       db.employee.count({ where: { companyId: session.tenantId, deletedAt: null } }),
       db.user.count({ where: { companyId: session.tenantId } }),
-      Promise.resolve(0),
+      db.kioskDevice.count({ where: { companyId: session.tenantId, status: "ACTIVE" } }),
     ]).then(([b, e, m, k]) => ({ branches: b, employees: e, managers: m, kiosks: k })),
   ]);
 
   const plan = subscription?.plan;
+  const inactive = tenant && !new Set(["ACTIVE", "TRIAL_ACTIVE"]).has(tenant.status);
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div><h1 className="text-lg font-bold text-foreground">{t("title")}</h1><p className="text-sm text-muted-foreground">{t("subtitle")}</p></div>
+
+      {inactive ? (
+        <div className="rounded-lg border border-amber-300 bg-amber-50/50 p-4 text-sm text-amber-900">
+          Operational access is paused until the subscription is active. You can still review invoices and contact billing support from this page.
+        </div>
+      ) : null}
 
       <Card>
         <CardHeader className="pb-3"><CardTitle className="text-sm font-semibold text-foreground">{t("currentSubscription")}</CardTitle></CardHeader>
@@ -71,7 +78,7 @@ export default async function BillingPage() {
             <Usage label={t("branchesLabel")} used={planUsage.branches} limit={plan?.maxBranches} />
             <Usage label={t("employeesLabel")} used={planUsage.employees} limit={plan?.maxEmployees} />
             <Usage label={t("managersLabel")} used={planUsage.managers} limit={plan?.maxManagers} />
-            <Usage label={t("kiosksLabel")} used={0} limit={plan?.maxKiosks} />
+            <Usage label={t("kiosksLabel")} used={planUsage.kiosks} limit={plan?.maxKiosks} />
           </div>
           {plan?.features && (
             <div className="mt-4">
