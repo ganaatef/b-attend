@@ -1,8 +1,8 @@
 "use server";
 
 /**
- * B-Attend tenant-side Server Actions — Phase 7.
- * Customer settings + support tickets + mark-absent trigger.
+ * B-Attend tenant-side Server Actions — customer settings, support utilities,
+ * attendance maintenance, and a compatibility shim for legacy user creation.
  */
 
 import { revalidatePath } from "next/cache";
@@ -11,6 +11,8 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { markAbsentForPastScheduledDays } from "@/lib/attendance/engine";
+import { ensureSystemRoles } from "@/lib/auth/authorization";
+import { inviteUserAction } from "../access/actions";
 
 async function requireTenant() {
   const s = await getSession();
@@ -169,8 +171,10 @@ export async function runMarkAbsentAction(daysBack: number) {
 }
 
 // ─────────────────────────────────────────────
-// User management (owner/HR)
+// Legacy user-management compatibility
 // ─────────────────────────────────────────────
+// No temporary password is ever generated. Old callers are routed into the
+// secure invitation flow until /users has fully moved to /access.
 
 const CreateUserSchema = z.object({
   name: z.string().min(2),
@@ -190,33 +194,29 @@ export async function createUserAction(prev: any, formData: FormData) {
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
-    // Check email unique within tenant
-    const existing = await db.user.findUnique({ where: { companyId_email: { companyId: s.tenantId!, email: d.email.toLowerCase() } } });
-    if (existing) return { ok: false, error: "User with this email already exists" };
-    // Generate temp password
-    const bcrypt = await import("bcryptjs");
-    const tempPassword = Math.random().toString(36).slice(-10);
-    const passwordHash = await bcrypt.hash(tempPassword, 10);
-    const u = await db.user.create({
-      data: {
-        companyId: s.tenantId!,
-        email: d.email.toLowerCase(),
-        name: d.name,
-        role: d.role,
-        passwordHash,
-        status: "INVITED",
-        forcePasswordChange: true,
-      },
+    if (d.role === "BRANCH_MANAGER" && !d.branchId) return { ok: false, error: "Branch managers require a branch scope." };
+
+    await ensureSystemRoles(s.tenantId!);
+    const roleCode = d.role === "HR_ADMIN" ? "HR_ADMIN" : d.role === "BRANCH_MANAGER" ? "BRANCH_MANAGER" : "EMPLOYEE";
+    const role = await db.tenantRole.findUnique({
+      where: { companyId_code: { companyId: s.tenantId!, code: roleCode } },
+      select: { id: true },
     });
-    // If branch manager, assign to branch
-    if (d.role === "BRANCH_MANAGER" && d.branchId) {
-      await db.branch.update({ where: { id: d.branchId }, data: { managerId: u.id } });
-    }
-    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "USER_INVITED", entityType: "User", entityId: u.id, reason: `Role: ${d.role}` });
+    if (!role) return { ok: false, error: "Access role is unavailable." };
+
+    const inviteData = new FormData();
+    inviteData.set("name", d.name);
+    inviteData.set("email", d.email);
+    inviteData.set("roleId", role.id);
+    inviteData.set("scopeType", d.role === "HR_ADMIN" ? "TENANT" : d.role === "BRANCH_MANAGER" ? "BRANCH" : "SELF");
+    if (d.branchId) inviteData.set("scopeId", d.branchId);
+
+    const result = await inviteUserAction(prev, inviteData);
     revalidatePath("/users");
-    return { ok: true, tempPassword };
+    revalidatePath("/access");
+    return result;
   } catch (e) {
-    console.error("[actions] createUserAction failed:", e);
+    console.error("[actions] createUserAction compatibility flow failed:", e);
     return { ok: false, error: "An unexpected error occurred. Please try again." };
   }
 }
