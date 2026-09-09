@@ -1,9 +1,5 @@
 "use client";
 
-/**
- * Authenticated sidebar — desktop (md+).
- * Renders different nav items based on session role/kind.
- */
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -48,16 +44,17 @@ export interface SidebarUser {
   email: string;
   role: string;
   kind: "platform" | "tenant";
+  permissions?: string[];
 }
 
 interface NavItem {
   href: string;
   labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
+  permission?: string;
   badge?: string;
 }
 
-// ─── Platform (SUPER_ADMIN) ──────────────────────────────────────
 const platformNavKeys: NavItem[] = [
   { href: "/admin", labelKey: "dashboard", icon: LayoutDashboard },
   { href: "/admin/tenants", labelKey: "tenants", icon: Building2 },
@@ -72,80 +69,76 @@ const platformNavKeys: NavItem[] = [
   { href: "/admin/settings", labelKey: "adminSettings", icon: Settings },
 ];
 
-// ─── COMPANY_OWNER — full tenant access ─────────────────────────
-const tenantOwnerNavKeys: NavItem[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/live", labelKey: "liveAttendance", icon: TabletSmartphone },
-  { href: "/branches", labelKey: "branches", icon: Building2 },
-  { href: "/employees", labelKey: "employees", icon: Users },
-  { href: "/policies", labelKey: "shiftPolicies", icon: Clock },
-  { href: "/schedules", labelKey: "schedules", icon: CalendarDays },
-  { href: "/kiosk", labelKey: "kiosk", icon: TabletSmartphone },
-  { href: "/approvals", labelKey: "approvals", icon: CheckSquare },
-  { href: "/reports", labelKey: "reports", icon: FileBarChart },
-  { href: "/hr", labelKey: "hrDashboard", icon: Briefcase },
-  { href: "/hr/departments", labelKey: "departments", icon: FolderTree },
-  { href: "/hr/job-titles", labelKey: "jobTitles", icon: Award },
-  { href: "/hr/contracts", labelKey: "contracts", icon: FileText },
-  { href: "/hr/documents", labelKey: "documents", icon: ClipboardList },
-  { href: "/hr/leaves", labelKey: "leaveManagement", icon: CalendarDays },
-  { href: "/hr/warnings", labelKey: "warnings", icon: AlertTriangle },
-  { href: "/hr/training", labelKey: "training", icon: GraduationCap },
-  { href: "/hr/assets", labelKey: "assets", icon: Package },
-  { href: "/hr/payroll-profiles", labelKey: "payrollProfiles", icon: Wallet },
-  { href: "/hr/payroll-runs", labelKey: "payrollRuns", icon: CreditCard },
-  { href: "/hr/onboarding", labelKey: "onboarding", icon: UserPlus },
-  { href: "/hr/offboarding", labelKey: "offboarding", icon: UserMinus },
-  { href: "/hr/reports", labelKey: "hrReports", icon: FileBarChart },
-  { href: "/team-coach", labelKey: "teamCoachAI", icon: Brain },
-  { href: "/daily-briefing", labelKey: "dailyBriefing", icon: Sunrise },
-  { href: "/coach-library", labelKey: "coachLibrary", icon: BookOpen },
-  { href: "/audit", labelKey: "auditLog", icon: ScrollText },
-  { href: "/billing", labelKey: "billing", icon: CreditCard },
-  { href: "/settings", labelKey: "settings", icon: Settings },
+/**
+ * Tenant navigation is permission-driven. The legacy role is retained only as a
+ * compatibility identity claim; it no longer decides which management screens
+ * a custom role can discover.
+ */
+const tenantManagementNavKeys: NavItem[] = [
+  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard, permission: "company.view" },
+  { href: "/live", labelKey: "liveAttendance", icon: TabletSmartphone, permission: "attendance.team.view" },
+  { href: "/branches", labelKey: "branches", icon: Building2, permission: "branches.view" },
+  { href: "/employees", labelKey: "employees", icon: Users, permission: "employees.view" },
+  { href: "/access", labelKey: "users", icon: ShieldCheck, permission: "users.view" },
+  { href: "/policies", labelKey: "shiftPolicies", icon: Clock, permission: "schedules.manage" },
+  { href: "/schedules", labelKey: "schedules", icon: CalendarDays, permission: "schedules.team.view" },
+  { href: "/kiosk", labelKey: "kiosk", icon: TabletSmartphone, permission: "kiosk.manage" },
+  { href: "/approvals", labelKey: "approvals", icon: CheckSquare, permission: "attendance.approve" },
+  { href: "/reports", labelKey: "reports", icon: FileBarChart, permission: "reports.view" },
+  { href: "/hr", labelKey: "hrDashboard", icon: Briefcase, permission: "employees.view" },
+  { href: "/hr/departments", labelKey: "departments", icon: FolderTree, permission: "employees.view" },
+  { href: "/hr/job-titles", labelKey: "jobTitles", icon: Award, permission: "employees.view" },
+  { href: "/hr/contracts", labelKey: "contracts", icon: FileText, permission: "documents.manage" },
+  { href: "/hr/documents", labelKey: "documents", icon: ClipboardList, permission: "documents.manage" },
+  { href: "/hr/leaves", labelKey: "leaveManagement", icon: CalendarDays, permission: "leave.team.view" },
+  { href: "/hr/warnings", labelKey: "warnings", icon: AlertTriangle, permission: "employees.edit" },
+  { href: "/hr/training", labelKey: "training", icon: GraduationCap, permission: "training.manage" },
+  { href: "/hr/assets", labelKey: "assets", icon: Package, permission: "assets.manage" },
+  { href: "/hr/payroll-profiles", labelKey: "payrollProfiles", icon: Wallet, permission: "payroll.view" },
+  { href: "/hr/payroll-runs", labelKey: "payrollRuns", icon: CreditCard, permission: "payroll.view" },
+  { href: "/hr/onboarding", labelKey: "onboarding", icon: UserPlus, permission: "employees.create" },
+  { href: "/hr/offboarding", labelKey: "offboarding", icon: UserMinus, permission: "employees.deactivate" },
+  { href: "/hr/reports", labelKey: "hrReports", icon: FileBarChart, permission: "reports.view" },
+  { href: "/team-coach", labelKey: "teamCoachAI", icon: Brain, permission: "ai.use" },
+  { href: "/daily-briefing", labelKey: "dailyBriefing", icon: Sunrise, permission: "reports.view" },
+  { href: "/coach-library", labelKey: "coachLibrary", icon: BookOpen, permission: "ai.use" },
+  { href: "/audit", labelKey: "auditLog", icon: ScrollText, permission: "audit.view" },
+  { href: "/billing", labelKey: "billing", icon: CreditCard, permission: "billing.view" },
+  { href: "/settings", labelKey: "settings", icon: Settings, permission: "company.settings.manage" },
+  { href: "/support", labelKey: "support", icon: LifeBuoy, permission: "support.use" },
 ];
 
-// ─── HR_ADMIN — same as owner minus billing ─────────────────────
-const tenantHrAdminNavKeys: NavItem[] = tenantOwnerNavKeys.filter(
-  (item) => item.href !== "/billing"
-);
-
-// ─── BRANCH_MANAGER — branch-scoped, demo-safe ─────────────────
-const tenantBranchManagerNavKeys: NavItem[] = [
-  { href: "/dashboard", labelKey: "dashboard", icon: LayoutDashboard },
-  { href: "/live", labelKey: "liveAttendance", icon: TabletSmartphone },
-  { href: "/branches", labelKey: "branches", icon: Building2 },
-  { href: "/employees", labelKey: "employees", icon: Users },
-  { href: "/policies", labelKey: "shiftPolicies", icon: Clock },
-  { href: "/schedules", labelKey: "schedules", icon: CalendarDays },
-  { href: "/kiosk", labelKey: "kiosk", icon: TabletSmartphone },
-  { href: "/approvals", labelKey: "approvals", icon: CheckSquare },
-  { href: "/reports", labelKey: "reports", icon: FileBarChart },
-  { href: "/hr", labelKey: "hrDashboard", icon: Briefcase },
-  { href: "/hr/leaves", labelKey: "leaveManagement", icon: CalendarDays },
-  { href: "/hr/training", labelKey: "training", icon: GraduationCap },
-  { href: "/hr/assets", labelKey: "assets", icon: Package },
-  { href: "/hr/reports", labelKey: "hrReports", icon: FileBarChart },
-  { href: "/team-coach", labelKey: "teamCoachAI", icon: Brain },
-  { href: "/daily-briefing", labelKey: "dailyBriefing", icon: Sunrise },
-  { href: "/support", labelKey: "support", icon: LifeBuoy },
-];
-
-// ─── EMPLOYEE — self-service only ───────────────────────────────
 const tenantEmployeeNavKeys: NavItem[] = [
-  { href: "/today", labelKey: "today", icon: CalendarClock },
-  { href: "/clock", labelKey: "clockInOut", icon: Clock },
-  { href: "/my-schedule", labelKey: "mySchedule", icon: CalendarDays },
-  { href: "/attendance", labelKey: "myAttendance", icon: ClipboardList },
-  { href: "/my-leave", labelKey: "myLeave", icon: CalendarDays },
-  { href: "/requests", labelKey: "myRequests", icon: CheckSquare },
-  { href: "/my-training", labelKey: "myTraining", icon: GraduationCap },
-  { href: "/my-assets", labelKey: "myAssets", icon: Package },
-  { href: "/my-warnings", labelKey: "myWarnings", icon: AlertTriangle },
-  { href: "/coach", labelKey: "myCoachAI", icon: Sparkles },
-  { href: "/privacy", labelKey: "privacy", icon: Shield },
-  { href: "/profile", labelKey: "myProfile", icon: UserIcon },
+  { href: "/today", labelKey: "today", icon: CalendarClock, permission: "attendance.self.view" },
+  { href: "/clock", labelKey: "clockInOut", icon: Clock, permission: "attendance.self.clock" },
+  { href: "/my-schedule", labelKey: "mySchedule", icon: CalendarDays, permission: "schedules.self.view" },
+  { href: "/attendance", labelKey: "myAttendance", icon: ClipboardList, permission: "attendance.self.view" },
+  { href: "/my-leave", labelKey: "myLeave", icon: CalendarDays, permission: "leave.self.view" },
+  { href: "/requests", labelKey: "myRequests", icon: CheckSquare, permission: "leave.self.request" },
+  { href: "/my-training", labelKey: "myTraining", icon: GraduationCap, permission: "training.self.view" },
+  { href: "/my-assets", labelKey: "myAssets", icon: Package, permission: "assets.self.view" },
+  { href: "/my-warnings", labelKey: "myWarnings", icon: AlertTriangle, permission: "attendance.self.view" },
+  { href: "/coach", labelKey: "myCoachAI", icon: Sparkles, permission: "ai.use" },
+  { href: "/privacy", labelKey: "privacy", icon: Shield, permission: "company.view" },
+  { href: "/profile", labelKey: "myProfile", icon: UserIcon, permission: "company.view" },
 ];
+
+const MANAGEMENT_PERMISSIONS = new Set([
+  "users.view",
+  "employees.view",
+  "branches.view",
+  "attendance.team.view",
+  "schedules.team.view",
+  "reports.view",
+  "payroll.view",
+  "company.settings.manage",
+]);
+
+function filterByPermission(items: NavItem[], permissions?: string[]) {
+  if (!permissions) return items;
+  const allowed = new Set(permissions);
+  return items.filter((item) => !item.permission || allowed.has(item.permission));
+}
 
 export function Sidebar({ user }: { user: SidebarUser }) {
   const pathname = usePathname();
@@ -160,16 +153,13 @@ export function Sidebar({ user }: { user: SidebarUser }) {
     SALES_ADMIN: locale === "ar" ? "مدير المبيعات" : "Sales Admin",
   };
 
-  const items =
-    user.kind === "platform"
-      ? platformNavKeys
-      : user.role === "EMPLOYEE"
-        ? tenantEmployeeNavKeys
-        : user.role === "BRANCH_MANAGER"
-          ? tenantBranchManagerNavKeys
-          : user.role === "HR_ADMIN"
-            ? tenantHrAdminNavKeys
-            : tenantOwnerNavKeys;
+  const permissions = user.permissions ?? [];
+  const hasManagementAccess = permissions.some((permission) => MANAGEMENT_PERMISSIONS.has(permission));
+  const items = user.kind === "platform"
+    ? platformNavKeys
+    : hasManagementAccess || user.role !== "EMPLOYEE"
+      ? filterByPermission(tenantManagementNavKeys, user.permissions)
+      : filterByPermission(tenantEmployeeNavKeys, user.permissions);
 
   return (
     <aside className="hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar text-sidebar-foreground md:flex">
@@ -190,7 +180,7 @@ export function Sidebar({ user }: { user: SidebarUser }) {
                     "group flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
                     active
                       ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground"
+                      : "text-sidebar-foreground/80 hover:bg-sidebar-accent/50 hover:text-sidebar-accent-foreground",
                   )}
                 >
                   <Icon className="h-4 w-4 shrink-0" />
