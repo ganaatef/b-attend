@@ -133,10 +133,14 @@ export async function launchLoginAction(
     graceEndsAt: subscription?.graceEndsAt ?? null,
     currentPeriodEnd: subscription?.currentPeriodEnd ?? null,
   });
-  if (!live) {
+
+  // When billing is inactive, only the company owner receives a restricted
+  // signed session. getSession() will reject it for normal product operations,
+  // while /billing and /support intentionally use getSessionAllowInactive().
+  if (!live && tenantUser.role !== "COMPANY_OWNER") {
     return {
       ok: false,
-      error: "Your subscription is not active yet. Complete activation or contact billing support.",
+      error: "Your company's subscription is not active. Ask the company owner to complete billing activation.",
     };
   }
 
@@ -168,6 +172,7 @@ export async function launchLoginAction(
   }
 
   revalidatePath("/");
+  if (!live) redirect("/billing?reason=subscription");
   if (tenantUser.forcePasswordChange) return { ok: true, forcePasswordChange: true };
   redirect(next && next.startsWith("/") ? next : "/dashboard");
 }
@@ -381,7 +386,7 @@ export async function launchSignupAction(
     ok: true,
     tenantId: result.tenant.id,
     status: result.tenant.status,
-    canLogin: plan.isTrial,
+    canLogin: true,
     planSlug: plan.slug,
     invoiceNumber: result.invoiceNumber,
   };
