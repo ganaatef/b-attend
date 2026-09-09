@@ -18,9 +18,45 @@ import { employeeDisplayName } from "@/lib/employee-display";
 
 interface KioskProps {
   branches: Branch[];
+  deviceIdentifier?: string;
 }
 
-export function KioskPage({ branches }: KioskProps) {
+const DEVICE_STORAGE_KEY = "battend_kiosk_device";
+const DEVICE_SECRET_STORAGE_KEY = "battend_kiosk_device_secret";
+
+function getDeviceIdentifier(prop?: string): string {
+  if (prop) {
+    try {
+      window.localStorage.setItem(DEVICE_STORAGE_KEY, prop);
+    } catch {
+      /* ignore storage errors */
+    }
+    return prop;
+  }
+  try {
+    return window.localStorage.getItem(DEVICE_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function getDeviceSecret(): string {
+  try {
+    return window.localStorage.getItem(DEVICE_SECRET_STORAGE_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function setDeviceSecret(secret: string): void {
+  try {
+    window.localStorage.setItem(DEVICE_SECRET_STORAGE_KEY, secret);
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+export function KioskPage({ branches, deviceIdentifier: deviceProp }: KioskProps) {
   const locale = useLocale();
   const t = useTranslations("kiosk");
   const [branchId, setBranchId] = useState(branches[0]?.id ?? "");
@@ -29,6 +65,13 @@ export function KioskPage({ branches }: KioskProps) {
   const [clockResult, setClockResult] = useState<{ ok: boolean; error?: string; insideGeofence?: boolean; distanceMeters?: number; type?: string } | null>(null);
   const [code, setCode] = useState("");
   const [pin, setPin] = useState("");
+  const [deviceIdentifier] = useState(() => getDeviceIdentifier(deviceProp));
+  const [deviceSecret, setDeviceSecretState] = useState(() => getDeviceSecret());
+
+  function handleDeviceSecretChange(v: string) {
+    setDeviceSecretState(v);
+    setDeviceSecret(v);
+  }
 
   async function handleLookup(e: React.FormEvent) {
     e.preventDefault();
@@ -38,6 +81,8 @@ export function KioskPage({ branches }: KioskProps) {
     fd.set("branchId", branchId);
     fd.set("code", code);
     fd.set("pin", pin);
+    fd.set("deviceIdentifier", deviceIdentifier);
+    fd.set("deviceSecret", deviceSecret);
     const r = await kioskLookupAction({}, fd);
     setLookup(r);
     setPending(false);
@@ -53,6 +98,8 @@ export function KioskPage({ branches }: KioskProps) {
     fd.set("latitude", "0");
     fd.set("longitude", "0");
     fd.set("source", "KIOSK");
+    fd.set("deviceIdentifier", deviceIdentifier);
+    fd.set("deviceSecret", deviceSecret);
     const r = await clockAction({}, fd);
     setClockResult(r);
     setPending(false);
@@ -93,16 +140,21 @@ export function KioskPage({ branches }: KioskProps) {
           {!lookup?.ok ? (
             <form onSubmit={handleLookup} className="space-y-3">
               <div>
+                <Label htmlFor="deviceSecret" className="text-sm font-medium">{t("deviceSecretLabel")}</Label>
+                <Input id="deviceSecret" type="password" value={deviceSecret} onChange={(e) => handleDeviceSecretChange(e.target.value)} className="mt-1 h-12 text-center tracking-widest" placeholder={t("deviceSecretPlaceholder")} autoComplete="off" />
+              </div>
+              <div>
                 <Label htmlFor="code" className="text-sm font-medium">{t("employeeCode")}</Label>
                 <Input id="code" value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="mt-1 h-14 text-center text-2xl tracking-widest" placeholder={t("codePlaceholder")} autoFocus />
               </div>
-              <div className="text-center text-xs text-muted-foreground">{t("orDivider")}</div>
               <div>
                 <Label htmlFor="pin" className="text-sm font-medium">{t("pinLabel")}</Label>
                 <Input id="pin" type="password" value={pin} onChange={(e) => setPin(e.target.value)} className="mt-1 h-14 text-center text-2xl tracking-widest" placeholder={t("pinPlaceholder")} />
               </div>
+              {!deviceIdentifier && <p className="text-sm text-destructive text-center">{t("deviceMissing")}</p>}
+              {!deviceSecret && <p className="text-sm text-destructive text-center">{t("deviceSecretMissing")}</p>}
               {lookup?.error && <p className="text-sm text-destructive text-center">{lookup.error}</p>}
-              <Button type="submit" size="lg" className="w-full h-14 text-base" disabled={pending || !branchId || (!code && !pin)}>
+              <Button type="submit" size="lg" className="w-full h-14 text-base" disabled={pending || !branchId || !code || !pin || !deviceIdentifier || !deviceSecret}>
                 {pending ? <Loader2 className="h-5 w-5 animate-spin" /> : <><Search className="mr-2 h-5 w-5" /> {t("findEmployee")}</>}
               </Button>
             </form>

@@ -1,6 +1,13 @@
 /**
  * In-memory sliding-window rate limiter for Next.js middleware.
- * 
+ *
+ * ⚠️ LIMITATION: this store is in-memory and edge/serverless instances do not
+ * share it. On Vercel it is NOT a strong distributed brute-force control — a
+ * distributed attacker (multiple IPs/instances/cold starts) can bypass it.
+ * Treat it as a cheap per-instance throttle, never as the sole security
+ * boundary. Kiosk PIN brute-force protection is NOT here; it is DB-backed on
+ * the KioskDevice row (see src/lib/kiosk/kiosk-auth.ts).
+ *
  * Per-IP limits:
  * - General routes: 120 req/min
  * - API routes:     60 req/min  

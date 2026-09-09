@@ -12,6 +12,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { logTenantEvent } from "@/lib/auth/audit";
+import { hashPassword } from "@/lib/auth/password";
 
 async function requireTenant() {
   const s = await getSession();
@@ -336,6 +337,9 @@ export async function createEmployeeAction(prev: any, formData: FormData) {
       const policy = await db.shiftPolicy.findFirst({ where: { id: d.defaultShiftPolicyId, companyId: s.tenantId! } });
       if (!policy) return { ok: false, error: "Shift policy not found or does not belong to your company" };
     }
+    // Employees never store a plaintext PIN. New PINs are bcrypt-hashed into
+    // pinHash for constant-time kiosk verification.
+    const pinHash = d.pinCode ? await hashPassword(d.pinCode) : null;
     const emp = await db.employee.create({
       data: {
         companyId: s.tenantId!,
@@ -348,7 +352,7 @@ export async function createEmployeeAction(prev: any, formData: FormData) {
         departmentId: d.departmentId || null,
         employmentType: d.employmentType,
         defaultShiftPolicyId: d.defaultShiftPolicyId || null,
-        pinCode: d.pinCode || null,
+        pinHash,
         status: "ACTIVE",
         startDate: new Date(),
       },
@@ -367,10 +371,15 @@ export async function updateEmployeeAction(employeeId: string, data: Record<stri
     const s = await requireTenantAdmin();
     const emp = await db.employee.findFirst({ where: { id: employeeId, companyId: s.tenantId! } });
     if (!emp) return { ok: false, error: "Employee not found" };
-    const allowed = ["fullName", "arabicName", "phone", "email", "jobTitle", "branchId", "departmentId", "employmentType", "defaultShiftPolicyId", "pinCode", "status", "employeeCode"];
+    // pinCode is NOT a writable field. A new PIN is bcrypt-hashed and stored in
+    // pinHash, replacing any previous hash so the old PIN stops working.
+    const allowed = ["fullName", "arabicName", "phone", "email", "jobTitle", "branchId", "departmentId", "employmentType", "defaultShiftPolicyId", "status", "employeeCode"];
     const safeData: Record<string, any> = {};
     for (const key of allowed) {
       if (key in data) safeData[key] = data[key];
+    }
+    if ("pinCode" in data && data.pinCode != null && String(data.pinCode) !== "") {
+      safeData.pinHash = await hashPassword(String(data.pinCode));
     }
     if (safeData.branchId) {
       const branch = await db.branch.findFirst({ where: { id: safeData.branchId, companyId: s.tenantId!, deletedAt: null } });

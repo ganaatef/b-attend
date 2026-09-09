@@ -1,158 +1,275 @@
 /**
- * Runtime tests — Kiosk device revocation and wrong-branch access.
+ * Runtime behavioral tests — Kiosk device trust + PIN authentication.
  *
- * Requires DATABASE_URL pointing to a test database.
+ * These tests invoke the real `kioskLookupAction` handler against a real
+ * database (mocked session only). Requires DATABASE_URL pointing to a test
+ * database:
+ *   npx vitest run tests/runtime/kiosk-device.test.ts
+ *
+ * Evidence is behavioral (handler results + DB state), not source patterns.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+
+vi.mock("@/lib/auth/session", () => ({ getSession: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+
+import { getSession } from "@/lib/auth/session";
+import { kioskLookupAction } from "@/app/(tenant)/clock/actions";
+import { generateDeviceSecret } from "@/lib/kiosk/kiosk-auth";
 
 const db = new PrismaClient();
 
-let tenantId: string;
+let tenantA: string;
+let tenantB: string;
 let branchA: string;
 let branchB: string;
-let kioskDeviceA: string;
-let kioskDeviceRevoked: string;
+let employeeId: string;
+let deviceActive: string;
+let deviceActiveSecret: string;
+let deviceRevoked: string;
+let deviceOtherBranch: string;
+let deviceOtherTenant: string;
+let pinHash: string;
+
+function makeForm(overrides: Record<string, string>) {
+  const fd = new FormData();
+  fd.set("branchId", branchA);
+  fd.set("code", "KD001");
+  fd.set("pin", "1234");
+  fd.set("deviceIdentifier", deviceActive);
+  fd.set("deviceSecret", deviceActiveSecret);
+  for (const [k, v] of Object.entries(overrides)) fd.set(k, v);
+  return fd;
+}
 
 beforeAll(async () => {
-  const tenant = await db.tenant.create({
+  pinHash = await bcrypt.hash("1234", 10);
+
+  const tA = await db.tenant.create({
     data: {
-      name: "Kiosk Test Tenant",
-      slug: `kiosk-test-${Date.now()}`,
-      ownerEmail: `kiosk-owner-${Date.now()}@test.com`,
-      ownerName: "Kiosk Owner",
-      ownerPhone: "+201000000088",
+      name: "Kiosk Behavioral Tenant A",
+      slug: `kiosk-beh-a-${Date.now()}`,
+      ownerEmail: `kiosk-beh-a-${Date.now()}@test.com`,
+      ownerName: "Kiosk A",
+      ownerPhone: "+201000000091",
       status: "ACTIVE",
     },
   });
-  tenantId = tenant.id;
+  tenantA = tA.id;
 
-  const bA = await db.branch.create({
-    data: { companyId: tenantId, name: "Kiosk Branch A", code: "KBA", status: "ACTIVE" },
+  const tB = await db.tenant.create({
+    data: {
+      name: "Kiosk Behavioral Tenant B",
+      slug: `kiosk-beh-b-${Date.now()}`,
+      ownerEmail: `kiosk-beh-b-${Date.now()}@test.com`,
+      ownerName: "Kiosk B",
+      ownerPhone: "+201000000092",
+      status: "ACTIVE",
+    },
   });
-  branchA = bA.id;
+  tenantB = tB.id;
 
-  const bB = await db.branch.create({
-    data: { companyId: tenantId, name: "Kiosk Branch B", code: "KBB", status: "ACTIVE" },
+  branchA = (
+    await db.branch.create({
+      data: { companyId: tenantA, name: "Kiosk Branch A", code: "KBA", status: "ACTIVE" },
+    })
+  ).id;
+
+  branchB = (
+    await db.branch.create({
+      data: { companyId: tenantA, name: "Kiosk Branch B", code: "KBB", status: "ACTIVE" },
+    })
+  ).id;
+
+  await db.branch.create({
+    data: { companyId: tenantB, name: "Kiosk Branch B2", code: "KBB2", status: "ACTIVE" },
   });
-  branchB = bB.id;
 
-  // Active kiosk device for branch A
-  kioskDeviceA = (
+  const emp = await db.employee.create({
+    data: {
+      companyId: tenantA,
+      employeeCode: "KD001",
+      fullName: "Kiosk Employee",
+      branchId: branchA,
+      pinHash,
+      status: "ACTIVE",
+    },
+  });
+  employeeId = emp.id;
+
+  deviceActiveSecret = generateDeviceSecret();
+  deviceActive = (
     await db.kioskDevice.create({
       data: {
-        companyId: tenantId,
+        companyId: tenantA,
         branchId: branchA,
         name: "Reception Kiosk",
-        deviceIdentifier: `kiosk-a-${Date.now()}`,
-        secretHash: "test-secret-hash",
+        deviceIdentifier: `kiosk-beh-active-${Date.now()}`,
+        secretHash: await bcrypt.hash(deviceActiveSecret, 10),
         status: "ACTIVE",
         activatedAt: new Date(),
       },
     })
-  ).id;
+  ).deviceIdentifier;
 
-  // Revoked kiosk device
-  kioskDeviceRevoked = (
+  deviceRevoked = (
     await db.kioskDevice.create({
       data: {
-        companyId: tenantId,
+        companyId: tenantA,
         branchId: branchA,
         name: "Old Kiosk",
-        deviceIdentifier: `kiosk-revoked-${Date.now()}`,
-        secretHash: "revoked-hash",
+        deviceIdentifier: `kiosk-beh-revoked-${Date.now()}`,
+        secretHash: await bcrypt.hash(generateDeviceSecret(), 10),
         status: "REVOKED",
         activatedAt: new Date(),
         revokedAt: new Date(),
       },
     })
-  ).id;
+  ).deviceIdentifier;
+
+  deviceOtherBranch = (
+    await db.kioskDevice.create({
+      data: {
+        companyId: tenantA,
+        branchId: branchB,
+        name: "Branch B Kiosk",
+        deviceIdentifier: `kiosk-beh-other-branch-${Date.now()}`,
+        secretHash: await bcrypt.hash(generateDeviceSecret(), 10),
+        status: "ACTIVE",
+        activatedAt: new Date(),
+      },
+    })
+  ).deviceIdentifier;
+
+  deviceOtherTenant = (
+    await db.kioskDevice.create({
+      data: {
+        companyId: tenantB,
+        branchId: branchB,
+        name: "Tenant B Kiosk",
+        deviceIdentifier: `kiosk-beh-other-tenant-${Date.now()}`,
+        secretHash: await bcrypt.hash(generateDeviceSecret(), 10),
+        status: "ACTIVE",
+        activatedAt: new Date(),
+      },
+    })
+  ).deviceIdentifier;
 });
 
 afterAll(async () => {
-  await db.kioskDevice.deleteMany({ where: { companyId: tenantId } });
-  await db.branch.deleteMany({ where: { companyId: tenantId } });
-  await db.tenant.deleteMany({ where: { id: tenantId } });
+  await db.kioskDevice.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
+  await db.employee.deleteMany({ where: { companyId: tenantA } });
+  await db.branch.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
+  await db.tenant.deleteMany({ where: { id: { in: [tenantA, tenantB] } } });
   await db.$disconnect();
 });
 
-describe("Kiosk device status", () => {
-  it("active device has status ACTIVE", async () => {
-    const device = await db.kioskDevice.findUnique({ where: { id: kioskDeviceA } });
-    expect(device?.status).toBe("ACTIVE");
-  });
-
-  it("revoked device has status REVOKED", async () => {
-    const device = await db.kioskDevice.findUnique({ where: { id: kioskDeviceRevoked } });
-    expect(device?.status).toBe("REVOKED");
-  });
+beforeEach(() => {
+  vi.mocked(getSession).mockResolvedValue({
+    sub: "user-kiosk-owner",
+    kind: "tenant",
+    role: "COMPANY_OWNER",
+    tenantId: tenantA,
+    name: "Owner",
+    email: "owner@kiosk.test",
+  } as any);
 });
 
-describe("Kiosk device branch isolation", () => {
-  it("device is scoped to its branch", async () => {
-    const device = await db.kioskDevice.findUnique({ where: { id: kioskDeviceA } });
-    expect(device?.branchId).toBe(branchA);
-    expect(device?.branchId).not.toBe(branchB);
+describe("kioskLookupAction — device trust (behavioral, real DB)", () => {
+  it("succeeds with an ACTIVE device bound to the tenant and branch", async () => {
+    const r = await kioskLookupAction({}, makeForm({}));
+
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.employee.employeeCode).toBe("KD001");
+      expect(r.employee.id).toBe(employeeId);
+    }
   });
 
-  it("querying device under wrong branch returns null", async () => {
-    const device = await db.kioskDevice.findFirst({
-      where: { id: kioskDeviceA, branchId: branchB },
+  it("rejects a REVOKED device", async () => {
+    const r = await kioskLookupAction({}, makeForm({ deviceIdentifier: deviceRevoked }));
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("not authorized");
+  });
+
+  it("rejects a wrong-branch device", async () => {
+    const r = await kioskLookupAction({}, makeForm({ deviceIdentifier: deviceOtherBranch }));
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("not authorized");
+  });
+
+  it("rejects a wrong-tenant device", async () => {
+    const r = await kioskLookupAction({}, makeForm({ deviceIdentifier: deviceOtherTenant }));
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("not authorized");
+  });
+
+  it("rejects an unknown device", async () => {
+    const r = await kioskLookupAction({}, makeForm({ deviceIdentifier: "kiosk-does-not-exist" }));
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("not authorized");
+  });
+
+  it("rejects a missing device identifier", async () => {
+    const r = await kioskLookupAction({}, makeForm({ deviceIdentifier: "" }));
+
+    // Empty input is rejected at schema validation, before any device or
+    // employee lookup — no enumeration, no data returned.
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error).not.toContain("KD001");
+      expect(r.error).not.toContain("1234");
+    }
+  });
+
+  it("rejects a missing device secret", async () => {
+    const r = await kioskLookupAction({}, makeForm({ deviceSecret: "" }));
+
+    // Empty input is rejected at schema validation, before any device or
+    // employee lookup — no enumeration, no data returned.
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error).not.toContain("KD001");
+      expect(r.error).not.toContain(deviceActiveSecret);
+    }
+  });
+
+  it("rejects a wrong device secret", async () => {
+    const r = await kioskLookupAction({}, makeForm({ deviceSecret: "wrong-secret-00000000000000000000" }));
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error).toContain("not authorized");
+      expect(r.error).not.toContain("wrong-secret");
+    }
+  });
+
+  it("rejects a wrong PIN without leaking data", async () => {
+    const r = await kioskLookupAction({}, makeForm({ pin: "0000" }));
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.error).toContain("Invalid employee code or PIN");
+      expect(r.error).not.toContain("0000");
+    }
+  });
+
+  it("records a device rejection in the tenant audit log without PIN data", async () => {
+    const r = await kioskLookupAction({}, makeForm({ deviceIdentifier: deviceRevoked }));
+    expect(r.ok).toBe(false);
+
+    const event = await db.auditLog.findFirst({
+      where: { companyId: tenantA, action: "KIOSK_DEVICE_REJECTED" },
+      orderBy: { createdAt: "desc" },
     });
-    expect(device).toBeNull();
-  });
-
-  it("device belongs to correct tenant", async () => {
-    const device = await db.kioskDevice.findFirst({
-      where: { id: kioskDeviceA, companyId: tenantId },
-    });
-    expect(device).not.toBeNull();
-  });
-
-  it("device not found under wrong tenant", async () => {
-    const device = await db.kioskDevice.findFirst({
-      where: { id: kioskDeviceA, companyId: "non-existent-tenant" },
-    });
-    expect(device).toBeNull();
-  });
-});
-
-describe("Revoked kiosk device", () => {
-  it("application should reject clock-in from revoked device", async () => {
-    const device = await db.kioskDevice.findUnique({ where: { id: kioskDeviceRevoked } });
-    // Application logic should check device.status !== "ACTIVE" and reject
-    expect(device?.status).toBe("REVOKED");
-  });
-
-  it("revoked device has revokedAt timestamp", async () => {
-    const device = await db.kioskDevice.findUnique({ where: { id: kioskDeviceRevoked } });
-    expect(device?.revokedAt).not.toBeNull();
-  });
-});
-
-describe("Wrong-branch kiosk device", () => {
-  it("device from branch A cannot be used for branch B operations", async () => {
-    const device = await db.kioskDevice.findUnique({ where: { id: kioskDeviceA } });
-    // Application should verify device.branchId matches the requested branchId
-    expect(device?.branchId).toBe(branchA);
-    expect(device?.branchId).not.toBe(branchB);
-  });
-
-  it("kiosk lookup validates branch matches device branch", async () => {
-    // In kioskLookupAction, the code verifies:
-    // 1. branch exists and belongs to tenant
-    // 2. device (if provided) must be ACTIVE and belong to same branch
-    // This is a structural test — actual HTTP test needs running server
-    const device = await db.kioskDevice.findFirst({
-      where: {
-        companyId: tenantId,
-        branchId: branchA,
-        status: "ACTIVE",
-        deviceIdentifier: { not: "" },
-      },
-    });
-    expect(device).not.toBeNull();
-    expect(device?.branchId).toBe(branchA);
+    expect(event).not.toBeNull();
+    expect(event?.afterData ?? "").not.toContain("1234");
   });
 });

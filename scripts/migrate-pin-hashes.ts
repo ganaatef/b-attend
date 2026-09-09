@@ -1,88 +1,121 @@
 /**
- * PIN Migration Script — Backfill pinHash from plaintext pinCode.
+ * PIN Migration Script — Backfill Employee.pinHash from plaintext Employee.pinCode.
  *
- * Run against the target database:
- *   npx tsx scripts/migrate-pin-hashes.ts
+ * Run against the target database (e.g. the Vercel Preview branch):
+ *   npx tsx scripts/migrate-pin-hashes.ts            # real run
+ *   npx tsx scripts/migrate-pin-hashes.ts --dry-run  # report only, no writes
  *
- * This script:
- *   1. Counts employees with plaintext pinCode
- *   2. Counts employees with existing pinHash
- *   3. Hashes each plaintext pinCode using SHA-256 (matching kiosk lookup)
- *   4. Updates pinHash field
- *   5. Reports results
+ * Per-employee behavior (each migration runs inside an interactive transaction):
+ *   - pinHash already set                 -> skipped as already migrated (no rehash)
+ *   - pinCode present, pinHash missing    -> bcrypt(pinCode, cost 10) -> write pinHash
+ *                                            -> verify the write with a fresh read
+ *                                            -> only then clear the plaintext pinCode
+ *   - neither present                     -> nothing to do
  *
- * Idempotent: skips employees that already have pinHash populated.
- * Safe: does NOT delete or modify pinCode (kept for backward compat until Phase 5).
+ * Transactional safety: the hash write + verification + plaintext clear commit
+ * together (or roll back together), so the script never ends with no usable
+ * credential — if anything fails, the plaintext PIN is preserved.
+ *
+ * Never logs a raw PIN value. Idempotent — safe to re-run.
+ * After a successful run the report ends with:
+ *   remaining plaintext PINs: 0
+ *
+ * NOTE: This script is the ONLY allowed reference to pinCode for writes. All
+ * active application authentication paths read Employee.pinHash only.
  */
 
-import crypto from "crypto";
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const db = new PrismaClient();
 
-function sha256(input: string): string {
-  return crypto.createHash("sha256").update(input).digest("hex");
+interface Counts {
+  inspected: number;
+  legacyFound: number;
+  alreadyMigrated: number;
+  hashesCreated: number;
+  cleared: number;
+  failed: number;
 }
 
 async function main() {
-  console.log("=== PIN Migration: pinCode → pinHash ===\n");
+  const dryRun = process.argv.includes("--dry-run");
 
-  // 1. Count plaintext pinCode values
-  const withPinCode = await db.employee.count({
-    where: { pinCode: { not: null }, deletedAt: null },
+  console.log(`=== PIN Migration: pinCode → pinHash${dryRun ? " (DRY RUN — no writes)" : ""} ===\n`);
+
+  const counts: Counts = { inspected: 0, legacyFound: 0, alreadyMigrated: 0, hashesCreated: 0, cleared: 0, failed: 0 };
+
+  const employees = await db.employee.findMany({
+    where: { deletedAt: null },
+    select: { id: true, employeeCode: true, pinCode: true, pinHash: true },
+    orderBy: { employeeCode: "asc" },
   });
-  console.log(`Employees with plaintext pinCode: ${withPinCode}`);
 
-  // 2. Count existing pinHash values
-  const withPinHash = await db.employee.count({
-    where: { pinHash: { not: null }, deletedAt: null },
-  });
-  console.log(`Employees with existing pinHash:  ${withPinHash}`);
+  counts.inspected = employees.length;
+  counts.legacyFound = employees.filter((e) => e.pinCode != null).length;
+  counts.alreadyMigrated = employees.filter((e) => e.pinHash != null).length;
 
-  // 3. Find employees that need migration (have pinCode but no pinHash)
-  const needsMigration = await db.employee.findMany({
-    where: {
-      pinCode: { not: null },
-      pinHash: null,
-      deletedAt: null,
-    },
-    select: { id: true, employeeCode: true, pinCode: true },
-  });
-  console.log(`Employees needing migration:       ${needsMigration.length}\n`);
+  for (const emp of employees) {
+    // Fully migrated already (hash present, no plaintext) — nothing to do.
+    if (emp.pinCode == null && emp.pinHash != null) continue;
+    // No PIN at all — nothing to do.
+    if (emp.pinCode == null) continue;
 
-  if (needsMigration.length === 0) {
-    console.log("Nothing to migrate. All done.");
-    return;
-  }
-
-  // 4. Backfill pinHash
-  let migrated = 0;
-  let failed = 0;
-
-  for (const emp of needsMigration) {
     try {
-      const hash = sha256(emp.pinCode!);
-      await db.employee.update({
-        where: { id: emp.id },
-        data: { pinHash: hash },
-      });
-      migrated++;
-      console.log(`  ✓ ${emp.employeeCode} — pinHash set (${hash.slice(0, 12)}...)`);
-    } catch (e) {
-      failed++;
-      console.error(`  ✗ ${emp.employeeCode} — FAILED: ${e}`);
+      // Create a hash only when pinHash is missing. Employees that already have
+      // pinHash are never rehashed — only their leftover plaintext is cleared.
+      if (emp.pinHash == null) {
+        const hash = await bcrypt.hash(emp.pinCode, 10);
+        if (dryRun) {
+          counts.hashesCreated++;
+        } else {
+          await db.$transaction(async (tx) => {
+            await tx.employee.update({ where: { id: emp.id }, data: { pinHash: hash } });
+            const after = await tx.employee.findUnique({
+              where: { id: emp.id },
+              select: { pinHash: true },
+            });
+            if (after?.pinHash !== hash) {
+              throw new Error("pinHash verification failed after update");
+            }
+            await tx.employee.update({ where: { id: emp.id }, data: { pinCode: null } });
+          });
+          counts.hashesCreated++;
+          counts.cleared++;
+        }
+      } else {
+        // pinHash already exists; clear the leftover plaintext PIN.
+        if (dryRun) {
+          counts.cleared++;
+        } else {
+          await db.employee.update({ where: { id: emp.id }, data: { pinCode: null } });
+          counts.cleared++;
+        }
+      }
+    } catch {
+      counts.failed++;
+      console.error(`  ✗ ${emp.employeeCode} — migration failed (raw PIN is never logged)`);
     }
   }
 
-  console.log(`\n=== Migration complete ===`);
-  console.log(`  Migrated: ${migrated}`);
-  console.log(`  Failed:   ${failed}`);
-
-  // 5. Verify final state
-  const finalPinHash = await db.employee.count({
-    where: { pinHash: { not: null }, deletedAt: null },
+  const remaining = await db.employee.count({
+    where: { pinCode: { not: null }, deletedAt: null },
   });
-  console.log(`  Total with pinHash: ${finalPinHash}`);
+
+  console.log("\n=== PIN Migration Summary ===");
+  console.log(`employees inspected:         ${counts.inspected}`);
+  console.log(`legacy plaintext PINs found: ${counts.legacyFound}`);
+  console.log(`hashes created:              ${counts.hashesCreated}`);
+  console.log(`already migrated:            ${counts.alreadyMigrated}`);
+  console.log(`plaintext PINs cleared:      ${counts.cleared}`);
+  console.log(`failed:                      ${counts.failed}`);
+  console.log(`remaining plaintext PINs:    ${remaining}${dryRun ? " (dry run — not applied)" : ""}`);
+
+  if (!dryRun && remaining > 0) {
+    console.error(`\n⚠️  Acceptance not met: remaining plaintext PINs should be 0. Re-run to retry.`);
+    await db.$disconnect();
+    process.exit(1);
+  }
 
   await db.$disconnect();
 }

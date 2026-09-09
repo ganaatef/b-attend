@@ -1,76 +1,139 @@
 /**
- * Runtime tests — Authorization and self-approval prevention.
+ * Runtime behavioral tests — Authorization enforced in real server actions.
  *
- * Requires DATABASE_URL pointing to a test database.
+ * These tests invoke the real action handlers (`createScheduleAction`,
+ * `clockAction`, `decideRequestAction`) against a real database with the
+ * session mocked to the caller's role. Requires DATABASE_URL pointing to a
+ * test database:
+ *   npx vitest run tests/runtime/authorization.test.ts
+ *
+ * Each scenario verifies the operation fails AND the database is not mutated.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
-import { getRolePermissions, canViewSalary } from "@/lib/hr/permissions";
+import bcrypt from "bcryptjs";
+
+vi.mock("@/lib/auth/session", () => ({ getSession: vi.fn() }));
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+
+import { getSession } from "@/lib/auth/session";
+import { createScheduleAction } from "@/app/(tenant)/actions";
+import { clockAction } from "@/app/(tenant)/clock/actions";
+import { decideRequestAction } from "@/app/(tenant)/approvals/actions";
 
 const db = new PrismaClient();
 
 let tenantId: string;
-let branchId: string;
-let ownerUserId: string;
-let hrAdminUserId: string;
+let branchA: string;
+let branchB: string;
 let managerUserId: string;
 let employeeUserId: string;
-let employeeId: string;
+let employeeA: string;
+let employeeB: string;
+let policyId: string;
+
+function sessionFor(role: string, sub: string) {
+  return {
+    sub,
+    kind: "tenant",
+    role,
+    tenantId,
+    name: "User",
+    email: `${role.toLowerCase()}@test.com`,
+  } as any;
+}
 
 beforeAll(async () => {
+  const hash = await bcrypt.hash("TestPass123!", 10);
+
   const tenant = await db.tenant.create({
     data: {
-      name: "Auth Test Tenant",
-      slug: `auth-test-${Date.now()}`,
-      ownerEmail: `auth-owner-${Date.now()}@test.com`,
+      name: "Auth Behavioral Tenant",
+      slug: `auth-beh-${Date.now()}`,
+      ownerEmail: `auth-beh-${Date.now()}@test.com`,
       ownerName: "Auth Owner",
-      ownerPhone: "+201000000099",
+      ownerPhone: "+201000000093",
       status: "ACTIVE",
     },
   });
   tenantId = tenant.id;
 
-  const branch = await db.branch.create({
-    data: { companyId: tenantId, name: "Auth Branch", code: "AB", status: "ACTIVE" },
-  });
-  branchId = branch.id;
+  branchA = (
+    await db.branch.create({
+      data: { companyId: tenantId, name: "Branch A", code: "BA", status: "ACTIVE" },
+    })
+  ).id;
 
-  // Create users with different roles
-  const bcrypt = await import("bcryptjs");
-  const hash = await bcrypt.hash("TestPass123!", 10);
-
-  const owner = await db.user.create({
-    data: { companyId: tenantId, email: `owner-${Date.now()}@test.com`, passwordHash: hash, name: "Owner", role: "COMPANY_OWNER", status: "ACTIVE" },
-  });
-  ownerUserId = owner.id;
-
-  const hrAdmin = await db.user.create({
-    data: { companyId: tenantId, email: `hradmin-${Date.now()}@test.com`, passwordHash: hash, name: "HR Admin", role: "HR_ADMIN", status: "ACTIVE" },
-  });
-  hrAdminUserId = hrAdmin.id;
+  branchB = (
+    await db.branch.create({
+      data: { companyId: tenantId, name: "Branch B", code: "BB", status: "ACTIVE" },
+    })
+  ).id;
 
   const manager = await db.user.create({
-    data: { companyId: tenantId, email: `manager-${Date.now()}@test.com`, passwordHash: hash, name: "Manager", role: "BRANCH_MANAGER", status: "ACTIVE" },
+    data: {
+      companyId: tenantId,
+      email: `beh-manager-${Date.now()}@test.com`,
+      passwordHash: hash,
+      name: "Manager",
+      role: "BRANCH_MANAGER",
+      status: "ACTIVE",
+    },
   });
   managerUserId = manager.id;
-
-  // Set branch manager
-  await db.branch.update({ where: { id: branchId }, data: { managerId: managerUserId } });
+  await db.branch.update({ where: { id: branchA }, data: { managerId: managerUserId } });
 
   const empUser = await db.user.create({
-    data: { companyId: tenantId, email: `employee-${Date.now()}@test.com`, passwordHash: hash, name: "Employee", role: "EMPLOYEE", status: "ACTIVE" },
+    data: {
+      companyId: tenantId,
+      email: `beh-employee-${Date.now()}@test.com`,
+      passwordHash: hash,
+      name: "Employee",
+      role: "EMPLOYEE",
+      status: "ACTIVE",
+    },
   });
   employeeUserId = empUser.id;
 
-  const emp = await db.employee.create({
-    data: { companyId: tenantId, employeeCode: "EAUTH", fullName: "Auth Employee", branchId, userId: employeeUserId, status: "ACTIVE" },
-  });
-  employeeId = emp.id;
+  employeeA = (
+    await db.employee.create({
+      data: {
+        companyId: tenantId,
+        employeeCode: "BEA001",
+        fullName: "Emp A",
+        branchId: branchA,
+        userId: employeeUserId,
+        status: "ACTIVE",
+      },
+    })
+  ).id;
+
+  employeeB = (
+    await db.employee.create({
+      data: {
+        companyId: tenantId,
+        employeeCode: "BEB001",
+        fullName: "Emp B",
+        branchId: branchB,
+        status: "ACTIVE",
+      },
+    })
+  ).id;
+
+  policyId = (
+    await db.shiftPolicy.create({
+      data: { companyId: tenantId, name: "Auth Policy", startTime: "09:00", endTime: "17:00" },
+    })
+  ).id;
 });
 
 afterAll(async () => {
   await db.approvalRequest.deleteMany({ where: { companyId: tenantId } });
+  await db.punch.deleteMany({ where: { companyId: tenantId } });
+  await db.schedule.deleteMany({ where: { companyId: tenantId } });
+  await db.shiftPolicy.deleteMany({ where: { companyId: tenantId } });
   await db.employee.deleteMany({ where: { companyId: tenantId } });
   await db.user.deleteMany({ where: { companyId: tenantId } });
   await db.branch.deleteMany({ where: { companyId: tenantId } });
@@ -78,103 +141,105 @@ afterAll(async () => {
   await db.$disconnect();
 });
 
-describe("Role permission checks", () => {
-  it("COMPANY_OWNER has all HR permissions", () => {
-    const perms = getRolePermissions("COMPANY_OWNER");
-    expect(perms).toContain("VIEW_PAYROLL");
-    expect(perms).toContain("MANAGE_PAYROLL");
-    expect(perms).toContain("EXPORT_HR_EXCEL");
-    expect(perms).toContain("VIEW_EMPLOYEE_SENSITIVE_DATA");
-    expect(perms).toContain("MANAGE_DEPARTMENTS");
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe("Manager cross-branch schedule writes are rejected", () => {
+  it("rejects scheduling into an unmanaged branch and does not mutate the DB", async () => {
+    vi.mocked(getSession).mockResolvedValue(sessionFor("BRANCH_MANAGER", managerUserId));
+
+    const fd = new FormData();
+    fd.set("employeeId", employeeB);
+    fd.set("branchId", branchB);
+    fd.set("date", "2026-08-12");
+    fd.set("shiftPolicyId", policyId);
+
+    const r = await createScheduleAction({}, fd);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("Cannot schedule for branches you don't manage");
+
+    const date = new Date("2026-08-12"); date.setHours(0, 0, 0, 0);
+    const created = await db.schedule.findFirst({
+      where: { companyId: tenantId, employeeId: employeeB, date },
+    });
+    expect(created).toBeNull();
   });
 
-  it("HR_ADMIN has all HR permissions", () => {
-    const perms = getRolePermissions("HR_ADMIN");
-    expect(perms).toContain("VIEW_PAYROLL");
-    expect(perms).toContain("MANAGE_PAYROLL");
-    expect(perms).toContain("EXPORT_HR_EXCEL");
-  });
+  it("rejects scheduling an employee who belongs to another branch and does not mutate the DB", async () => {
+    vi.mocked(getSession).mockResolvedValue(sessionFor("BRANCH_MANAGER", managerUserId));
 
-  it("BRANCH_MANAGER has limited permissions", () => {
-    const perms = getRolePermissions("BRANCH_MANAGER");
-    expect(perms).toContain("VIEW_HR_DASHBOARD");
-    expect(perms).toContain("APPROVE_LEAVE");
-    expect(perms).toContain("EXPORT_HR_EXCEL");
-    expect(perms).not.toContain("VIEW_PAYROLL");
-    expect(perms).not.toContain("MANAGE_PAYROLL");
-    expect(perms).not.toContain("MANAGE_DEPARTMENTS");
-  });
+    const fd = new FormData();
+    fd.set("employeeId", employeeB);
+    fd.set("branchId", branchA); // managed, but employee belongs to branch B
+    fd.set("date", "2026-08-13");
+    fd.set("shiftPolicyId", policyId);
 
-  it("EMPLOYEE has no HR permissions", () => {
-    const perms = getRolePermissions("EMPLOYEE");
-    expect(perms).toHaveLength(0);
-  });
+    const r = await createScheduleAction({}, fd);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("Employee must belong to the selected branch");
 
-  it("salary view restricted to owner and HR admin", async () => {
-    expect(await canViewSalary({ role: "COMPANY_OWNER" })).toBe(true);
-    expect(await canViewSalary({ role: "HR_ADMIN" })).toBe(true);
-    expect(await canViewSalary({ role: "BRANCH_MANAGER" })).toBe(false);
-    expect(await canViewSalary({ role: "EMPLOYEE" })).toBe(false);
+    const date = new Date("2026-08-13"); date.setHours(0, 0, 0, 0);
+    const created = await db.schedule.findFirst({
+      where: { companyId: tenantId, employeeId: employeeB, date },
+    });
+    expect(created).toBeNull();
   });
 });
 
-describe("Self-approval prevention", () => {
-  it("approval record tracks requestedById separately from approvedById", async () => {
+describe("Employee cannot clock for another employee", () => {
+  it("rejects clock-in for another employee and does not create a punch", async () => {
+    vi.mocked(getSession).mockResolvedValue(sessionFor("EMPLOYEE", employeeUserId));
+
+    const fd = new FormData();
+    fd.set("employeeId", employeeB); // employee B has no userId == employeeUserId
+    fd.set("type", "CLOCK_IN");
+    fd.set("latitude", "0");
+    fd.set("longitude", "0");
+    fd.set("source", "MOBILE_WEB");
+
+    const r = await clockAction({}, fd);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("You can only clock for yourself");
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    const punch = await db.punch.findFirst({
+      where: { companyId: tenantId, employeeId: employeeB, timestamp: { gte: today, lt: tomorrow } },
+    });
+    expect(punch).toBeNull();
+  });
+});
+
+describe("Self-approval is prevented", () => {
+  it("rejects a manager approving their own request and leaves it PENDING", async () => {
+    vi.mocked(getSession).mockResolvedValue(sessionFor("BRANCH_MANAGER", managerUserId));
+
     const req = await db.approvalRequest.create({
       data: {
         companyId: tenantId,
-        employeeId,
-        branchId,
-        date: new Date(),
+        employeeId: employeeA,
+        branchId: branchA,
+        date: new Date("2026-08-14"),
         type: "MANUAL_CLOCK_IN",
         reason: "Forgot to clock in",
         status: "PENDING",
-        requestedById: employeeUserId,
+        requestedById: managerUserId,
       },
     });
 
-    // Simulate self-approval attempt
-    const isSelfApproval = req.requestedById === employeeUserId;
-    expect(isSelfApproval).toBe(true);
+    const fd = new FormData();
+    fd.set("requestId", req.id);
+    fd.set("decision", "APPROVED");
 
-    // The code should block this — verify the pattern exists in source
-    // (Actual enforcement is in decideRequestAction)
+    const r = await decideRequestAction({}, fd);
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("your own request");
+
+    const after = await db.approvalRequest.findUnique({ where: { id: req.id } });
+    expect(after?.status).toBe("PENDING");
+    expect(after?.approvedById).toBeNull();
+
     await db.approvalRequest.delete({ where: { id: req.id } });
-  });
-});
-
-describe("Employee reading another employee", () => {
-  it("employee userId cannot find other employee records by companyId", async () => {
-    const otherEmp = await db.employee.create({
-      data: { companyId: tenantId, employeeCode: "EAUTH2", fullName: "Other Employee", branchId, status: "ACTIVE" },
-    });
-
-    // An employee with userId=employeeUserId should NOT be able to query
-    // another employee's full record (application layer enforces this)
-    // Database level: companyId scoping prevents cross-tenant access
-    const found = await db.employee.findFirst({
-      where: { id: otherEmp.id, companyId: tenantId },
-    });
-    expect(found).not.toBeNull(); // DB allows same-tenant reads
-
-    // But the APPLICATION should only return self-data for EMPLOYEE role
-    // This is enforced in the clock action: employee.userId !== s.sub
-    await db.employee.delete({ where: { id: otherEmp.id } });
-  });
-});
-
-describe("Branch manager scheduling restriction", () => {
-  it("manager is linked to exactly one branch", async () => {
-    const branch = await db.branch.findUnique({ where: { id: branchId } });
-    expect(branch?.managerId).toBe(managerUserId);
-  });
-
-  it("manager's branch is queryable via managerId", async () => {
-    const managedBranches = await db.branch.findMany({
-      where: { companyId: tenantId, managerId: managerUserId, deletedAt: null },
-      select: { id: true },
-    });
-    expect(managedBranches).toHaveLength(1);
-    expect(managedBranches[0].id).toBe(branchId);
   });
 });

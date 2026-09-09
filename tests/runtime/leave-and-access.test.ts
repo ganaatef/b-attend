@@ -2,10 +2,25 @@
  * Runtime tests — Leave conflicts and unauthorized access patterns.
  *
  * Requires DATABASE_URL pointing to a test database.
+ * Access-control tests invoke the real handlers with real signed sessions.
  */
 
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { SignJWT } from "jose";
+
+vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+vi.mock("next/headers", () => ({
+  cookies: vi.fn(),
+}));
+
+import { cookies } from "next/headers";
+import { requirePlatformRole } from "@/lib/auth/session";
+import { createPayrollRunAction } from "@/app/(tenant)/hr/actions";
+import { hasHrPermission } from "@/lib/hr/permissions";
+
+const SECRET = "battend-test-secret-1234567890-abcdefgh";
 
 const db = new PrismaClient();
 
@@ -16,7 +31,25 @@ let employeeA: string;
 let employeeB: string;
 let policyId: string;
 
+async function signSession(payload: Record<string, unknown>): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime("1h")
+    .sign(new TextEncoder().encode(SECRET));
+}
+
+function mockCookie(value: string) {
+  vi.mocked(cookies).mockResolvedValue({
+    get: vi.fn((name: string) => (name === "battend_session" ? { name, value } : undefined)),
+    set: vi.fn(),
+    delete: vi.fn(),
+  } as any);
+}
+
 beforeAll(async () => {
+  vi.stubEnv("SESSION_SECRET", SECRET);
+
   const tA = await db.tenant.create({
     data: {
       name: "Leave Test Tenant A",
@@ -73,6 +106,7 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  await db.payrollRun.deleteMany({ where: { companyId: tenantA } });
   await db.approvalRequest.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
   await db.attendanceDay.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
   await db.schedule.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
@@ -173,43 +207,78 @@ describe("Approved leave conflicts", () => {
 });
 
 describe("Unauthorized payroll access", () => {
-  it("salary data is only accessible to COMPANY_OWNER and HR_ADMIN", async () => {
-    // Verify payroll profile creation requires correct role
-    // (enforced at application layer)
-    const profile = await db.payrollProfile.create({
-      data: {
-        companyId: tenantA,
-        employeeId: employeeA,
-        baseSalary: 15000,
-        salaryType: "MONTHLY",
-        currency: "EGP",
-        paymentMethod: "BANK_TRANSFER",
-      },
-    });
+  it("denies payroll run creation to EMPLOYEE and does not create a run", async () => {
+    mockCookie(await signSession({
+      kind: "tenant",
+      role: "EMPLOYEE",
+      tenantId: tenantA,
+      sub: "user-emp",
+      name: "Employee",
+      email: "emp@leave.test",
+    }));
 
-    // Employee role should NOT see this data
-    // HR_ADMIN and COMPANY_OWNER should see it
-    expect(profile.baseSalary).toBe(15000);
+    const fd = new FormData();
+    fd.set("month", "8");
+    fd.set("year", "2026");
 
-    await db.payrollProfile.delete({ where: { id: profile.id } });
+    const r = await createPayrollRunAction({}, fd);
+
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.error).toContain("Permission denied");
+
+    const runs = await db.payrollRun.findMany({ where: { companyId: tenantA } });
+    expect(runs).toHaveLength(0);
+  });
+
+  it("grants payroll permission to COMPANY_OWNER and HR_ADMIN only", async () => {
+    mockCookie(await signSession({
+      kind: "tenant",
+      role: "COMPANY_OWNER",
+      tenantId: tenantA,
+      sub: "user-owner",
+      name: "Owner",
+      email: "owner@leave.test",
+    }));
+    expect(await hasHrPermission("VIEW_PAYROLL")).toBe(true);
+
+    mockCookie(await signSession({
+      kind: "tenant",
+      role: "BRANCH_MANAGER",
+      tenantId: tenantA,
+      sub: "user-mgr",
+      name: "Manager",
+      email: "mgr@leave.test",
+    }));
+    expect(await hasHrPermission("VIEW_PAYROLL")).toBe(false);
   });
 });
 
 describe("Unauthorized platform access", () => {
-  it("platform admin cannot access tenant data directly", async () => {
-    // Platform admins (SUPER_ADMIN, SALES_ADMIN etc.) operate on the platform schema
-    // They should not be able to query tenant-scoped tables directly
-    // This is enforced by kind:"platform" vs kind:"tenant" in sessions
+  it("rejects a tenant session from platform admin APIs", async () => {
+    mockCookie(await signSession({
+      kind: "tenant",
+      role: "BRANCH_MANAGER",
+      tenantId: tenantA,
+      sub: "user-mgr",
+      name: "Manager",
+      email: "mgr@leave.test",
+    }));
 
-    // Verify tenant employee is not accessible via platform user ID
-    const emp = await db.employee.findFirst({
-      where: { companyId: tenantA, employeeCode: "LEA001" },
-    });
-    expect(emp).not.toBeNull();
+    await expect(requirePlatformRole("SUPER_ADMIN")).rejects.toThrow("FORBIDDEN");
+  });
 
-    // A platform session with kind:"platform" would not have tenantId
-    // So getTenantId() would throw FORBIDDEN
-    // This is a structural guarantee — verified by source code pattern
+  it("allows a platform SUPER_ADMIN session into platform admin APIs", async () => {
+    mockCookie(await signSession({
+      kind: "platform",
+      role: "SUPER_ADMIN",
+      sub: "platform-1",
+      name: "Admin",
+      email: "admin@platform.test",
+    }));
+
+    const s = await requirePlatformRole("SUPER_ADMIN");
+    expect(s.kind).toBe("platform");
+    expect(s.role).toBe("SUPER_ADMIN");
   });
 });
 

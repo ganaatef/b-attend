@@ -299,7 +299,6 @@ async function main() {
         status: "ACTIVE",
         startDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
         defaultShiftPolicyId: policyMap[e.policy].id,
-        pinCode: pinValue,
         pinHash,
       },
     });

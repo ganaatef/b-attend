@@ -305,9 +305,9 @@ describe("Overnight shift clock-out", () => {
 
     const workedMs = clockOut.timestamp.getTime() - clockIn.timestamp.getTime();
     const workedMinutes = Math.round(workedMs / 60_000) - 30; // minus break
-    // Should be ~470 minutes (7h50m - 30m break)
-    expect(workedMinutes).toBeGreaterThanOrEqual(460);
-    expect(workedMinutes).toBeLessThanOrEqual(480);
+    // 22:05 -> 05:55 next day = 7h50m = 470 minutes, minus 30m break = 440.
+    expect(workedMinutes).toBeGreaterThanOrEqual(430);
+    expect(workedMinutes).toBeLessThanOrEqual(450);
 
     // Cleanup
     await db.punch.deleteMany({ where: { companyId: tenantA, employeeId: employeeA1 } });

@@ -4,6 +4,7 @@
 // ===================================================================
 
 import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -78,7 +79,7 @@ async function repairDemoLinks() {
           status: "ACTIVE",
           startDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
           defaultShiftPolicyId: morningPolicy.id,
-          pinCode: "5000",
+          pinHash: await bcrypt.hash("5000", 10),
         },
       });
       console.log("  ✓ Created missing employee: MGR001 (New Cairo Manager)");
@@ -99,7 +100,7 @@ async function repairDemoLinks() {
           status: "ACTIVE",
           startDate: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
           defaultShiftPolicyId: morningPolicy.id,
-          pinCode: "5001",
+          pinHash: await bcrypt.hash("5001", 10),
         },
       });
       console.log("  ✓ Created missing employee: MGR002 (Nasr City Manager)");

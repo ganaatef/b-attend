@@ -10,7 +10,7 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { haversineMeters, isInsideGeofence, recalculateAttendanceDay } from "@/lib/attendance/engine";
-import { RATE_LIMITS } from "@/lib/rate-limit";
+import { validateKioskDevice, verifyKioskCredentials, KIOSK_DEVICE_ERROR } from "@/lib/kiosk/kiosk-auth";
 
 const ClockSchema = z.object({
   employeeId: z.string().min(1),
@@ -18,6 +18,8 @@ const ClockSchema = z.object({
   latitude: z.coerce.number().min(-90).max(90),
   longitude: z.coerce.number().min(-180).max(180),
   source: z.enum(["MOBILE_WEB", "KIOSK"]).default("MOBILE_WEB"),
+  deviceIdentifier: z.string().optional(),
+  deviceSecret: z.string().optional(),
 });
 
 export async function clockAction(prev: any, formData: FormData) {
@@ -32,6 +34,8 @@ export async function clockAction(prev: any, formData: FormData) {
       latitude: formData.get("latitude"),
       longitude: formData.get("longitude"),
       source: formData.get("source") ?? "MOBILE_WEB",
+      deviceIdentifier: formData.get("deviceIdentifier") || undefined,
+      deviceSecret: formData.get("deviceSecret") || undefined,
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
@@ -47,6 +51,19 @@ export async function clockAction(prev: any, formData: FormData) {
     // For employee self-clock, ensure employee is clocking themselves
     if (s.role === "EMPLOYEE" && employee.userId !== s.sub) {
       return { ok: false, error: "You can only clock for yourself" };
+    }
+
+    // Kiosk clocks must come from a trusted, registered device bound to the
+    // employee's branch — never from an unauthenticated or unregistered client.
+    if (d.source === "KIOSK") {
+      if (!employee.branchId) return { ok: false, error: "Employee has no assigned branch" };
+      const device = await validateKioskDevice({
+        tenantId: s.tenantId,
+        branchId: employee.branchId,
+        deviceIdentifier: d.deviceIdentifier,
+        deviceSecret: d.deviceSecret,
+      });
+      if (!device.ok) return { ok: false, error: KIOSK_DEVICE_ERROR };
     }
 
     // Find today's schedule
@@ -133,15 +150,29 @@ export async function clockAction(prev: any, formData: FormData) {
 
 const KioskLookupSchema = z.object({
   branchId: z.string().min(1),
-  code: z.string().optional(),
-  pin: z.string().optional(),
-  deviceIdentifier: z.string().optional(),
+  code: z.string().min(1),
+  pin: z.string().min(1),
+  deviceIdentifier: z.string().min(1),
+  deviceSecret: z.string().min(1),
 });
 
-// In-memory rate limit buckets for kiosk lookups (keyed by branchId:deviceIdentifier)
-const kioskRateBuckets = new Map<string, { count: number; resetAt: number }>();
+export type KioskLookupResult =
+  | {
+      ok: true;
+      employee: {
+        id: string;
+        fullName: string;
+        employeeCode: string;
+        jobTitle: string | null;
+        branchName: string | null;
+      };
+      schedule: { policyName: string | null; expectedStart: Date | null; expectedEnd: Date | null } | null;
+      lastPunch: { type: string; timestamp: Date } | null;
+      nextAction: "CLOCK_IN" | "CLOCK_OUT";
+    }
+  | { ok: false; error: string };
 
-export async function kioskLookupAction(prev: any, formData: FormData) {
+export async function kioskLookupAction(prev: any, formData: FormData): Promise<KioskLookupResult> {
   try {
     const s = await getSession();
     if (!s || s.kind !== "tenant" || !s.tenantId) return { ok: false, error: "Not authenticated" };
@@ -150,35 +181,30 @@ export async function kioskLookupAction(prev: any, formData: FormData) {
       code: formData.get("code") || undefined,
       pin: formData.get("pin") || undefined,
       deviceIdentifier: formData.get("deviceIdentifier") || undefined,
+      deviceSecret: formData.get("deviceSecret") || undefined,
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
 
-    // Kiosk rate limiting by branchId + deviceIdentifier
-    const rateKey = `${d.branchId}:${d.deviceIdentifier ?? "unknown"}`;
-    const now = Date.now();
-    let kioskBucket = kioskRateBuckets.get(rateKey);
-    if (!kioskBucket || now > kioskBucket.resetAt) {
-      kioskBucket = { count: 0, resetAt: now + 60_000 };
-      kioskRateBuckets.set(rateKey, kioskBucket);
-    }
-    kioskBucket.count++;
-    if (kioskBucket.count > RATE_LIMITS.kiosk) {
-      return { ok: false, error: "Too many requests. Please wait a moment." };
-    }
     // Verify branch belongs to tenant
     const branch = await db.branch.findFirst({ where: { id: d.branchId, companyId: s.tenantId } });
     if (!branch) return { ok: false, error: "Branch not found" };
-    // Find employee
-    // Phase 4 (pilot): PIN verified via direct DB match (plaintext pinCode).
-    // Phase 5: migrate to constant-time bcrypt compare against pinHash.
-    const employee = await db.employee.findFirst({
-      where: {
-        companyId: s.tenantId,
-        OR: [{ employeeCode: d.code }, { pinCode: d.pin }],
-        status: "ACTIVE",
-        deletedAt: null,
-      },
+
+    // Verify device trust + employee credentials.
+    // Employee is identified by employeeCode only; the PIN is verified via
+    // bcrypt against pinHash. No plaintext PIN is ever read.
+    const auth = await verifyKioskCredentials({
+      tenantId: s.tenantId,
+      branchId: d.branchId,
+      deviceIdentifier: d.deviceIdentifier,
+      deviceSecret: d.deviceSecret,
+      code: d.code,
+      pin: d.pin,
+    });
+    if (!auth.ok) return { ok: false, error: auth.error };
+
+    const employee = await db.employee.findUnique({
+      where: { id: auth.employeeId },
       include: { branch: true, defaultShiftPolicy: true },
     });
     if (!employee) return { ok: false, error: "Employee not found. Check code/PIN." };
@@ -200,10 +226,10 @@ export async function kioskLookupAction(prev: any, formData: FormData) {
         fullName: employee.fullName,
         employeeCode: employee.employeeCode,
         jobTitle: employee.jobTitle,
-        branchName: employee.branch?.name,
+        branchName: employee.branch?.name ?? null,
       },
       schedule: schedule ? {
-        policyName: schedule.shiftPolicy?.name,
+        policyName: schedule.shiftPolicy?.name ?? null,
         expectedStart: schedule.expectedStart,
         expectedEnd: schedule.expectedEnd,
       } : null,

@@ -47,7 +47,7 @@ const PUBLIC_ROUTES = [
   "/legal/terms",
 ];
 
-const PUBLIC_PREFIXES = ["/api/public/", "/legal/", "/_next/", "/favicon.ico", "/logo.svg", "/robots.txt"];
+const PUBLIC_PREFIXES = ["/api/health", "/api/public/", "/legal/", "/_next/", "/favicon.ico", "/logo.svg", "/robots.txt"];
 
 async function verifyToken(token: string): Promise<{ kind: string; role: string; tenantId?: string } | null> {
   try {
