@@ -2,16 +2,11 @@
  * B-Attend session — signed HttpOnly browser cookie plus a separately-audienced
  * native employee bearer token.
  *
- * Session payload: { sub, role, kind, tenantId?, name, email, sessionVersion }
- *   - kind: "platform" | "tenant"
- *   - role: PlatformRole | TenantUserRole
- *   - sessionVersion: bumped to invalidate all sessions
- *
- * Lifetime: 7 days. Browser tenant sessions are also checked against current
- * tenant + subscription state on every server-side getSession() call so
- * cancellation, suspension, expiry, or past-due state revokes operational
- * access immediately. Native tokens are additionally checked by the mobile
- * auth context on every request.
+ * Browser tenant sessions are validated against BOTH the live user identity and
+ * the live tenant/subscription state. Suspending/deleting a user therefore
+ * revokes their browser access immediately even if the signed cookie has not
+ * expired. Recovery sessions bypass billing state only; they never bypass user
+ * suspension/deletion.
  */
 
 import { SignJWT, jwtVerify } from "jose";
@@ -20,7 +15,7 @@ import { db } from "@/lib/db";
 import { isTenantOperationalState } from "@/lib/auth/subscription-state";
 
 const COOKIE_NAME = "battend_session";
-const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
+const MAX_AGE_SECONDS = 60 * 60 * 24 * 7;
 const SESSION_VERSION = 1;
 const MOBILE_TOKEN_AUDIENCE = "battend-staff-mobile";
 
@@ -28,13 +23,9 @@ function getSecret(): Uint8Array {
   const raw = process.env.SESSION_SECRET;
   if (!raw) {
     if (process.env.NODE_ENV === "production") {
-      throw new Error(
-        "SESSION_SECRET must be set in production. Generate a 32+ character secret and set it as an environment variable."
-      );
+      throw new Error("SESSION_SECRET must be set in production. Generate a 32+ character secret and set it as an environment variable.");
     }
-    console.warn(
-      "[auth] WARNING: SESSION_SECRET is not set. Using an insecure default for development only. Do NOT use in production."
-    );
+    console.warn("[auth] WARNING: SESSION_SECRET is not set. Using an insecure default for development only. Do NOT use in production.");
     return new TextEncoder().encode("dev-secret-change-me-in-production-please-use-32+chars");
   }
   return new TextEncoder().encode(raw);
@@ -60,18 +51,16 @@ export interface SessionTokenPayload extends SessionPayload {
 export type SessionData = SessionPayload;
 
 async function sign(payload: SessionPayload): Promise<string> {
-  const secret = getSecret();
   return new SignJWT({ ...payload, sessionVersion: SESSION_VERSION })
     .setProtectedHeader({ alg: "HS256" })
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
-    .sign(secret);
+    .sign(getSecret());
 }
 
 async function verify(token: string): Promise<SessionTokenPayload | null> {
   try {
-    const secret = getSecret();
-    const { payload } = await jwtVerify(token, secret);
+    const { payload } = await jwtVerify(token, getSecret());
     const typed = payload as unknown as SessionTokenPayload;
     if (typed.sessionVersion !== undefined && typed.sessionVersion < SESSION_VERSION) return null;
     return typed;
@@ -80,22 +69,19 @@ async function verify(token: string): Promise<SessionTokenPayload | null> {
   }
 }
 
-/** Issues a bearer token for the native employee application, never a browser cookie. */
+/** Issues a bearer token specifically for the native employee application. */
 export async function createMobileSessionToken(payload: SessionPayload): Promise<string> {
-  const secret = getSecret();
   return new SignJWT({ ...payload, sessionVersion: SESSION_VERSION, channel: "mobile" })
     .setProtectedHeader({ alg: "HS256" })
     .setAudience(MOBILE_TOKEN_AUDIENCE)
     .setIssuedAt()
     .setExpirationTime(`${MAX_AGE_SECONDS}s`)
-    .sign(secret);
+    .sign(getSecret());
 }
 
-/** Verifies that a token was issued specifically for B-Attend Staff. */
 export async function verifyMobileSessionToken(token: string): Promise<SessionTokenPayload | null> {
   try {
-    const secret = getSecret();
-    const { payload } = await jwtVerify(token, secret, { audience: MOBILE_TOKEN_AUDIENCE });
+    const { payload } = await jwtVerify(token, getSecret(), { audience: MOBILE_TOKEN_AUDIENCE });
     if (payload.channel !== "mobile") return null;
     const typed = payload as unknown as SessionTokenPayload;
     if (typed.sessionVersion !== undefined && typed.sessionVersion < SESSION_VERSION) return null;
@@ -110,6 +96,22 @@ async function readVerifiedCookie(): Promise<SessionTokenPayload | null> {
   const token = c.get(COOKIE_NAME)?.value;
   if (!token) return null;
   return verify(token);
+}
+
+async function isActiveTenantIdentity(session: SessionTokenPayload): Promise<boolean> {
+  if (session.kind !== "tenant") return true;
+  if (!session.tenantId) return false;
+
+  const user = await db.user.findFirst({
+    where: {
+      id: session.sub,
+      companyId: session.tenantId,
+      status: "ACTIVE",
+      deletedAt: null,
+    },
+    select: { id: true },
+  });
+  return Boolean(user);
 }
 
 async function isOperationalTenantSession(session: SessionTokenPayload): Promise<boolean> {
@@ -131,8 +133,7 @@ async function isOperationalTenantSession(session: SessionTokenPayload): Promise
       },
     },
   });
-
-  return !!tenant && isTenantOperationalState(tenant);
+  return Boolean(tenant && isTenantOperationalState(tenant));
 }
 
 export async function createSession(payload: SessionPayload): Promise<void> {
@@ -152,24 +153,27 @@ export async function destroySession(): Promise<void> {
   c.delete(COOKIE_NAME);
 }
 
-/**
- * Verified session for normal product access.
- * Tenant sessions are rejected when the tenant/subscription is not operational.
- */
+/** Normal application access: identity + subscription must both be active. */
 export async function getSession(): Promise<SessionTokenPayload | null> {
   const session = await readVerifiedCookie();
   if (!session) return null;
-  if (!(await isOperationalTenantSession(session))) return null;
-  return session;
+  if (session.kind !== "tenant") return session;
+  const [identityActive, operational] = await Promise.all([
+    isActiveTenantIdentity(session),
+    isOperationalTenantSession(session),
+  ]);
+  return identityActive && operational ? session : null;
 }
 
 /**
- * Verified cookie without the operational subscription gate.
- * Use ONLY for recovery surfaces that must remain available when billing is
- * pending/past-due/suspended, currently Billing and Support.
+ * Billing/support recovery access. This bypasses subscription state only. A
+ * suspended/deleted tenant user can never use a recovery session.
  */
 export async function getSessionAllowInactive(): Promise<SessionTokenPayload | null> {
-  return readVerifiedCookie();
+  const session = await readVerifiedCookie();
+  if (!session) return null;
+  if (session.kind !== "tenant") return session;
+  return (await isActiveTenantIdentity(session)) ? session : null;
 }
 
 export async function requireSession(): Promise<SessionTokenPayload> {
