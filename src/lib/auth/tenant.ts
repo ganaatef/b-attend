@@ -6,16 +6,7 @@
 import { Prisma, type PrismaClient } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireTenantSession } from "./session";
-
-const ACTIVE_SUBSCRIPTION_STATUSES = new Set(["TRIALING", "ACTIVE", "GRACE_PERIOD"]);
-const BLOCKED_TENANT_STATUSES = new Set(["PENDING_ACTIVATION", "PAST_DUE", "SUSPENDED", "CANCELLED", "REJECTED"]);
-
-type SubscriptionWindow = {
-  status: string;
-  trialEndsAt: Date | null;
-  graceEndsAt: Date | null;
-  currentPeriodEnd: Date | null;
-};
+import { isTenantOperationalState } from "./subscription-state";
 
 export async function getTenantId(): Promise<string> {
   const session = await requireTenantSession();
@@ -33,35 +24,14 @@ export async function getTenantContext(tenantId: string) {
 
 export type TenantContext = Awaited<ReturnType<typeof getTenantContext>>;
 
-function hasValidPeriod(subscription: SubscriptionWindow) {
-  const now = Date.now();
-  if (subscription.status === "TRIALING" && subscription.trialEndsAt && subscription.trialEndsAt.getTime() <= now) return false;
-  if (subscription.status === "GRACE_PERIOD" && subscription.graceEndsAt && subscription.graceEndsAt.getTime() <= now) return false;
-  if (subscription.status === "ACTIVE" && subscription.currentPeriodEnd && subscription.currentPeriodEnd.getTime() <= now) return false;
-  return true;
-}
-
-function isOperationalTenant(tenant: {
-  deletedAt: Date | null;
-  status: string;
-  subscription: SubscriptionWindow | null;
-}) {
-  const subscription = tenant.subscription;
-  return !tenant.deletedAt
-    && !BLOCKED_TENANT_STATUSES.has(tenant.status)
-    && !!subscription
-    && ACTIVE_SUBSCRIPTION_STATUSES.has(subscription.status)
-    && hasValidPeriod(subscription);
-}
-
 export async function requireActiveSubscription(tenantId: string): Promise<boolean> {
   const tenant = await getTenantContext(tenantId);
-  return !!tenant && isOperationalTenant(tenant);
+  return !!tenant && isTenantOperationalState(tenant);
 }
 
 export async function canUseFeature(tenantId: string, featureKey: string): Promise<boolean> {
   const tenant = await getTenantContext(tenantId);
-  if (!tenant || !isOperationalTenant(tenant) || !tenant.subscription) return false;
+  if (!tenant || !isTenantOperationalState(tenant) || !tenant.subscription) return false;
   return tenant.subscription.plan.features.some((feature) => feature.key === featureKey && feature.enabled);
 }
 
@@ -101,7 +71,7 @@ export async function checkPlanLimit(
 ): Promise<{ allowed: boolean; used: number; limit: number }> {
   const tenant = await getTenantContext(tenantId);
   const plan = tenant?.subscription?.plan;
-  if (!tenant || !plan || !isOperationalTenant(tenant)) return { allowed: false, used: 0, limit: 0 };
+  if (!tenant || !plan || !isTenantOperationalState(tenant)) return { allowed: false, used: 0, limit: 0 };
   const used = await countPlanResource(db, tenantId, resource);
   const limit = planLimitForResource(plan, resource);
   return { allowed: used < limit, used, limit };
@@ -118,7 +88,7 @@ export async function withPlanLimit<T>(
       include: { subscription: { include: { plan: true } } },
     });
     const plan = tenant?.subscription?.plan;
-    if (!tenant || !plan || !isOperationalTenant(tenant)) {
+    if (!tenant || !plan || !isTenantOperationalState(tenant)) {
       return { ok: false, error: "An active subscription is required." } as const;
     }
 
