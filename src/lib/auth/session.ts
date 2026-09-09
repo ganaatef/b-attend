@@ -1,14 +1,17 @@
 /**
- * B-Attend session — signed HttpOnly cookie using jose JWT.
+ * B-Attend session — signed HttpOnly browser cookie plus a separately-audienced
+ * native employee bearer token.
  *
  * Session payload: { sub, role, kind, tenantId?, name, email, sessionVersion }
  *   - kind: "platform" | "tenant"
  *   - role: PlatformRole | TenantUserRole
  *   - sessionVersion: bumped to invalidate all sessions
  *
- * Lifetime: 7 days. Tenant sessions are also checked against current tenant +
- * subscription state on every server-side getSession() call so cancellation,
- * suspension, expiry, or past-due state revokes operational access immediately.
+ * Lifetime: 7 days. Browser tenant sessions are also checked against current
+ * tenant + subscription state on every server-side getSession() call so
+ * cancellation, suspension, expiry, or past-due state revokes operational
+ * access immediately. Native tokens are additionally checked by the mobile
+ * auth context on every request.
  */
 
 import { SignJWT, jwtVerify } from "jose";
@@ -19,6 +22,7 @@ import { isTenantOperationalState } from "@/lib/auth/subscription-state";
 const COOKIE_NAME = "battend_session";
 const MAX_AGE_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const SESSION_VERSION = 1;
+const MOBILE_TOKEN_AUDIENCE = "battend-staff-mobile";
 
 function getSecret(): Uint8Array {
   const raw = process.env.SESSION_SECRET;
@@ -69,9 +73,32 @@ async function verify(token: string): Promise<SessionTokenPayload | null> {
     const secret = getSecret();
     const { payload } = await jwtVerify(token, secret);
     const typed = payload as unknown as SessionTokenPayload;
-    if (typed.sessionVersion !== undefined && typed.sessionVersion < SESSION_VERSION) {
-      return null;
-    }
+    if (typed.sessionVersion !== undefined && typed.sessionVersion < SESSION_VERSION) return null;
+    return typed;
+  } catch {
+    return null;
+  }
+}
+
+/** Issues a bearer token for the native employee application, never a browser cookie. */
+export async function createMobileSessionToken(payload: SessionPayload): Promise<string> {
+  const secret = getSecret();
+  return new SignJWT({ ...payload, sessionVersion: SESSION_VERSION, channel: "mobile" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setAudience(MOBILE_TOKEN_AUDIENCE)
+    .setIssuedAt()
+    .setExpirationTime(`${MAX_AGE_SECONDS}s`)
+    .sign(secret);
+}
+
+/** Verifies that a token was issued specifically for B-Attend Staff. */
+export async function verifyMobileSessionToken(token: string): Promise<SessionTokenPayload | null> {
+  try {
+    const secret = getSecret();
+    const { payload } = await jwtVerify(token, secret, { audience: MOBILE_TOKEN_AUDIENCE });
+    if (payload.channel !== "mobile") return null;
+    const typed = payload as unknown as SessionTokenPayload;
+    if (typed.sessionVersion !== undefined && typed.sessionVersion < SESSION_VERSION) return null;
     return typed;
   } catch {
     return null;
@@ -147,28 +174,20 @@ export async function getSessionAllowInactive(): Promise<SessionTokenPayload | n
 
 export async function requireSession(): Promise<SessionTokenPayload> {
   const s = await getSession();
-  if (!s) {
-    throw new Error("UNAUTHENTICATED");
-  }
+  if (!s) throw new Error("UNAUTHENTICATED");
   return s;
 }
 
 export async function requirePlatformRole(...roles: string[]): Promise<SessionTokenPayload> {
   const s = await requireSession();
-  if (s.kind !== "platform") {
-    throw new Error("FORBIDDEN");
-  }
-  if (roles.length > 0 && !roles.includes(s.role)) {
-    throw new Error("FORBIDDEN");
-  }
+  if (s.kind !== "platform") throw new Error("FORBIDDEN");
+  if (roles.length > 0 && !roles.includes(s.role)) throw new Error("FORBIDDEN");
   return s;
 }
 
 export async function requireTenantSession(): Promise<SessionTokenPayload> {
   const s = await requireSession();
-  if (s.kind !== "tenant" || !s.tenantId) {
-    throw new Error("FORBIDDEN");
-  }
+  if (s.kind !== "tenant" || !s.tenantId) throw new Error("FORBIDDEN");
   return s;
 }
 
