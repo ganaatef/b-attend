@@ -1,21 +1,19 @@
 "use client";
 
-/**
- * Tenant action buttons — calls Server Actions via fetch.
- */
+/** Tenant action buttons. */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   activateTrialAction,
-  activateTenantAction,
   suspendTenantAction,
   reactivateTenantAction,
   cancelTenantAction,
   rejectTenantAction,
   impersonateTenantOwnerAction,
 } from "@/app/admin/actions";
+import { activatePaidTenantAction } from "@/app/admin/launch-billing-actions";
 import { CheckCircle2, PauseCircle, PlayCircle, XCircle, UserCog, Hourglass } from "lucide-react";
 import {
   AlertDialog,
@@ -55,7 +53,7 @@ export function TenantActions({ tenantId, status }: { tenantId: string; status: 
           <Button size="sm" onClick={() => run("trial", () => activateTrialAction(tenantId))} disabled={loading === "trial"}>
             <Hourglass className="mr-1.5 h-3.5 w-3.5" /> {t("activateTrial")}
           </Button>
-          <Button size="sm" onClick={() => run("activate", () => activateTenantAction(tenantId))} disabled={loading === "activate"}>
+          <Button size="sm" onClick={() => run("activate", () => activatePaidTenantAction(tenantId))} disabled={loading === "activate"}>
             <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> {t("activatePaid")}
           </Button>
           <AlertDialog>
@@ -83,7 +81,7 @@ export function TenantActions({ tenantId, status }: { tenantId: string; status: 
       )}
 
       {(status === "TRIAL_ACTIVE" || status === "PAST_DUE" || status === "GRACE_PERIOD") && (
-        <Button size="sm" onClick={() => run("activate", () => activateTenantAction(tenantId))} disabled={loading === "activate"}>
+        <Button size="sm" onClick={() => run("activate", () => activatePaidTenantAction(tenantId))} disabled={loading === "activate"}>
           <CheckCircle2 className="mr-1.5 h-3.5 w-3.5" /> {t("activatePaid")}
         </Button>
       )}
