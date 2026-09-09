@@ -1,21 +1,9 @@
 /**
- * In-memory sliding-window rate limiter for Next.js middleware.
+ * Distributed fixed-window rate limiter for Next.js middleware.
  *
- * ⚠️ LIMITATION: this store is in-memory and edge/serverless instances do not
- * share it. On Vercel it is NOT a strong distributed brute-force control — a
- * distributed attacker (multiple IPs/instances/cold starts) can bypass it.
- * Treat it as a cheap per-instance throttle, never as the sole security
- * boundary. Kiosk PIN brute-force protection is NOT here; it is DB-backed on
- * the KioskDevice row (see src/lib/kiosk/kiosk-auth.ts).
- *
- * Per-IP limits:
- * - General routes: 120 req/min
- * - API routes:     60 req/min  
- * - Auth routes:    10 req/min (brute-force protection)
- * - Public API:     30 req/min
- *
- * Uses a simple sliding window with 1-minute buckets.
- * No external dependencies — works in edge/serverless.
+ * Production should set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN so
+ * multiple Vercel instances share counters. Local memory remains a fallback,
+ * not the production security boundary.
  */
 
 interface WindowBucket {
@@ -23,10 +11,15 @@ interface WindowBucket {
   resetAt: number;
 }
 
-const store = new Map<string, WindowBucket>();
+interface RateLimitResult {
+  allowed: boolean;
+  remaining: number;
+  retryAfterMs: number;
+}
 
-// Periodic cleanup every 60s to prevent memory leak
+const store = new Map<string, WindowBucket>();
 let lastCleanup = Date.now();
+
 function cleanup() {
   const now = Date.now();
   if (now - lastCleanup < 60_000) return;
@@ -36,22 +29,23 @@ function cleanup() {
   }
 }
 
-export function checkRateLimit(
-  ip: string,
-  path: string,
-  limit: number,
-  windowMs = 60_000
-): { allowed: boolean; remaining: number; retryAfterMs: number } {
+function categoryForPath(path: string): string {
+  if (
+    path === "/login" ||
+    path === "/signup" ||
+    path === "/forgot-password" ||
+    path === "/reset-password" ||
+    path.startsWith("/api/auth/")
+  ) return "auth";
+  if (path === "/kiosk" || path.startsWith("/kiosk/") || path.startsWith("/api/kiosk/")) return "kiosk";
+  if (path.startsWith("/api/")) return "api";
+  return "general";
+}
+
+function checkRateLimitLocal(ip: string, category: string, limit: number, windowMs: number): RateLimitResult {
   cleanup();
-
-  // Determine category — must match middleware's classification
-  let category = "general";
-  if (path.startsWith("/api/auth/")) category = "auth";
-  else if (path.startsWith("/api/")) category = "api";
-
   const key = `${ip}:${category}`;
   const now = Date.now();
-
   let bucket = store.get(key);
   if (!bucket || now > bucket.resetAt) {
     bucket = { count: 0, resetAt: now + windowMs };
@@ -59,38 +53,80 @@ export function checkRateLimit(
   }
 
   bucket.count++;
-
   if (bucket.count > limit) {
-    return {
-      allowed: false,
-      remaining: 0,
-      retryAfterMs: bucket.resetAt - now,
-    };
+    return { allowed: false, remaining: 0, retryAfterMs: bucket.resetAt - now };
   }
+  return { allowed: true, remaining: limit - bucket.count, retryAfterMs: 0 };
+}
 
-  return {
-    allowed: true,
-    remaining: limit - bucket.count,
-    retryAfterMs: 0,
-  };
+async function checkRateLimitRedis(
+  ip: string,
+  category: string,
+  limit: number,
+  windowMs: number,
+): Promise<RateLimitResult | null> {
+  const endpoint = process.env.UPSTASH_REDIS_REST_URL;
+  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  if (!endpoint || !token) return null;
+
+  const now = Date.now();
+  const windowSeconds = Math.max(1, Math.ceil(windowMs / 1000));
+  const windowId = Math.floor(now / windowMs);
+  const key = `battend:ratelimit:${category}:${windowId}:${ip}`;
+
+  try {
+    const response = await fetch(`${endpoint.replace(/\/$/, "")}/pipeline`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify([
+        ["INCR", key],
+        ["EXPIRE", key, windowSeconds + 5],
+      ]),
+      signal: AbortSignal.timeout(1000),
+    });
+    if (!response.ok) return null;
+
+    const payload = (await response.json()) as Array<{ result?: number | string; error?: string }>;
+    const count = Number(payload[0]?.result);
+    if (!Number.isFinite(count)) return null;
+
+    const windowEndsAt = (windowId + 1) * windowMs;
+    if (count > limit) {
+      return { allowed: false, remaining: 0, retryAfterMs: Math.max(0, windowEndsAt - now) };
+    }
+    return { allowed: true, remaining: Math.max(0, limit - count), retryAfterMs: 0 };
+  } catch {
+    return null;
+  }
+}
+
+export async function checkRateLimit(
+  ip: string,
+  path: string,
+  limit: number,
+  windowMs = 60_000,
+): Promise<RateLimitResult> {
+  const category = categoryForPath(path);
+  return (await checkRateLimitRedis(ip, category, limit, windowMs))
+    ?? checkRateLimitLocal(ip, category, limit, windowMs);
 }
 
 export function getRateLimitHeaders(
   limit: number,
   remaining: number,
-  retryAfterMs: number
+  retryAfterMs: number,
 ): Record<string, string> {
   const headers: Record<string, string> = {
     "X-RateLimit-Limit": String(limit),
     "X-RateLimit-Remaining": String(Math.max(0, remaining)),
   };
-  if (retryAfterMs > 0) {
-    headers["Retry-After"] = String(Math.ceil(retryAfterMs / 1000));
-  }
+  if (retryAfterMs > 0) headers["Retry-After"] = String(Math.ceil(retryAfterMs / 1000));
   return headers;
 }
 
-// Route-specific limits
 export const RATE_LIMITS = {
   general: 120,
   api: 60,
