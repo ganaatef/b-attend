@@ -107,8 +107,8 @@ describe("Tenant isolation security patterns", () => {
   });
 
   describe("rate limiter auth classification", () => {
-    it("auth routes are classified as 'auth' category", () => {
-      const result = checkRateLimit("test-ip", "/api/auth/login", 100, 60_000);
+    it("auth routes are classified as 'auth' category", async () => {
+      const result = await checkRateLimit("test-ip", "/api/auth/login", 100, 60_000);
       expect(result.allowed).toBe(true);
     });
 
