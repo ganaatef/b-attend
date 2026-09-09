@@ -1,9 +1,9 @@
 /**
- * Distributed fixed-window rate limiter for Next.js middleware.
+ * Distributed fixed-window rate limiter for Next.js proxy/middleware.
  *
- * Production should set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN so
- * multiple Vercel instances share counters. Local memory remains a fallback,
- * not the production security boundary.
+ * Production must set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN so
+ * multiple server instances share counters. Local memory is development fallback,
+ * not a production security boundary.
  */
 
 interface WindowBucket {
@@ -29,13 +29,15 @@ function cleanup() {
   }
 }
 
-function categoryForPath(path: string): string {
+export function categoryForRateLimitPath(path: string): "auth" | "kiosk" | "api" | "general" {
   if (
     path === "/login" ||
     path === "/signup" ||
     path === "/forgot-password" ||
     path === "/reset-password" ||
-    path.startsWith("/api/auth/")
+    path === "/accept-invite" ||
+    path.startsWith("/api/auth/") ||
+    path.startsWith("/api/mobile/auth/")
   ) return "auth";
   if (path === "/kiosk" || path.startsWith("/kiosk/") || path.startsWith("/api/kiosk/")) return "kiosk";
   if (path.startsWith("/api/")) return "api";
@@ -109,7 +111,7 @@ export async function checkRateLimit(
   limit: number,
   windowMs = 60_000,
 ): Promise<RateLimitResult> {
-  const category = categoryForPath(path);
+  const category = categoryForRateLimitPath(path);
   return (await checkRateLimitRedis(ip, category, limit, windowMs))
     ?? checkRateLimitLocal(ip, category, limit, windowMs);
 }
