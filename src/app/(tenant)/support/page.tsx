@@ -1,7 +1,7 @@
 /** /support — customer support tickets list + new ticket form */
 import Link from "next/link";
 import { db } from "@/lib/db";
-import { getSession } from "@/lib/auth/session";
+import { getSessionAllowInactive } from "@/lib/auth/session";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
@@ -14,8 +14,8 @@ import { getLocaleCode } from "@/lib/locale";
 export const dynamic = "force-dynamic";
 
 export default async function SupportPage() {
-  const session = await getSession();
-  if (!session?.tenantId) return null;
+  const session = await getSessionAllowInactive();
+  if (!session?.tenantId || session.kind !== "tenant") return null;
   const t = await getTranslations("support");
   const locale = await getLocaleCode();
   const tickets = await db.supportTicket.findMany({
