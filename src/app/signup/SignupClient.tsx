@@ -48,33 +48,40 @@ export function SignupForm({ plans }: { plans: Plan[] }) {
   ];
 
   if (state.ok) {
-    const trialTitle = locale === "ar" ? "التجربة جاهزة" : "Your trial is ready";
+    const selectedPlan = plans.find((plan) => plan.slug === state.planSlug);
+    const isTrial = selectedPlan?.isTrial ?? false;
+    const title = isTrial
+      ? (locale === "ar" ? "التجربة جاهزة" : "Your trial is ready")
+      : (locale === "ar" ? "تم إنشاء طلب الاشتراك" : "Subscription request created");
     const trialCopy = locale === "ar"
       ? "تم تفعيل تجربتك المجانية. يمكنك تسجيل الدخول الآن وبدء إعداد شركتك."
       : "Your free trial is active. You can sign in now and start setting up your company.";
     const paidCopy = locale === "ar"
-      ? "تم إنشاء حسابك وطلب الاشتراك. سيظل الدخول مقفولاً حتى تأكيد الدفع وتفعيل الاشتراك."
-      : "Your account and subscription request were created. Access stays locked until payment is confirmed and the subscription is activated.";
+      ? "تم إنشاء حساب المالك والفاتورة. سجّل الدخول لمراجعة الفاتورة؛ تظل العمليات مقفولة حتى تأكيد الدفع وتفعيل الاشتراك."
+      : "Your owner account and invoice are ready. Sign in to review billing; operational access stays locked until payment is confirmed and the subscription is activated.";
+    const loginLabel = isTrial
+      ? t("goToLogin")
+      : (locale === "ar" ? "مراجعة الفاتورة والتفعيل" : "Review invoice and activation");
 
     return (
       <div className="rounded-lg border border-brand-accent/30 bg-brand-accent/5 p-6 text-center">
-        {state.canLogin
+        {isTrial
           ? <CheckCircle2 className="mx-auto h-10 w-10 text-brand-success" />
           : <Hourglass className="mx-auto h-10 w-10 text-brand-accent" />}
-        <h2 className="mt-3 text-base font-semibold text-foreground">{state.canLogin ? trialTitle : t("successTitle")}</h2>
-        <p className="mt-2 text-sm text-muted-foreground">{state.canLogin ? trialCopy : paidCopy}</p>
+        <h2 className="mt-3 text-base font-semibold text-foreground">{title}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{isTrial ? trialCopy : paidCopy}</p>
         <div className="mt-4 text-xs text-muted-foreground">
           {t("tenantId")}: <code className="rounded bg-muted px-1.5 py-0.5">{state.tenantId}</code>
           {" · "}{t("statusLabel")}: <span className="font-medium text-foreground">{getStatusLabel(state.status, locale)}</span>
+          {state.invoiceNumber ? <><br />{locale === "ar" ? "رقم الفاتورة" : "Invoice"}: <span className="font-medium text-foreground">{state.invoiceNumber}</span></> : null}
         </div>
         <div className="mt-5 flex flex-col items-center justify-center gap-2 sm:flex-row">
-          {state.canLogin ? (
-            <Link href="/login" className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 sm:w-auto">{t("goToLogin")}</Link>
-          ) : (
-            <Link href="/contact" className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 sm:w-auto">
-              {locale === "ar" ? "التواصل لإتمام التفعيل" : "Contact us to complete activation"}
+          <Link href="/login" className="inline-flex w-full items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90 sm:w-auto">{loginLabel}</Link>
+          {!isTrial ? (
+            <Link href="/contact" className="inline-flex w-full items-center justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted sm:w-auto">
+              {locale === "ar" ? "التواصل مع المبيعات" : "Contact sales"}
             </Link>
-          )}
+          ) : null}
           <Link href="/" className="inline-flex w-full items-center justify-center rounded-md border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-muted sm:w-auto">{t("backToHome")}</Link>
         </div>
       </div>
