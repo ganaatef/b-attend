@@ -11,6 +11,7 @@ import { getSession } from "@/lib/auth/session";
 import { evaluatePermission } from "@/lib/auth/authorization";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { haversineMeters, isInsideGeofence, recalculateAttendanceDay } from "@/lib/attendance/engine";
+import { assessAttendanceTrust } from "@/lib/attendance/trust-engine";
 import { validateKioskDevice, verifyKioskCredentials, KIOSK_DEVICE_ERROR } from "@/lib/kiosk/kiosk-auth";
 
 const ClockSchema = z.object({
@@ -18,6 +19,7 @@ const ClockSchema = z.object({
   type: z.enum(["CLOCK_IN", "CLOCK_OUT"]),
   latitude: z.coerce.number().min(-90).max(90),
   longitude: z.coerce.number().min(-180).max(180),
+  accuracyMeters: z.coerce.number().min(0).max(10_000).optional(),
   source: z.enum(["MOBILE_WEB", "KIOSK"]).default("MOBILE_WEB"),
   deviceIdentifier: z.string().optional(),
   deviceSecret: z.string().optional(),
@@ -34,6 +36,7 @@ export async function clockAction(prev: any, formData: FormData) {
       type: formData.get("type"),
       latitude: formData.get("latitude"),
       longitude: formData.get("longitude"),
+      accuracyMeters: formData.get("accuracyMeters") || undefined,
       source: formData.get("source") ?? "MOBILE_WEB",
       deviceIdentifier: formData.get("deviceIdentifier") || undefined,
       deviceSecret: formData.get("deviceSecret") || undefined,
@@ -96,7 +99,7 @@ export async function clockAction(prev: any, formData: FormData) {
       where: { companyId_employeeId_date: { companyId: employee.companyId, employeeId: employee.id, date: today } },
     });
 
-    // Geofence check (skip for kiosk — assume inside)
+    // Geofence check (skip for kiosk — registered kiosk is branch-bound)
     let distanceMeters = 0;
     let insideGeofence = true;
     if (d.source === "MOBILE_WEB" && employee.branch) {
@@ -120,7 +123,18 @@ export async function clockAction(prev: any, formData: FormData) {
       return { ok: false, error: "Cannot clock out without clocking in first." };
     }
 
-    // Create punch
+    const trust = assessAttendanceTrust({
+      source: d.source,
+      insideGeofence,
+      distanceMeters,
+      accuracyMeters: d.source === "MOBILE_WEB" ? (d.accuracyMeters ?? null) : null,
+      deviceTrusted: d.source === "KIOSK" ? true : null,
+    });
+    const needsApproval = !insideGeofence || trust.decision !== "ACCEPT";
+
+    // Create punch. Trust evidence is persisted in the existing deviceInfo
+    // envelope for v1 so the scoring rollout is backwards-compatible. A
+    // dedicated normalized assessment model is the next Trust Engine phase.
     const punch = await db.punch.create({
       data: {
         companyId: employee.companyId,
@@ -134,8 +148,20 @@ export async function clockAction(prev: any, formData: FormData) {
         distanceMeters,
         insideGeofence,
         source: d.source,
-        status: insideGeofence ? "ACCEPTED" : "NEEDS_APPROVAL",
-        userAgent: typeof navigator !== "undefined" ? navigator.userAgent : "server",
+        status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
+        deviceInfo: JSON.stringify({
+          platform: d.source,
+          accuracyMeters: d.accuracyMeters ?? null,
+          trust: {
+            policyVersion: trust.policyVersion,
+            score: trust.score,
+            riskLevel: trust.riskLevel,
+            decision: trust.decision,
+            criticalRisk: trust.criticalRisk,
+            signals: trust.signals,
+          },
+        }),
+        userAgent: "server-action",
       },
     });
 
@@ -150,7 +176,15 @@ export async function clockAction(prev: any, formData: FormData) {
       entityType: "Punch",
       entityId: punch.id,
       reason: d.source === "KIOSK" ? "Kiosk clock" : "Mobile web clock",
-      afterData: { insideGeofence, distanceMeters, status: punch.status },
+      afterData: {
+        insideGeofence,
+        distanceMeters,
+        status: punch.status,
+        trustScore: trust.score,
+        trustRisk: trust.riskLevel,
+        trustDecision: trust.decision,
+        trustPolicyVersion: trust.policyVersion,
+      },
     });
 
     revalidatePath("/clock");
@@ -164,6 +198,13 @@ export async function clockAction(prev: any, formData: FormData) {
       distanceMeters,
       status: punch.status,
       type: d.type,
+      trust: {
+        score: trust.score,
+        riskLevel: trust.riskLevel,
+        decision: trust.decision,
+        reasons: trust.reasons,
+        policyVersion: trust.policyVersion,
+      },
     };
   } catch (e) {
     console.error("[actions] clockAction failed:", e);
