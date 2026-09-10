@@ -8,6 +8,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { evaluatePermission } from "@/lib/auth/authorization";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { haversineMeters, isInsideGeofence, recalculateAttendanceDay } from "@/lib/attendance/engine";
 import { validateKioskDevice, verifyKioskCredentials, KIOSK_DEVICE_ERROR } from "@/lib/kiosk/kiosk-auth";
@@ -48,9 +49,31 @@ export async function clockAction(prev: any, formData: FormData) {
     if (!employee) return { ok: false, error: "Employee not found" };
     if (employee.status !== "ACTIVE") return { ok: false, error: "Employee is not active" };
 
-    // For employee self-clock, ensure employee is clocking themselves
-    if (s.role === "EMPLOYEE" && employee.userId !== s.sub) {
-      return { ok: false, error: "You can only clock for yourself" };
+    // Browser/mobile-web punches are permission-scoped. Employees can clock only
+    // themselves; delegated users need attendance.manage in the employee's
+    // branch/department scope. Kiosk punches use the independent trusted-device
+    // credential path below instead of inheriting the browser user's privileges.
+    if (d.source === "MOBILE_WEB") {
+      const isSelf = employee.userId === s.sub;
+      const decision = await evaluatePermission({
+        companyId: s.tenantId,
+        userId: s.sub,
+        legacyRole: s.role,
+        permission: isSelf ? "attendance.self.clock" : "attendance.manage",
+        scope: {
+          branchId: employee.branchId,
+          departmentId: employee.departmentId,
+          targetUserId: employee.userId,
+        },
+      });
+      if (!decision.allowed) {
+        return {
+          ok: false,
+          error: s.role === "EMPLOYEE" && !isSelf
+            ? "You can only clock for yourself"
+            : "You do not have permission to clock for this employee",
+        };
+      }
     }
 
     // Kiosk clocks must come from a trusted, registered device bound to the
