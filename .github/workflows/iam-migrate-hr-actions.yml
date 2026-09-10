@@ -1,0 +1,65 @@
+name: Guarded HR IAM Migration
+
+on:
+  push:
+    branches: [integration/main-reconcile]
+    paths:
+      - .github/workflows/iam-migrate-hr-actions.yml
+
+permissions:
+  contents: write
+
+env:
+  DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
+  SESSION_SECRET: ci-test-secret-for-build-only-32chars!!
+  NEXT_PUBLIC_DEMO_MODE: "true"
+  RUN_PRISMA_MIGRATIONS: "false"
+
+jobs:
+  migrate-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/main-reconcile
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Apply HR IAM migration
+        run: node scripts/migrate-hr-actions-iam.mjs
+      - name: Verify patch hygiene
+        run: |
+          git diff --check
+          git diff --exit-code -- scripts/migrate-hr-actions-iam.mjs .github/workflows/iam-migrate-hr-actions.yml
+          git diff -- src/app/'(tenant)'/hr/actions.ts
+      - name: Prisma validate
+        run: npx prisma validate
+      - name: Prisma generate
+        run: npx prisma generate
+      - name: TypeScript check
+        run: npm run typecheck
+      - name: Lint
+        run: npm run lint
+      - name: i18n parity
+        run: npm run i18n:check
+      - name: Tests
+        run: npm test
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Build
+        run: npm run build
+      - name: Commit verified HR IAM migration
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/app/'(tenant)'/hr/actions.ts
+          if git diff --cached --quiet; then
+            echo "No HR IAM changes to commit"
+          else
+            git commit -m "feat(authz): enforce IAM capabilities across HR actions"
+            git push origin HEAD:integration/main-reconcile
+          fi
