@@ -5,7 +5,7 @@ export const dynamic = "force-dynamic";
 
 // Keep this aligned with the newest migration required by the running release.
 // Readiness intentionally returns no migration names or database metadata.
-const REQUIRED_MIGRATION = "20260910010000_enterprise_iam_foundation";
+const REQUIRED_MIGRATION = "20260910133000_biometric_identity_foundation";
 
 type MigrationState = {
   finished_at: Date | null;
