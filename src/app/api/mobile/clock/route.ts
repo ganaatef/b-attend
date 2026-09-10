@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireMobileEmployee } from "@/lib/auth/mobile";
@@ -12,6 +13,16 @@ const ClockSchema = z.object({
   accuracyMeters: z.number().min(0).max(10_000).optional(),
   idempotencyKey: z.string().uuid(),
 });
+
+const replaySelect = {
+  id: true,
+  type: true,
+  timestamp: true,
+  status: true,
+  insideGeofence: true,
+  distanceMeters: true,
+  deviceInfo: true,
+} as const;
 
 function dayRange() {
   const start = new Date();
@@ -31,6 +42,19 @@ function storedTrust(deviceInfo: string | null) {
   }
 }
 
+function replayResponse(punch: {
+  id: string;
+  type: string;
+  timestamp: Date;
+  status: string;
+  insideGeofence: boolean;
+  distanceMeters: number | null;
+  deviceInfo: string | null;
+}) {
+  const { deviceInfo, ...response } = punch;
+  return NextResponse.json({ ...response, trust: storedTrust(deviceInfo), idempotentReplay: true });
+}
+
 export async function POST(request: NextRequest) {
   const context = await requireMobileEmployee(request);
   if (!context) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
@@ -40,26 +64,12 @@ export async function POST(request: NextRequest) {
   const input = parsed.data;
   const { start, end } = dayRange();
 
-  const duplicate = await db.punch.findFirst({
-    where: {
-      companyId: context.employee.companyId,
-      employeeId: context.employee.id,
-      deviceInfo: { contains: input.idempotencyKey },
-    },
-    select: {
-      id: true,
-      type: true,
-      timestamp: true,
-      status: true,
-      insideGeofence: true,
-      distanceMeters: true,
-      deviceInfo: true,
-    },
-  });
-  if (duplicate) {
-    const { deviceInfo, ...response } = duplicate;
-    return NextResponse.json({ ...response, trust: storedTrust(deviceInfo), idempotentReplay: true });
-  }
+  // The idempotency key becomes part of the primary key. This turns duplicate
+  // network retries into a database-enforced invariant rather than a best-effort
+  // pre-query, so two simultaneous retries cannot create two punches.
+  const punchId = `mobile:${context.employee.id}:${input.idempotencyKey}`;
+  const duplicate = await db.punch.findUnique({ where: { id: punchId }, select: replaySelect });
+  if (duplicate) return replayResponse(duplicate);
 
   const [settings, schedule, lastPunch] = await Promise.all([
     db.companySettings.findUnique({ where: { companyId: context.employee.companyId } }),
@@ -126,24 +136,34 @@ export async function POST(request: NextRequest) {
     trust: persistedTrust,
   });
 
-  const punch = await db.punch.create({
-    data: {
-      companyId: context.employee.companyId,
-      employeeId: context.employee.id,
-      branchId: context.employee.branchId,
-      scheduleId: schedule?.id,
-      type: input.type,
-      timestamp: new Date(),
-      latitude: input.latitude,
-      longitude: input.longitude,
-      distanceMeters,
-      insideGeofence,
-      source: "MOBILE_APP",
-      status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
-      deviceInfo,
-      userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? "B-Attend Staff",
-    },
-  });
+  let punch;
+  try {
+    punch = await db.punch.create({
+      data: {
+        id: punchId,
+        companyId: context.employee.companyId,
+        employeeId: context.employee.id,
+        branchId: context.employee.branchId,
+        scheduleId: schedule?.id,
+        type: input.type,
+        timestamp: new Date(),
+        latitude: input.latitude,
+        longitude: input.longitude,
+        distanceMeters,
+        insideGeofence,
+        source: "MOBILE_APP",
+        status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
+        deviceInfo,
+        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? "B-Attend Staff",
+      },
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
+      const replay = await db.punch.findUnique({ where: { id: punchId }, select: replaySelect });
+      if (replay) return replayResponse(replay);
+    }
+    throw error;
+  }
 
   await Promise.all([
     recalculateAttendanceDay({ employeeId: context.employee.id, date: start }),
