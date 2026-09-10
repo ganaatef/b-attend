@@ -18,7 +18,10 @@ import { getManagedBranchIds } from "@/lib/hr/permissions";
 async function requireTenant() {
   const s = await getSession();
   if (!s || s.kind !== "tenant" || !s.tenantId) throw new Error("FORBIDDEN");
-  return s;
+  // Re-materialize tenantId as a required string so TypeScript carries the
+  // runtime guard across action boundaries instead of widening it back to the
+  // optional session shape.
+  return { ...s, tenantId: s.tenantId };
 }
 
 function isLeaveRequest(type: string) {
