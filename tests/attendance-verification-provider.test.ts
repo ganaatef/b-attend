@@ -15,6 +15,7 @@ afterEach(() => {
 describe("attendance verification provider contract", () => {
   it("defaults to a capability-free provider and never invents verification", async () => {
     vi.stubEnv("ATTENDANCE_VERIFICATION_PROVIDER", "none");
+    vi.stubEnv("ATTENDANCE_BIOMETRIC_PROVIDER", "none");
     const provider = getAttendanceVerificationProvider();
     expect(provider.key).toBe("none");
     expect(provider.capabilities).toEqual([]);
@@ -23,7 +24,9 @@ describe("attendance verification provider contract", () => {
       companyId: "tenant",
       employeeId: "employee",
       userId: "user",
+      challengeId: "challenge-id",
       challenge: "challenge",
+      requiredCapabilities: [],
       evidence: {},
     });
     expect(result.deviceTrusted).toBeNull();
@@ -31,8 +34,15 @@ describe("attendance verification provider contract", () => {
     expect(result.livenessPassed).toBeNull();
   });
 
-  it("fails closed for an unsupported configured provider", () => {
+  it("fails closed for an unsupported configured device provider", () => {
     vi.stubEnv("ATTENDANCE_VERIFICATION_PROVIDER", "unknown-provider");
+    vi.stubEnv("ATTENDANCE_BIOMETRIC_PROVIDER", "none");
+    expect(() => getAttendanceVerificationProvider()).toThrow(AttendanceVerificationProviderConfigurationError);
+  });
+
+  it("fails closed for an unsupported biometric provider", () => {
+    vi.stubEnv("ATTENDANCE_VERIFICATION_PROVIDER", "none");
+    vi.stubEnv("ATTENDANCE_BIOMETRIC_PROVIDER", "unknown-biometric");
     expect(() => getAttendanceVerificationProvider()).toThrow(AttendanceVerificationProviderConfigurationError);
   });
 
