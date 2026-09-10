@@ -1,4 +1,4 @@
-name: Targeted Runtime Security Cleanup
+name: Targeted Runtime Security Overrides
 
 on:
   push:
@@ -16,7 +16,7 @@ env:
   RUN_PRISMA_MIGRATIONS: "false"
 
 jobs:
-  cleanup:
+  overrides:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,10 +29,15 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: Remove unused editor dependencies with vulnerable transitive trees
-        run: npm uninstall @mdxeditor/editor react-syntax-highlighter
-      - name: Block critical production advisories
-        run: npm audit --omit=dev --audit-level=critical
+      - name: Pin patched transitive dependencies
+        run: |
+          npm pkg set 'overrides.deepmerge-ts=^8.0.1'
+          npm pkg set 'overrides.fast-uri=^3.1.6'
+          npm pkg set 'overrides.nanoid=^3.3.18'
+          npm install --package-lock-only
+          npm ci
+      - name: Require zero high or critical production advisories
+        run: npm audit --omit=dev --audit-level=high
       - name: Prisma validate
         run: npx prisma validate
       - name: Prisma generate
@@ -47,7 +52,7 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
-      - name: Commit verified dependency cleanup
+      - name: Commit verified dependency overrides
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -55,6 +60,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No package changes"
           else
-            git commit -m "fix(security): remove unused vulnerable editor dependencies"
+            git commit -m "fix(security): pin patched transitive dependencies"
             git push origin HEAD:integration/main-reconcile
           fi
