@@ -20,6 +20,7 @@ import {
   consumeAttendanceVerificationChallenge,
   validateAttendanceVerificationChallenge,
 } from "@/lib/attendance/verification-challenge";
+import { consumeBiometricVerificationSession } from "@/lib/attendance/biometric-identity";
 
 const VerificationSchema = z.object({
   challengeId: z.string().min(1),
@@ -198,7 +199,9 @@ export async function POST(request: NextRequest) {
         companyId: context.employee.companyId,
         employeeId: context.employee.id,
         userId: context.user.id,
+        challengeId: input.verification.challengeId,
         challenge: input.verification.challenge,
+        requiredCapabilities,
         evidence: {
           deviceIntegrityToken: input.verification.deviceIntegrityToken,
           locationIntegrityToken: input.verification.locationIntegrityToken,
@@ -279,6 +282,15 @@ export async function POST(request: NextRequest) {
           employeeId: context.employee.id,
           userId: context.user.id,
         });
+        if (input.verification.biometricToken) {
+          await consumeBiometricVerificationSession(tx, {
+            id: input.verification.biometricToken,
+            companyId: context.employee.companyId,
+            employeeId: context.employee.id,
+            userId: context.user.id,
+            attendanceChallengeId: input.verification.challengeId,
+          });
+        }
       }
 
       const created = await tx.punch.create({
