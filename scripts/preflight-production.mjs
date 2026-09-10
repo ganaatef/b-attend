@@ -15,6 +15,17 @@ function isBooleanString(value) {
   return /^(?:true|false|1|0|yes|no|on|off)$/i.test(value ?? "");
 }
 
+function parseThreshold(name, fallback) {
+  const raw = process.env[name];
+  if (raw == null || raw === "") return fallback;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0 || value > 100) {
+    failures.push(`${name} must be a number between 0 and 100`);
+    return fallback;
+  }
+  return value;
+}
+
 const databaseUrl = requireEnv("DATABASE_URL", isPostgres);
 requireEnv("DIRECT_URL", isPostgres);
 requireEnv("APP_URL", (value) => /^https:\/\//i.test(value ?? ""));
@@ -37,9 +48,6 @@ if (!["sales_assisted", "self_service"].includes(billingMode)) {
 }
 
 if (billingMode === "self_service") {
-  // Paymob is the only provider for which the current production contract has
-  // explicit credentials and HMAC/webhook verification fields. Refuse to call
-  // another provider "ready" until its adapter and secret contract exist.
   if (paymentProvider !== "paymob") {
     failures.push("Self-service production billing currently requires PAYMENT_PROVIDER='paymob'");
   }
@@ -67,21 +75,17 @@ if (attendanceVerificationProvider === "google_play_integrity") {
     "GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME",
     (value) => /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/.test(value ?? ""),
   );
-
   const serviceAccountJson = requireEnv("GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON");
   if (serviceAccountJson) {
     try {
       const parsed = JSON.parse(serviceAccountJson);
       if (!parsed || typeof parsed !== "object" || !parsed.client_email || !parsed.private_key) {
-        failures.push(
-          "GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON must contain client_email and private_key",
-        );
+        failures.push("GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON must contain client_email and private_key");
       }
     } catch {
       failures.push("GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON must be valid JSON");
     }
   }
-
   requireEnv(
     "GOOGLE_PLAY_INTEGRITY_CERT_SHA256",
     (value) => Boolean(value && value.split(",").map((item) => item.trim()).filter(Boolean).length > 0),
@@ -96,9 +100,29 @@ if (attendanceVerificationProvider === "google_play_integrity") {
     },
   );
 } else {
-  warnings.push(
-    "Attendance verification provider is disabled; device-integrity requirements must remain disabled until a real provider is configured",
-  );
+  warnings.push("Device-integrity verification is disabled; requireDeviceIntegrity must remain off until a real adapter is configured");
+}
+
+const biometricProvider = String(process.env.ATTENDANCE_BIOMETRIC_PROVIDER ?? "none").trim().toLowerCase();
+if (!["none", "aws_rekognition"].includes(biometricProvider)) {
+  failures.push(`ATTENDANCE_BIOMETRIC_PROVIDER='${biometricProvider || "<missing>"}' is not an active production adapter`);
+}
+if (biometricProvider === "aws_rekognition") {
+  requireEnv("AWS_REKOGNITION_REGION", (value) => /^[a-z]{2}(?:-gov)?-[a-z]+-\d$/.test(value ?? ""));
+  requireEnv("AWS_REKOGNITION_ACCESS_KEY_ID", (value) => Boolean(value && value.length >= 16));
+  requireEnv("AWS_REKOGNITION_SECRET_ACCESS_KEY", (value) => Boolean(value && value.length >= 32));
+  requireEnv("AWS_REKOGNITION_COLLECTION_ID", (value) => /^[A-Za-z0-9_.-]{1,255}$/.test(value ?? ""));
+  const liveness = parseThreshold("AWS_REKOGNITION_LIVENESS_THRESHOLD", 90);
+  const face = parseThreshold("AWS_REKOGNITION_FACE_MATCH_THRESHOLD", 90);
+  const duplicate = parseThreshold("AWS_REKOGNITION_DUPLICATE_THRESHOLD", 97);
+  if (duplicate < face) {
+    failures.push("AWS_REKOGNITION_DUPLICATE_THRESHOLD must be >= AWS_REKOGNITION_FACE_MATCH_THRESHOLD");
+  }
+  if (liveness < 50 || face < 50) {
+    warnings.push("Biometric thresholds below 50 are unusually permissive; security review is required before release");
+  }
+} else {
+  warnings.push("Face/Liveness verification is disabled; trustRequireFace and trustRequireLiveness must remain off");
 }
 
 if (process.env.DEMO_SEED_CONFIRM === "true") {
@@ -128,7 +152,8 @@ console.log("===============================");
 console.log(`Billing mode: ${billingMode || "<missing>"}`);
 console.log(`Payment provider: ${paymentProvider || "<missing>"}`);
 console.log(`Email provider: ${emailProvider || "<missing>"}`);
-console.log(`Attendance verification provider: ${attendanceVerificationProvider || "<missing>"}`);
+console.log(`Device verification provider: ${attendanceVerificationProvider || "<missing>"}`);
+console.log(`Biometric provider: ${biometricProvider || "<missing>"}`);
 
 if (failures.length === 0) console.log("PASS: required production configuration is present.");
 else {
