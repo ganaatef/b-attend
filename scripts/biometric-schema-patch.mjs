@@ -15,6 +15,11 @@ function replaceOnce(marker, replacement, label) {
   schema = schema.replace(marker, replacement);
 }
 
+function replaceFirst(marker, replacement, label) {
+  if (!schema.includes(marker)) throw new Error(`Missing ${label} marker`);
+  schema = schema.replace(marker, replacement);
+}
+
 replaceOnce(
 `enum AttendanceTrustReviewStatus {
   NOT_REQUIRED
@@ -54,7 +59,8 @@ enum BiometricSessionStatus {
 "attendance trust review enum",
 );
 
-replaceOnce(
+// This relation pair appears first on Tenant and later on Employee.
+replaceFirst(
 `  attendanceVerificationChallenges AttendanceVerificationChallenge[]
   attendanceDays                   AttendanceDay[]`,
 `  attendanceVerificationChallenges AttendanceVerificationChallenge[]
