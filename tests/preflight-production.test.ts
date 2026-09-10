@@ -25,6 +25,22 @@ function validBaseEnv() {
     PAYMOB_API_KEY: "",
     PAYMOB_INTEGRATION_ID: "",
     PAYMOB_HMAC_SECRET: "",
+    ATTENDANCE_VERIFICATION_PROVIDER: "none",
+    ATTENDANCE_BIOMETRIC_PROVIDER: "none",
+  };
+}
+
+function validAwsBiometricEnv() {
+  return {
+    ATTENDANCE_BIOMETRIC_PROVIDER: "aws_rekognition",
+    AWS_REKOGNITION_REGION: "eu-west-1",
+    AWS_REKOGNITION_ACCESS_KEY_ID: "access-key-at-least-16",
+    AWS_REKOGNITION_SECRET_ACCESS_KEY: "secret-key-that-is-at-least-32-characters",
+    AWS_REKOGNITION_COLLECTION_ID: "b-attend-test",
+    AWS_REKOGNITION_LIVENESS_THRESHOLD: "90",
+    AWS_REKOGNITION_FACE_MATCH_THRESHOLD: "90",
+    AWS_REKOGNITION_DUPLICATE_THRESHOLD: "97",
+    BIOMETRIC_CONSENT_VERSION: "2026-09-10-v1",
   };
 }
 
@@ -88,5 +104,43 @@ describe("production preflight", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("PASS: required production configuration is present");
+  });
+
+  it("allows a complete AWS Face Liveness production contract in a supported region", () => {
+    const result = run({
+      ...validBaseEnv(),
+      BILLING_MODE: "sales_assisted",
+      PAYMENT_PROVIDER: "manual",
+      ...validAwsBiometricEnv(),
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stdout).toContain("Biometric provider: aws_rekognition");
+  });
+
+  it("blocks an AWS region without Face Liveness streaming support", () => {
+    const result = run({
+      ...validBaseEnv(),
+      BILLING_MODE: "sales_assisted",
+      PAYMENT_PROVIDER: "manual",
+      ...validAwsBiometricEnv(),
+      AWS_REKOGNITION_REGION: "me-south-1",
+    });
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("AWS_REKOGNITION_REGION is missing or invalid");
+  });
+
+  it("blocks biometric production mode without a pinned consent policy version", () => {
+    const result = run({
+      ...validBaseEnv(),
+      BILLING_MODE: "sales_assisted",
+      PAYMENT_PROVIDER: "manual",
+      ...validAwsBiometricEnv(),
+      BIOMETRIC_CONSENT_VERSION: "",
+    });
+
+    expect(result.status).toBe(1);
+    expect(`${result.stdout}\n${result.stderr}`).toContain("BIOMETRIC_CONSENT_VERSION is missing or invalid");
   });
 });
