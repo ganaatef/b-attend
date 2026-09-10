@@ -199,3 +199,5 @@ replaceOnce(
 
 fs.writeFileSync(path, source);
 console.log("Applied biometric enrollment/attendance idempotency hardening.");
+
+// trigger: 2026-09-10T15:55Z
