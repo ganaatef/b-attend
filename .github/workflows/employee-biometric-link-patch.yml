@@ -1,0 +1,36 @@
+name: Employee biometric link patch
+
+on:
+  push:
+    branches:
+      - integration/face-liveness
+    paths:
+      - scripts/employee-biometric-link-patch.mjs
+
+permissions:
+  contents: write
+
+jobs:
+  patch-employee-biometric-link:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: integration/face-liveness
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Apply employee profile biometric link patch
+        run: node scripts/employee-biometric-link-patch.mjs
+      - name: Commit employee profile integration
+        run: |
+          if git diff --quiet -- 'src/app/(tenant)/employees/[id]/page.tsx'; then
+            echo "Employee profile already linked"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add 'src/app/(tenant)/employees/[id]/page.tsx'
+          git commit -m "feat(biometrics): link employee profile to biometric identity"
+          git push origin HEAD:integration/face-liveness
