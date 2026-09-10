@@ -1,4 +1,4 @@
-name: Targeted Runtime Security Upgrade
+name: Targeted Runtime Security Cleanup
 
 on:
   push:
@@ -16,7 +16,7 @@ env:
   RUN_PRISMA_MIGRATIONS: "false"
 
 jobs:
-  upgrade:
+  cleanup:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -29,9 +29,9 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      - name: Upgrade directly exposed vulnerable runtime packages
-        run: npm install --save next@16.3.3 sharp@0.35.4 react-syntax-highlighter@16.1.1 @mdxeditor/editor@4.2.3
-      - name: Block remaining critical production advisories
+      - name: Remove unused editor dependencies with vulnerable transitive trees
+        run: npm uninstall @mdxeditor/editor react-syntax-highlighter
+      - name: Block critical production advisories
         run: npm audit --omit=dev --audit-level=critical
       - name: Prisma validate
         run: npx prisma validate
@@ -47,7 +47,7 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
-      - name: Commit verified package upgrade
+      - name: Commit verified dependency cleanup
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -55,6 +55,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "No package changes"
           else
-            git commit -m "fix(security): patch critical runtime dependencies"
+            git commit -m "fix(security): remove unused vulnerable editor dependencies"
             git push origin HEAD:integration/main-reconcile
           fi
