@@ -23,6 +23,6 @@ jobs:
           cache: npm
       - name: Install locked dependencies
         run: npm ci
-      # Public launch gate: production dependency high/critical advisories must be resolved.
+      # Release gate: production dependency high/critical advisories must be zero.
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
