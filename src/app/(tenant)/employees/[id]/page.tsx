@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { evaluatePermission } from "@/lib/auth/authorization";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -41,6 +42,18 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
     include: { branch: true, department: true, jobTitleRef: true, defaultShiftPolicy: true, user: true },
   });
   if (!employee) notFound();
+
+  const biometricAccess = await evaluatePermission({
+    companyId: tid,
+    userId: session.sub,
+    legacyRole: session.role,
+    permission: "biometrics.manage",
+    scope: {
+      branchId: employee.branchId,
+      departmentId: employee.departmentId,
+      targetUserId: employee.user?.id ?? null,
+    },
+  });
 
   const isSelf = session.sub === employee.userId;
   const isBranchManager = role === "BRANCH_MANAGER";
@@ -104,9 +117,18 @@ export default async function EmployeeDetailPage({ params }: { params: Promise<{
         <Link href="/employees" className="text-xs text-muted-foreground hover:text-foreground">{t("backToList")}</Link>
         <h1 className="mt-1 text-lg font-bold text-foreground">{employee.fullName}</h1>
         <p className="text-sm text-muted-foreground">{employee.employeeCode} · {employee.jobTitleRef?.title ?? employee.jobTitle ?? "—"}</p>
-        <div className="mt-2 flex items-center gap-2">
+        <div className="mt-2 flex flex-wrap items-center gap-2">
           <Badge variant={employee.status === "ACTIVE" ? "default" : "destructive"} className={employee.status === "ACTIVE" ? "bg-brand-success text-white border-transparent" : ""}>{getStatusLabel(employee.status, locale)}</Badge>
           <Badge variant="outline">{displayEmploymentType(employee.employmentType, locale)}</Badge>
+          {biometricAccess.allowed && (
+            <Link
+              href={"/employees/" + employee.id + "/biometrics"}
+              className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
+            >
+              <Lock className="h-3.5 w-3.5" />
+              {locale === "ar" ? "الهوية البيومترية" : "Biometric identity"}
+            </Link>
+          )}
         </div>
       </div>
 
