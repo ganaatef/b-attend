@@ -1,4 +1,5 @@
 import { createHash, createHmac } from "node:crypto";
+import { isRekognitionFaceLivenessRegion } from "@/lib/attendance/providers/rekognition-liveness-regions";
 
 const SERVICE = "rekognition";
 const DEFAULT_LIVENESS_THRESHOLD = 90;
@@ -98,6 +99,13 @@ function numericEnv(name: string, fallback: number, min = 0, max = 100): number 
 }
 
 export function loadAwsRekognitionBiometricConfig(): AwsRekognitionBiometricConfig {
+  const region = requiredEnv("AWS_REKOGNITION_REGION");
+  if (!isRekognitionFaceLivenessRegion(region)) {
+    throw new AwsRekognitionBiometricConfigurationError(
+      `AWS_REKOGNITION_REGION does not support Face Liveness: ${region}`,
+    );
+  }
+
   const livenessThreshold = numericEnv("AWS_REKOGNITION_LIVENESS_THRESHOLD", DEFAULT_LIVENESS_THRESHOLD);
   const faceMatchThreshold = numericEnv("AWS_REKOGNITION_FACE_MATCH_THRESHOLD", DEFAULT_FACE_MATCH_THRESHOLD);
   const duplicateThreshold = numericEnv("AWS_REKOGNITION_DUPLICATE_THRESHOLD", DEFAULT_DUPLICATE_THRESHOLD);
@@ -108,7 +116,7 @@ export function loadAwsRekognitionBiometricConfig(): AwsRekognitionBiometricConf
   }
 
   return {
-    region: requiredEnv("AWS_REKOGNITION_REGION"),
+    region,
     accessKeyId: requiredEnv("AWS_REKOGNITION_ACCESS_KEY_ID"),
     secretAccessKey: requiredEnv("AWS_REKOGNITION_SECRET_ACCESS_KEY"),
     sessionToken: env("AWS_REKOGNITION_SESSION_TOKEN") || undefined,
