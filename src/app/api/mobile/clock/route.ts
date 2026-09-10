@@ -5,6 +5,8 @@ import { db } from "@/lib/db";
 import { requireMobileEmployee } from "@/lib/auth/mobile";
 import { haversineMeters, isInsideGeofence, recalculateAttendanceDay } from "@/lib/attendance/engine";
 import { assessAttendanceTrust } from "@/lib/attendance/trust-engine";
+import { attendanceTrustPolicyFromSettings } from "@/lib/attendance/trust-policy";
+import { persistAttendanceTrustAssessment } from "@/lib/attendance/trust-persistence";
 
 const ClockSchema = z.object({
   type: z.enum(["CLOCK_IN", "CLOCK_OUT"]),
@@ -22,6 +24,15 @@ const replaySelect = {
   insideGeofence: true,
   distanceMeters: true,
   deviceInfo: true,
+  trustAssessment: {
+    select: {
+      score: true,
+      riskLevel: true,
+      decision: true,
+      policyVersion: true,
+      reviewStatus: true,
+    },
+  },
 } as const;
 
 function dayRange() {
@@ -42,17 +53,13 @@ function storedTrust(deviceInfo: string | null) {
   }
 }
 
-function replayResponse(punch: {
-  id: string;
-  type: string;
-  timestamp: Date;
-  status: string;
-  insideGeofence: boolean;
-  distanceMeters: number | null;
-  deviceInfo: string | null;
-}) {
-  const { deviceInfo, ...response } = punch;
-  return NextResponse.json({ ...response, trust: storedTrust(deviceInfo), idempotentReplay: true });
+function replayResponse(punch: Prisma.PunchGetPayload<{ select: typeof replaySelect }>) {
+  const { deviceInfo, trustAssessment, ...response } = punch;
+  return NextResponse.json({
+    ...response,
+    trust: trustAssessment ?? storedTrust(deviceInfo),
+    idempotentReplay: true,
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -64,9 +71,8 @@ export async function POST(request: NextRequest) {
   const input = parsed.data;
   const { start, end } = dayRange();
 
-  // The idempotency key becomes part of the primary key. This turns duplicate
-  // network retries into a database-enforced invariant rather than a best-effort
-  // pre-query, so two simultaneous retries cannot create two punches.
+  // The idempotency key becomes part of the primary key. Concurrent network
+  // retries therefore resolve at the database boundary, not by timing luck.
   const punchId = `mobile:${context.employee.id}:${input.idempotencyKey}`;
   const duplicate = await db.punch.findUnique({ where: { id: punchId }, select: replaySelect });
   if (duplicate) {
@@ -111,20 +117,21 @@ export async function POST(request: NextRequest) {
     insideGeofence = isInsideGeofence(distanceMeters, context.employee.branch.geofenceRadius);
   }
 
-  // Trust v1 is server-computed from evidence the API can currently verify.
-  // Face/liveness, mock-location and device-integrity providers plug into the
-  // same deterministic engine later; client assertions are never trusted as
-  // authoritative anti-fraud signals.
+  const trustPolicy = attendanceTrustPolicyFromSettings(settings);
   const trust = assessAttendanceTrust({
     source: "MOBILE_APP",
     insideGeofence,
     distanceMeters,
     accuracyMeters: input.accuracyMeters ?? null,
-  });
+  }, trustPolicy);
 
   const geofenceReviewRequired = !insideGeofence && (settings?.requireApprovalOutsideGeofence ?? true);
-  const trustReviewRequired = trust.criticalRisk || (insideGeofence && trust.decision !== "ACCEPT");
-  const needsApproval = geofenceReviewRequired || trustReviewRequired;
+  const needsApproval = trust.decision === "REVIEW" || geofenceReviewRequired;
+  const punchStatus = trust.decision === "REJECT"
+    ? "REJECTED" as const
+    : needsApproval
+      ? "NEEDS_APPROVAL" as const
+      : "ACCEPTED" as const;
 
   const persistedTrust = {
     policyVersion: trust.policyVersion,
@@ -143,8 +150,9 @@ export async function POST(request: NextRequest) {
   const userAgent = request.headers.get("user-agent")?.slice(0, 500) ?? "B-Attend Staff";
 
   let punch;
+  let approvalRequestId: string | null = null;
   try {
-    punch = await db.$transaction(async (tx) => {
+    const result = await db.$transaction(async (tx) => {
       const created = await tx.punch.create({
         data: {
           id: punchId,
@@ -159,14 +167,23 @@ export async function POST(request: NextRequest) {
           distanceMeters,
           insideGeofence,
           source: "MOBILE_APP",
-          status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
+          status: punchStatus,
           deviceInfo,
           userAgent,
         },
       });
 
-      if (needsApproval) {
-        await tx.approvalRequest.create({
+      await persistAttendanceTrustAssessment(tx, {
+        companyId: context.employee.companyId,
+        punchId: created.id,
+        source: "MOBILE_APP",
+        assessment: trust,
+        reviewStatus: punchStatus === "NEEDS_APPROVAL" ? "PENDING" : "NOT_REQUIRED",
+      });
+
+      let requestId: string | null = null;
+      if (punchStatus === "NEEDS_APPROVAL") {
+        const approval = await tx.approvalRequest.create({
           data: {
             companyId: context.employee.companyId,
             employeeId: context.employee.id,
@@ -189,6 +206,7 @@ export async function POST(request: NextRequest) {
             relatedPunchId: created.id,
           },
         });
+        requestId = approval.id;
       }
 
       await tx.auditLog.create({
@@ -209,13 +227,15 @@ export async function POST(request: NextRequest) {
             trustRisk: trust.riskLevel,
             trustDecision: trust.decision,
             trustPolicyVersion: trust.policyVersion,
-            approvalCreated: needsApproval,
+            approvalRequestId: requestId,
           }),
         },
       });
 
-      return created;
+      return { created, requestId };
     });
+    punch = result.created;
+    approvalRequestId = result.requestId;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const replay = await db.punch.findUnique({ where: { id: punchId }, select: replaySelect });
@@ -238,13 +258,15 @@ export async function POST(request: NextRequest) {
     status: punch.status,
     insideGeofence,
     distanceMeters,
+    approvalRequestId,
     trust: {
       score: trust.score,
       riskLevel: trust.riskLevel,
       decision: trust.decision,
       reasons: trust.reasons,
       policyVersion: trust.policyVersion,
+      reviewStatus: punchStatus === "NEEDS_APPROVAL" ? "PENDING" : "NOT_REQUIRED",
     },
-    approvalRequired: needsApproval,
+    approvalRequired: punchStatus === "NEEDS_APPROVAL",
   }, { status: 201 });
 }
