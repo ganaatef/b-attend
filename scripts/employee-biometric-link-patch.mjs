@@ -46,7 +46,7 @@ replaceOnce(
           <Badge variant="outline">{displayEmploymentType(employee.employmentType, locale)}</Badge>
           {biometricAccess.allowed && (
             <Link
-              href={\`/employees/${employee.id}/biometrics\`}
+              href={"/employees/" + employee.id + "/biometrics"}
               className="inline-flex items-center gap-1 rounded-md border border-border bg-card px-2.5 py-1 text-xs font-medium text-foreground hover:bg-muted"
             >
               <Lock className="h-3.5 w-3.5" />
@@ -60,4 +60,4 @@ replaceOnce(
 fs.writeFileSync(path, source);
 console.log("Linked employee profile to scoped biometric identity management.");
 
-// trigger 2026-09-10T16:01Z
+// trigger 2026-09-10T16:04Z
