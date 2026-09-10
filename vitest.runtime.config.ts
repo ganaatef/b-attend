@@ -7,7 +7,7 @@ export default defineConfig({
     environment: "node",
     include: ["tests/runtime/**/*.test.ts"],
     exclude: [],
-    timeout: 30_000,
+    testTimeout: 30_000,
     hookTimeout: 30_000,
     fileParallelism: false,
   },
