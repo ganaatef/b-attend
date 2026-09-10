@@ -14,8 +14,12 @@ function errorResponse(error: BiometricIdentityError) {
   switch (error.code) {
     case "BIOMETRIC_CONSENT_REQUIRED":
       return NextResponse.json({ error: error.code }, { status: 422 });
+    case "BIOMETRIC_CONSENT_OUTDATED":
+      return NextResponse.json({ error: error.code }, { status: 409 });
     case "BIOMETRIC_ENROLLMENT_NOT_REQUESTED":
       return NextResponse.json({ error: error.code }, { status: 409 });
+    case "BIOMETRIC_CONSENT_CONFIG_MISSING":
+    case "BIOMETRIC_CONSENT_CONFIG_INVALID":
     case "BIOMETRIC_PROVIDER_UNAVAILABLE":
     case "BIOMETRIC_PROVIDER_MISCONFIGURED":
     case "BIOMETRIC_PROVIDER_FAILED":
