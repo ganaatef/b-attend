@@ -11,6 +11,10 @@ function isPostgres(value) {
   return /^postgres(?:ql)?:\/\//i.test(value ?? "");
 }
 
+function isBooleanString(value) {
+  return /^(?:true|false|1|0|yes|no|on|off)$/i.test(value ?? "");
+}
+
 const databaseUrl = requireEnv("DATABASE_URL", isPostgres);
 requireEnv("DIRECT_URL", isPostgres);
 requireEnv("APP_URL", (value) => /^https:\/\//i.test(value ?? ""));
@@ -49,6 +53,54 @@ if (billingMode === "self_service") {
   warnings.push(`PAYMENT_PROVIDER='${paymentProvider || "<missing>"}' is not an active production adapter in the current release`);
 }
 
+const attendanceVerificationProvider = String(process.env.ATTENDANCE_VERIFICATION_PROVIDER ?? "none")
+  .trim()
+  .toLowerCase();
+if (!["none", "google_play_integrity"].includes(attendanceVerificationProvider)) {
+  failures.push(
+    `ATTENDANCE_VERIFICATION_PROVIDER='${attendanceVerificationProvider || "<missing>"}' is not an active production adapter`,
+  );
+}
+
+if (attendanceVerificationProvider === "google_play_integrity") {
+  requireEnv(
+    "GOOGLE_PLAY_INTEGRITY_PACKAGE_NAME",
+    (value) => /^[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+$/.test(value ?? ""),
+  );
+
+  const serviceAccountJson = requireEnv("GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON");
+  if (serviceAccountJson) {
+    try {
+      const parsed = JSON.parse(serviceAccountJson);
+      if (!parsed || typeof parsed !== "object" || !parsed.client_email || !parsed.private_key) {
+        failures.push(
+          "GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON must contain client_email and private_key",
+        );
+      }
+    } catch {
+      failures.push("GOOGLE_PLAY_INTEGRITY_SERVICE_ACCOUNT_JSON must be valid JSON");
+    }
+  }
+
+  requireEnv(
+    "GOOGLE_PLAY_INTEGRITY_CERT_SHA256",
+    (value) => Boolean(value && value.split(",").map((item) => item.trim()).filter(Boolean).length > 0),
+  );
+  requireEnv("GOOGLE_PLAY_INTEGRITY_REQUIRE_LICENSED", isBooleanString);
+  requireEnv("GOOGLE_PLAY_INTEGRITY_REQUIRE_STRONG", isBooleanString);
+  requireEnv(
+    "GOOGLE_PLAY_INTEGRITY_MAX_TOKEN_AGE_MS",
+    (value) => {
+      const parsed = Number(value);
+      return Number.isSafeInteger(parsed) && parsed >= 60_000 && parsed <= 900_000;
+    },
+  );
+} else {
+  warnings.push(
+    "Attendance verification provider is disabled; device-integrity requirements must remain disabled until a real provider is configured",
+  );
+}
+
 if (process.env.DEMO_SEED_CONFIRM === "true") {
   failures.push("DEMO_SEED_CONFIRM=true must never be enabled in production");
 }
@@ -76,6 +128,7 @@ console.log("===============================");
 console.log(`Billing mode: ${billingMode || "<missing>"}`);
 console.log(`Payment provider: ${paymentProvider || "<missing>"}`);
 console.log(`Email provider: ${emailProvider || "<missing>"}`);
+console.log(`Attendance verification provider: ${attendanceVerificationProvider || "<missing>"}`);
 
 if (failures.length === 0) console.log("PASS: required production configuration is present.");
 else {
