@@ -13,6 +13,12 @@ import { logTenantEvent } from "@/lib/auth/audit";
 import { markAbsentForPastScheduledDays } from "@/lib/attendance/engine";
 import { ensureSystemRoles, evaluatePermission } from "@/lib/auth/authorization";
 import type { PermissionKey } from "@/lib/auth/permission-catalog";
+import {
+  AttendanceVerificationProviderConfigurationError,
+  getAttendanceVerificationProvider,
+  missingAttendanceVerificationCapabilities,
+  type AttendanceVerificationCapability,
+} from "@/lib/attendance/verification-provider";
 import { inviteUserAction } from "../access/actions";
 
 async function requireTenant() {
@@ -54,6 +60,9 @@ const SettingsSchema = z.object({
   trustReviewBelow: z.coerce.number().int().min(1).max(100),
   trustRejectBelow: z.coerce.number().int().min(0).max(99),
   trustBlockCriticalRisk: z.enum(["true", "false"]).or(z.boolean()),
+  trustRequireDeviceIntegrity: z.enum(["true", "false"]).or(z.boolean()),
+  trustRequireFace: z.enum(["true", "false"]).or(z.boolean()),
+  trustRequireLiveness: z.enum(["true", "false"]).or(z.boolean()),
   biometricRetentionHours: z.coerce.number().int().min(1).max(168),
 });
 
@@ -81,16 +90,60 @@ export async function updateCustomerSettingsAction(prev: any, formData: FormData
       trustReviewBelow: formData.get("trustReviewBelow") ?? "75",
       trustRejectBelow: formData.get("trustRejectBelow") ?? "30",
       trustBlockCriticalRisk: formData.get("trustBlockCriticalRisk") ?? "false",
+      trustRequireDeviceIntegrity: formData.get("trustRequireDeviceIntegrity") ?? "false",
+      trustRequireFace: formData.get("trustRequireFace") ?? "false",
+      trustRequireLiveness: formData.get("trustRequireLiveness") ?? "false",
       biometricRetentionHours: formData.get("biometricRetentionHours") ?? "24",
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     if (parsed.data.trustRejectBelow >= parsed.data.trustReviewBelow) {
       return { ok: false, error: "Trust reject threshold must be lower than the review threshold" };
     }
+
     const d: any = parsed.data;
-    for (const k of ["enableMobileClock", "enableKioskClock", "requireApprovalOutsideGeofence", "requireApprovalOvertime", "allowNoScheduleClockIn", "allowManualRequests", "enableEmployeeSelfService", "enableBranchManagerApprovals", "emailNotifications", "whatsappNotifications", "trustBlockCriticalRisk"]) {
+    for (const k of [
+      "enableMobileClock",
+      "enableKioskClock",
+      "requireApprovalOutsideGeofence",
+      "requireApprovalOvertime",
+      "allowNoScheduleClockIn",
+      "allowManualRequests",
+      "enableEmployeeSelfService",
+      "enableBranchManagerApprovals",
+      "emailNotifications",
+      "whatsappNotifications",
+      "trustBlockCriticalRisk",
+      "trustRequireDeviceIntegrity",
+      "trustRequireFace",
+      "trustRequireLiveness",
+    ]) {
       d[k] = d[k] === true || d[k] === "true";
     }
+
+    const requiredCapabilities: AttendanceVerificationCapability[] = [];
+    if (d.trustRequireDeviceIntegrity) requiredCapabilities.push("DEVICE_INTEGRITY");
+    if (d.trustRequireFace) requiredCapabilities.push("FACE_MATCH");
+    if (d.trustRequireLiveness) requiredCapabilities.push("LIVENESS");
+
+    if (requiredCapabilities.length > 0) {
+      let provider;
+      try {
+        provider = getAttendanceVerificationProvider();
+      } catch (error) {
+        if (error instanceof AttendanceVerificationProviderConfigurationError) {
+          return { ok: false, error: "Attendance verification provider is misconfigured." };
+        }
+        throw error;
+      }
+      const missing = missingAttendanceVerificationCapabilities(provider, requiredCapabilities);
+      if (missing.length > 0) {
+        return {
+          ok: false,
+          error: `Connect a verification provider before requiring: ${missing.join(", ")}`,
+        };
+      }
+    }
+
     await db.companySettings.upsert({
       where: { companyId: s.tenantId },
       update: d,
