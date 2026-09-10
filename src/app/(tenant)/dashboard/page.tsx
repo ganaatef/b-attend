@@ -1,57 +1,101 @@
-/** /dashboard — customer owner/HR dashboard */
+/** /dashboard — customer owner/HR/manager operational dashboard */
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { getPermissionAccessScopes, type PermissionAccessScopes } from "@/lib/auth/authorization";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SubscriptionBadge } from "@/components/badges/StatusBadges";
 import { EmptyState } from "@/components/ui-empty/EmptyState";
 import { Users, Building2, CalendarClock, CheckCircle2, AlertCircle, Clock, FileBarChart } from "lucide-react";
 import { getTranslations, getLocale } from "next-intl/server";
 import { employeeDisplayName } from "@/lib/employee-display";
-import { getManagedBranchIds } from "@/lib/hr/permissions";
 
 export const dynamic = "force-dynamic";
+
+function hasAnyScope(scopes: PermissionAccessScopes) {
+  return scopes.tenant || scopes.self || scopes.branchIds.length > 0 || scopes.departmentIds.length > 0;
+}
+
+function employeeScopeFilter(scopes: PermissionAccessScopes, userId: string): any {
+  if (scopes.tenant) return {};
+  const or: any[] = [];
+  if (scopes.branchIds.length > 0) or.push({ branchId: { in: scopes.branchIds } });
+  if (scopes.departmentIds.length > 0) or.push({ departmentId: { in: scopes.departmentIds } });
+  if (scopes.self) or.push({ userId });
+  return or.length > 0 ? { OR: or } : { id: "__no_access__" };
+}
+
+function employeeRelationScopeFilter(scopes: PermissionAccessScopes, userId: string): any {
+  if (scopes.tenant) return {};
+  const or: any[] = [];
+  if (scopes.branchIds.length > 0) or.push({ branchId: { in: scopes.branchIds } });
+  if (scopes.departmentIds.length > 0) or.push({ employee: { departmentId: { in: scopes.departmentIds } } });
+  if (scopes.self) or.push({ employee: { userId } });
+  return or.length > 0 ? { OR: or } : { id: "__no_access__" };
+}
 
 export default async function DashboardPage() {
   const session = await getSession();
   if (!session?.tenantId || session.kind !== "tenant") return null;
-  if (session.role === "EMPLOYEE") return null;
   const tid = session.tenantId;
 
   const t = await getTranslations("dashboard");
   const tSub = await getTranslations("subscription");
   const locale = await getLocale();
 
-  const isBranchManager = session.role === "BRANCH_MANAGER";
-  const managedBranchIds = isBranchManager ? await getManagedBranchIds(session.sub, tid) : [];
+  const [employeeScopes, scheduleScopes, attendanceScopes, approvalScopes] = await Promise.all([
+    getPermissionAccessScopes({ companyId: tid, userId: session.sub, legacyRole: session.role, permission: "employees.view" }),
+    getPermissionAccessScopes({ companyId: tid, userId: session.sub, legacyRole: session.role, permission: "schedules.team.view" }),
+    getPermissionAccessScopes({ companyId: tid, userId: session.sub, legacyRole: session.role, permission: "attendance.team.view" }),
+    getPermissionAccessScopes({ companyId: tid, userId: session.sub, legacyRole: session.role, permission: "attendance.approve" }),
+  ]);
 
-  const branchScope = isBranchManager ? { in: managedBranchIds } : undefined;
-  const empBranchFilter = isBranchManager ? { branchId: { in: managedBranchIds } } : {};
+  // Employee self-service identities do not receive this managerial dashboard.
+  if (![employeeScopes, scheduleScopes, attendanceScopes, approvalScopes].some(hasAnyScope)) return null;
+
+  const employeeFilter = employeeScopeFilter(employeeScopes, session.sub);
+  const scheduleFilter = employeeRelationScopeFilter(scheduleScopes, session.sub);
+  const attendanceFilter = employeeRelationScopeFilter(attendanceScopes, session.sub);
+  const approvalFilter = employeeRelationScopeFilter(approvalScopes, session.sub);
 
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
 
   const [
-    employees, branches, departments, policies, schedulesToday, punchesToday,
+    employees, visibleEmployees, policies, schedulesToday, punchesToday,
     pendingApprovals, recentExceptions, tenant, subscription, currentUser,
   ] = await Promise.all([
-    db.employee.count({ where: { companyId: tid, deletedAt: null, status: "ACTIVE", ...empBranchFilter } }),
-    isBranchManager ? Promise.resolve(managedBranchIds.length) : db.branch.count({ where: { companyId: tid, deletedAt: null } }),
-    isBranchManager ? Promise.resolve(0) : db.department.count({ where: { companyId: tid } }),
+    db.employee.count({ where: { companyId: tid, deletedAt: null, status: "ACTIVE", ...employeeFilter } }),
+    db.employee.findMany({
+      where: { companyId: tid, deletedAt: null, status: "ACTIVE", ...employeeFilter },
+      select: { branchId: true, departmentId: true },
+    }),
     db.shiftPolicy.count({ where: { companyId: tid } }),
-    db.schedule.count({ where: { companyId: tid, date: { gte: today, lt: tomorrow }, ...(branchScope ? { branchId: branchScope } : {}) } }),
-    db.punch.count({ where: { companyId: tid, timestamp: { gte: today }, ...empBranchFilter } }),
-    db.approvalRequest.count({ where: { companyId: tid, status: "PENDING" } }),
-    db.punch.findMany({ where: { companyId: tid, insideGeofence: false, ...empBranchFilter }, include: { employee: true, branch: true }, take: 5, orderBy: { timestamp: "desc" } }),
+    db.schedule.count({ where: { companyId: tid, date: { gte: today, lt: tomorrow }, ...scheduleFilter } }),
+    db.punch.count({ where: { companyId: tid, timestamp: { gte: today, lt: tomorrow }, ...attendanceFilter } }),
+    db.approvalRequest.count({ where: { companyId: tid, status: "PENDING", ...approvalFilter } }),
+    db.punch.findMany({
+      where: {
+        companyId: tid,
+        timestamp: { gte: today, lt: tomorrow },
+        status: "NEEDS_APPROVAL",
+        ...attendanceFilter,
+      },
+      include: { employee: true, branch: true },
+      take: 5,
+      orderBy: { timestamp: "desc" },
+    }),
     db.tenant.findUnique({ where: { id: tid } }),
     db.subscription.findUnique({ where: { tenantId: tid }, include: { plan: true } }),
     db.user.findUnique({ where: { id: session.sub } }),
   ]);
 
+  const branches = new Set(visibleEmployees.map((employee) => employee.branchId).filter(Boolean)).size;
+  const departments = new Set(visibleEmployees.map((employee) => employee.departmentId).filter(Boolean)).size;
   const displayName = locale === "ar" ? (currentUser?.name || session.name) : session.name;
 
   const cards = [
-    { label: t("activeEmployees"), value: employees, icon: Users, sub: `${branches} ${t("branches")}${!isBranchManager ? ` · ${departments} ${t("depts")}` : ""}` },
+    { label: t("activeEmployees"), value: employees, icon: Users, sub: `${branches} ${t("branches")} · ${departments} ${t("depts")}` },
     { label: t("scheduledToday"), value: schedulesToday, icon: CalendarClock, sub: `${policies} ${t("shiftPolicies")}` },
     { label: t("clockActionsToday"), value: punchesToday, icon: Clock, sub: t("punchesRecorded") },
     { label: t("pendingApprovals"), value: pendingApprovals, icon: AlertCircle, sub: t("awaitingReview"), highlight: pendingApprovals > 0 },
@@ -103,7 +147,11 @@ export default async function DashboardPage() {
                       <p className="font-medium text-foreground">{employeeDisplayName(p.employee, locale)}</p>
                       <p className="text-xs text-muted-foreground">{p.branch?.name}</p>
                     </div>
-                    <span className="text-xs text-amber-700">{p.distanceMeters}m</span>
+                    <span className="text-xs text-amber-700">
+                      {p.insideGeofence
+                        ? (locale === "ar" ? "يحتاج مراجعة الثقة" : "Trust review")
+                        : `${p.distanceMeters ?? 0}m`}
+                    </span>
                   </div>
                 ))}
               </div>
