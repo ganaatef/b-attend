@@ -35,6 +35,9 @@ export function CustomerSettingsForm({ settings }: { settings: CompanySettings |
         <div><Label htmlFor="defaultGeofenceRadius">{t("geofenceRadius")}</Label><Input id="defaultGeofenceRadius" name="defaultGeofenceRadius" type="number" min={50} max={2000} defaultValue={s.defaultGeofenceRadius ?? 150} /></div>
         <div><Label htmlFor="defaultGraceMinutes">{t("graceMinutes")}</Label><Input id="defaultGraceMinutes" name="defaultGraceMinutes" type="number" min={0} max={120} defaultValue={s.defaultGraceMinutes ?? 10} /></div>
         <div><Label htmlFor="defaultOvertimeThresholdMinutes">{t("overtimeThreshold")}</Label><Input id="defaultOvertimeThresholdMinutes" name="defaultOvertimeThresholdMinutes" type="number" min={0} max={1440} defaultValue={s.defaultOvertimeThresholdMinutes ?? 480} /></div>
+        <div><Label htmlFor="trustReviewBelow">{t("trustReviewBelow")}</Label><Input id="trustReviewBelow" name="trustReviewBelow" type="number" min={1} max={100} defaultValue={s.trustReviewBelow ?? 75} /></div>
+        <div><Label htmlFor="trustRejectBelow">{t("trustRejectBelow")}</Label><Input id="trustRejectBelow" name="trustRejectBelow" type="number" min={0} max={99} defaultValue={s.trustRejectBelow ?? 30} /></div>
+        <div><Label htmlFor="biometricRetentionHours">{t("biometricRetentionHours")}</Label><Input id="biometricRetentionHours" name="biometricRetentionHours" type="number" min={1} max={168} defaultValue={s.biometricRetentionHours ?? 24} /></div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
@@ -47,6 +50,7 @@ export function CustomerSettingsForm({ settings }: { settings: CompanySettings |
           { key: "allowManualRequests", label: t("allowManualRequests"), def: true },
           { key: "enableEmployeeSelfService", label: t("enableEmployeeSelfService"), def: true },
           { key: "enableBranchManagerApprovals", label: t("enableBranchManagerApprovals"), def: true },
+          { key: "trustBlockCriticalRisk", label: t("trustBlockCriticalRisk"), def: false },
           { key: "emailNotifications", label: `${t("emailNotifications")} (Coming soon)`, def: true },
           { key: "whatsappNotifications", label: `${t("whatsappNotifications")} (Coming soon)`, def: false },
         ].map((f) => (
@@ -55,6 +59,10 @@ export function CustomerSettingsForm({ settings }: { settings: CompanySettings |
             <Label htmlFor={f.key} className="text-sm">{f.label}</Label>
           </div>
         ))}
+      </div>
+
+      <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+        {t("trustProviderNotice")}
       </div>
 
       {state.error && <p className="text-xs text-destructive">{state.error}</p>}

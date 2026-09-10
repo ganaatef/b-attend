@@ -171,6 +171,21 @@ async function makeTrustReview() {
       deviceInfo: JSON.stringify({ trust: { score: 62, riskLevel: "MEDIUM", decision: "REVIEW", policyVersion: "trust-v1.0" } }),
     },
   });
+  await db.attendanceTrustAssessment.create({
+    data: {
+      companyId: tenantId,
+      punchId: punch.id,
+      policyVersion: "trust-v1.0",
+      score: 62,
+      riskLevel: "MEDIUM",
+      decision: "REVIEW",
+      criticalRisk: false,
+      source: "MOBILE_APP",
+      signalsJson: "[]",
+      reasonsJson: "[]",
+      reviewStatus: "PENDING",
+    },
+  });
   const request = await db.approvalRequest.create({
     data: {
       companyId: tenantId,
@@ -200,8 +215,11 @@ describe("Trust review approval lifecycle", () => {
     expect(result.ok).toBe(true);
     const updatedPunch = await db.punch.findUnique({ where: { id: punch.id } });
     const updatedRequest = await db.approvalRequest.findUnique({ where: { id: request.id } });
+    const assessment = await db.attendanceTrustAssessment.findUnique({ where: { punchId: punch.id } });
     expect(updatedPunch?.status).toBe("ACCEPTED");
     expect(updatedRequest?.status).toBe("APPROVED");
+    expect(assessment?.reviewStatus).toBe("APPROVED");
+    expect(assessment?.reviewedById).toBe(managerUserId);
   });
 
   it("rejection resolves the related punch to REJECTED", async () => {
@@ -217,7 +235,10 @@ describe("Trust review approval lifecycle", () => {
     expect(result.ok).toBe(true);
     const updatedPunch = await db.punch.findUnique({ where: { id: punch.id } });
     const updatedRequest = await db.approvalRequest.findUnique({ where: { id: request.id } });
+    const assessment = await db.attendanceTrustAssessment.findUnique({ where: { punchId: punch.id } });
     expect(updatedPunch?.status).toBe("REJECTED");
     expect(updatedRequest?.status).toBe("REJECTED");
+    expect(assessment?.reviewStatus).toBe("REJECTED");
+    expect(assessment?.reviewNotes).toBe("Risk evidence not accepted");
   });
 });

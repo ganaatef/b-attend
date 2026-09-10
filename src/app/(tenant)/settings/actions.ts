@@ -44,6 +44,10 @@ const SettingsSchema = z.object({
   enableBranchManagerApprovals: z.enum(["true", "false"]).or(z.boolean()),
   emailNotifications: z.enum(["true", "false"]).or(z.boolean()),
   whatsappNotifications: z.enum(["true", "false"]).or(z.boolean()),
+  trustReviewBelow: z.coerce.number().int().min(1).max(100),
+  trustRejectBelow: z.coerce.number().int().min(0).max(99),
+  trustBlockCriticalRisk: z.enum(["true", "false"]).or(z.boolean()),
+  biometricRetentionHours: z.coerce.number().int().min(1).max(168),
 });
 
 export async function updateCustomerSettingsAction(prev: any, formData: FormData) {
@@ -67,10 +71,17 @@ export async function updateCustomerSettingsAction(prev: any, formData: FormData
       enableBranchManagerApprovals: formData.get("enableBranchManagerApprovals") ?? "true",
       emailNotifications: formData.get("emailNotifications") ?? "true",
       whatsappNotifications: formData.get("whatsappNotifications") ?? "false",
+      trustReviewBelow: formData.get("trustReviewBelow") ?? "75",
+      trustRejectBelow: formData.get("trustRejectBelow") ?? "30",
+      trustBlockCriticalRisk: formData.get("trustBlockCriticalRisk") ?? "false",
+      biometricRetentionHours: formData.get("biometricRetentionHours") ?? "24",
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
+    if (parsed.data.trustRejectBelow >= parsed.data.trustReviewBelow) {
+      return { ok: false, error: "Trust reject threshold must be lower than the review threshold" };
+    }
     const d: any = parsed.data;
-    for (const k of ["enableMobileClock", "enableKioskClock", "requireApprovalOutsideGeofence", "requireApprovalOvertime", "allowNoScheduleClockIn", "allowManualRequests", "enableEmployeeSelfService", "enableBranchManagerApprovals", "emailNotifications", "whatsappNotifications"]) {
+    for (const k of ["enableMobileClock", "enableKioskClock", "requireApprovalOutsideGeofence", "requireApprovalOvertime", "allowNoScheduleClockIn", "allowManualRequests", "enableEmployeeSelfService", "enableBranchManagerApprovals", "emailNotifications", "whatsappNotifications", "trustBlockCriticalRisk"]) {
       d[k] = d[k] === true || d[k] === "true";
     }
     await db.companySettings.upsert({

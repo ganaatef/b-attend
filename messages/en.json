@@ -862,7 +862,12 @@
     "markAbsentTitle": "Mark absent for past days",
     "markAbsentDesc": "Finds scheduled shifts in the past where the employee never clocked in and marks them ABSENT. Useful at month-end before payroll.",
     "runMarkAbsent": "Run mark-absent",
-    "savedMessage": "Settings saved."
+    "savedMessage": "Settings saved.",
+    "trustReviewBelow": "Review punches below trust score",
+    "trustRejectBelow": "Reject threshold (strict mode)",
+    "biometricRetentionHours": "Biometric evidence retention (hours)",
+    "trustBlockCriticalRisk": "Block critical-risk attendance automatically",
+    "trustProviderNotice": "Face and liveness requirements stay disabled until a verified biometric provider is connected. Current policy uses server-verifiable location and device evidence only."
   },
   "billing": {
     "title": "Billing",

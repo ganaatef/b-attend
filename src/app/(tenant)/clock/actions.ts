@@ -12,6 +12,8 @@ import { evaluatePermission } from "@/lib/auth/authorization";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { haversineMeters, isInsideGeofence, recalculateAttendanceDay } from "@/lib/attendance/engine";
 import { assessAttendanceTrust } from "@/lib/attendance/trust-engine";
+import { attendanceTrustPolicyFromSettings } from "@/lib/attendance/trust-policy";
+import { persistAttendanceTrustAssessment } from "@/lib/attendance/trust-persistence";
 import { validateKioskDevice, verifyKioskCredentials, KIOSK_DEVICE_ERROR } from "@/lib/kiosk/kiosk-auth";
 
 const ClockSchema = z.object({
@@ -90,9 +92,12 @@ export async function clockAction(prev: any, formData: FormData) {
 
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
-    const schedule = await db.schedule.findUnique({
-      where: { companyId_employeeId_date: { companyId: employee.companyId, employeeId: employee.id, date: today } },
-    });
+    const [schedule, settings] = await Promise.all([
+      db.schedule.findUnique({
+        where: { companyId_employeeId_date: { companyId: employee.companyId, employeeId: employee.id, date: today } },
+      }),
+      db.companySettings.findUnique({ where: { companyId: employee.companyId } }),
+    ]);
 
     let distanceMeters = 0;
     let insideGeofence = true;
@@ -114,14 +119,21 @@ export async function clockAction(prev: any, formData: FormData) {
       return { ok: false, error: "Cannot clock out without clocking in first." };
     }
 
+    const trustPolicy = attendanceTrustPolicyFromSettings(settings);
     const trust = assessAttendanceTrust({
       source: d.source,
       insideGeofence,
       distanceMeters,
       accuracyMeters: d.source === "MOBILE_WEB" ? (d.accuracyMeters ?? null) : null,
       deviceTrusted: d.source === "KIOSK" ? true : null,
-    });
-    const needsApproval = !insideGeofence || trust.decision !== "ACCEPT";
+    }, trustPolicy);
+    const geofenceReviewRequired = !insideGeofence && (settings?.requireApprovalOutsideGeofence ?? true);
+    const needsApproval = trust.decision === "REVIEW" || geofenceReviewRequired;
+    const punchStatus = trust.decision === "REJECT"
+      ? "REJECTED" as const
+      : needsApproval
+        ? "NEEDS_APPROVAL" as const
+        : "ACCEPTED" as const;
     const persistedTrust = {
       policyVersion: trust.policyVersion,
       score: trust.score,
@@ -148,7 +160,7 @@ export async function clockAction(prev: any, formData: FormData) {
           distanceMeters,
           insideGeofence,
           source: d.source,
-          status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
+          status: punchStatus,
           deviceInfo: JSON.stringify({
             platform: d.source,
             accuracyMeters: d.accuracyMeters ?? null,
@@ -158,7 +170,15 @@ export async function clockAction(prev: any, formData: FormData) {
         },
       });
 
-      if (needsApproval) {
+      await persistAttendanceTrustAssessment(tx, {
+        companyId: employee.companyId,
+        punchId: created.id,
+        source: d.source,
+        assessment: trust,
+        reviewStatus: punchStatus === "NEEDS_APPROVAL" ? "PENDING" : "NOT_REQUIRED",
+      });
+
+      if (punchStatus === "NEEDS_APPROVAL") {
         await tx.approvalRequest.create({
           data: {
             companyId: employee.companyId,
@@ -205,7 +225,7 @@ export async function clockAction(prev: any, formData: FormData) {
         trustRisk: trust.riskLevel,
         trustDecision: trust.decision,
         trustPolicyVersion: trust.policyVersion,
-        approvalCreated: needsApproval,
+        approvalCreated: punchStatus === "NEEDS_APPROVAL",
       },
     });
 
@@ -229,7 +249,7 @@ export async function clockAction(prev: any, formData: FormData) {
         reasons: trust.reasons,
         policyVersion: trust.policyVersion,
       },
-      approvalRequired: needsApproval,
+      approvalRequired: punchStatus === "NEEDS_APPROVAL",
     };
   } catch (e) {
     console.error("[actions] clockAction failed:", e);

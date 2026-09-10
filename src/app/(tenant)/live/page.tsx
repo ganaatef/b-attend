@@ -81,7 +81,7 @@ export default async function LivePage() {
   const [punches, attendance] = await Promise.all([
     db.punch.findMany({
       where: { companyId: session.tenantId, timestamp: { gte: today, lt: tomorrow }, ...accessFilter },
-      include: { employee: true, branch: true },
+      include: { employee: true, branch: true, trustAssessment: true },
       orderBy: { timestamp: "desc" },
       take: 100,
     }),
@@ -145,7 +145,9 @@ export default async function LivePage() {
               </thead>
               <tbody>
                 {punches.map((p) => {
-                  const trust = parseStoredTrust(p.deviceInfo);
+                  const trust = p.trustAssessment
+                    ? { score: p.trustAssessment.score, riskLevel: p.trustAssessment.riskLevel, decision: p.trustAssessment.decision }
+                    : parseStoredTrust(p.deviceInfo);
                   return (
                     <tr key={p.id} className="border-b border-border/60 last:border-0">
                       <td className="px-4 py-2.5 text-xs text-muted-foreground whitespace-nowrap">{new Date(p.timestamp).toLocaleTimeString()}</td>

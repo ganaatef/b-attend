@@ -228,10 +228,21 @@ export async function decideRequestAction(prev: any, formData: FormData) {
         select: { id: true },
       });
       if (relatedPunch) {
-        await db.punch.update({
-          where: { id: relatedPunch.id },
-          data: { status: decision === "APPROVED" ? "ACCEPTED" : "REJECTED" },
-        });
+        await db.$transaction([
+          db.punch.update({
+            where: { id: relatedPunch.id },
+            data: { status: decision === "APPROVED" ? "ACCEPTED" : "REJECTED" },
+          }),
+          db.attendanceTrustAssessment.updateMany({
+            where: { companyId: s.tenantId, punchId: relatedPunch.id },
+            data: {
+              reviewStatus: decision === "APPROVED" ? "APPROVED" : "REJECTED",
+              reviewedById: s.sub,
+              reviewedAt: new Date(),
+              reviewNotes: managerNotes ?? null,
+            },
+          }),
+        ]);
         await recalculateAttendanceDay({ employeeId: req.employeeId, date: dayStart });
         relatedPunchResolved = true;
       }

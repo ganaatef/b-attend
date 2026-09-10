@@ -107,7 +107,7 @@ export async function recalculateAttendanceDay({ employeeId, date }: RecalcOptio
       }
     }
 
-    const outsideGeofence = punches.some((p) => p.insideGeofence === false);
+    const outsideGeofence = punches.some((p) => p.insideGeofence === false && p.status !== "REJECTED");
     if (outsideGeofence) {
       exceptionFlags.push("OUTSIDE_GEOFENCE");
       requiresApproval = true;
