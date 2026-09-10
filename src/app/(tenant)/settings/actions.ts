@@ -11,18 +11,25 @@ import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { markAbsentForPastScheduledDays } from "@/lib/attendance/engine";
-import { ensureSystemRoles } from "@/lib/auth/authorization";
+import { ensureSystemRoles, evaluatePermission } from "@/lib/auth/authorization";
+import type { PermissionKey } from "@/lib/auth/permission-catalog";
 import { inviteUserAction } from "../access/actions";
 
 async function requireTenant() {
   const s = await getSession();
   if (!s || s.kind !== "tenant" || !s.tenantId) throw new Error("FORBIDDEN");
-  return s;
+  return { ...s, tenantId: s.tenantId };
 }
 
-async function requireTenantAdmin() {
+async function requireTenantPermission(permission: PermissionKey) {
   const s = await requireTenant();
-  if (s.role !== "COMPANY_OWNER" && s.role !== "HR_ADMIN") throw new Error("FORBIDDEN");
+  const decision = await evaluatePermission({
+    companyId: s.tenantId,
+    userId: s.sub,
+    legacyRole: s.role,
+    permission,
+  });
+  if (!decision.allowed) throw new Error(`PERMISSION_DENIED:${permission}`);
   return s;
 }
 
@@ -52,7 +59,7 @@ const SettingsSchema = z.object({
 
 export async function updateCustomerSettingsAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenantAdmin();
+    const s = await requireTenantPermission("company.settings.manage");
     const parsed = SettingsSchema.safeParse({
       industry: formData.get("industry") || undefined,
       timezone: formData.get("timezone"),
@@ -85,11 +92,11 @@ export async function updateCustomerSettingsAction(prev: any, formData: FormData
       d[k] = d[k] === true || d[k] === "true";
     }
     await db.companySettings.upsert({
-      where: { companyId: s.tenantId! },
+      where: { companyId: s.tenantId },
       update: d,
-      create: { companyId: s.tenantId!, ...d },
+      create: { companyId: s.tenantId, ...d },
     });
-    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "SETTINGS_UPDATED", entityType: "CompanySettings" });
+    await logTenantEvent({ companyId: s.tenantId, actorId: s.sub, actorEmail: s.email, action: "SETTINGS_UPDATED", entityType: "CompanySettings" });
     revalidatePath("/settings");
     return { ok: true };
   } catch (e) {
@@ -107,7 +114,7 @@ const TicketSchema = z.object({
 
 export async function createTicketAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenant();
+    const s = await requireTenantPermission("support.use");
     const parsed = TicketSchema.safeParse({
       subject: formData.get("subject"),
       category: formData.get("category") || undefined,
@@ -118,7 +125,7 @@ export async function createTicketAction(prev: any, formData: FormData) {
     const d = parsed.data;
     const ticket = await db.supportTicket.create({
       data: {
-        companyId: s.tenantId!,
+        companyId: s.tenantId,
         subject: d.subject,
         category: d.category,
         message: d.message,
@@ -146,13 +153,13 @@ const TicketReplySchema = z.object({
 
 export async function replyToTicketAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenant();
+    const s = await requireTenantPermission("support.use");
     const parsed = TicketReplySchema.safeParse({
       ticketId: formData.get("ticketId"),
       body: formData.get("body"),
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
-    const ticket = await db.supportTicket.findFirst({ where: { id: parsed.data.ticketId, companyId: s.tenantId! } });
+    const ticket = await db.supportTicket.findFirst({ where: { id: parsed.data.ticketId, companyId: s.tenantId } });
     if (!ticket) return { ok: false, error: "Ticket not found" };
     await db.supportMessage.create({
       data: { ticketId: ticket.id, authorId: s.sub, authorEmail: s.email, authorRole: s.role, body: parsed.data.body, isInternal: false },
@@ -169,9 +176,9 @@ export async function replyToTicketAction(prev: any, formData: FormData) {
 
 export async function runMarkAbsentAction(daysBack: number) {
   try {
-    const s = await requireTenantAdmin();
-    const r = await markAbsentForPastScheduledDays({ companyId: s.tenantId!, daysBack });
-    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "ATTENDANCE_RECALCULATED", reason: `Manual mark-absent daysBack=${daysBack} marked=${r.marked}` });
+    const s = await requireTenantPermission("attendance.manage");
+    const r = await markAbsentForPastScheduledDays({ companyId: s.tenantId, daysBack });
+    await logTenantEvent({ companyId: s.tenantId, actorId: s.sub, actorEmail: s.email, action: "ATTENDANCE_RECALCULATED", reason: `Manual mark-absent daysBack=${daysBack} marked=${r.marked}` });
     revalidatePath("/reports");
     revalidatePath("/dashboard");
     return r;
@@ -196,7 +203,7 @@ const CreateUserSchema = z.object({
 
 export async function createUserAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenantAdmin();
+    const s = await requireTenantPermission("users.invite");
     const parsed = CreateUserSchema.safeParse({
       name: formData.get("name"),
       email: formData.get("email"),
@@ -207,10 +214,10 @@ export async function createUserAction(prev: any, formData: FormData) {
     const d = parsed.data;
     if (d.role === "BRANCH_MANAGER" && !d.branchId) return { ok: false, error: "Branch managers require a branch scope." };
 
-    await ensureSystemRoles(s.tenantId!);
+    await ensureSystemRoles(s.tenantId);
     const roleCode = d.role === "HR_ADMIN" ? "HR_ADMIN" : d.role === "BRANCH_MANAGER" ? "BRANCH_MANAGER" : "EMPLOYEE";
     const role = await db.tenantRole.findUnique({
-      where: { companyId_code: { companyId: s.tenantId!, code: roleCode } },
+      where: { companyId_code: { companyId: s.tenantId, code: roleCode } },
       select: { id: true },
     });
     if (!role) return { ok: false, error: "Access role is unavailable." };
