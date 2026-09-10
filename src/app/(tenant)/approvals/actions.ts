@@ -3,13 +3,14 @@
 /**
  * B-Attend approvals Server Actions — Phase 5.
  *
- * Employee submits request → manager/HR approves/rejects → side effects on AttendanceDay.
+ * Employee submits request → authorized manager/HR approves/rejects → side effects on AttendanceDay.
  */
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { evaluatePermission } from "@/lib/auth/authorization";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { recalculateAttendanceDay } from "@/lib/attendance/engine";
 import { getManagedBranchIds } from "@/lib/hr/permissions";
@@ -20,8 +21,23 @@ async function requireTenant() {
   return s;
 }
 
+function isLeaveRequest(type: string) {
+  return type === "LEAVE_REQUEST";
+}
+
+function requestPermission(type: string, mode: "self" | "manage" | "approve") {
+  if (isLeaveRequest(type)) {
+    if (mode === "self") return "leave.self.request" as const;
+    if (mode === "manage") return "leave.manage" as const;
+    return "leave.approve" as const;
+  }
+  if (mode === "self") return "attendance.self.request" as const;
+  if (mode === "manage") return "attendance.manage" as const;
+  return "attendance.approve" as const;
+}
+
 // ─────────────────────────────────────────────
-// Submit request (employee)
+// Submit request
 // ─────────────────────────────────────────────
 
 const SubmitRequestSchema = z.object({
@@ -30,11 +46,10 @@ const SubmitRequestSchema = z.object({
   branchId: z.string().optional(),
   date: z.string().min(1),
   reason: z.string().min(5, "Provide a clear reason (at least 5 characters)"),
-  // Optional fields per type
   requestedClockIn: z.string().optional(),
   requestedClockOut: z.string().optional(),
-  dateTo: z.string().optional(), // for leave range
-  fromTime: z.string().optional(), // for permission
+  dateTo: z.string().optional(),
+  fromTime: z.string().optional(),
   toTime: z.string().optional(),
 });
 
@@ -56,23 +71,36 @@ export async function submitRequestAction(prev: any, formData: FormData) {
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
 
-    // Verify employee belongs to tenant
-    const employee = await db.employee.findFirst({ where: { id: d.employeeId, companyId: s.tenantId! } });
+    const employee = await db.employee.findFirst({
+      where: { id: d.employeeId, companyId: s.tenantId, deletedAt: null },
+    });
     if (!employee) return { ok: false, error: "Employee not found" };
 
-    // Employees can only submit for themselves
-    if (s.role === "EMPLOYEE" && employee.userId !== s.sub) {
-      return { ok: false, error: "You can only submit requests for yourself" };
+    // Never trust a caller-supplied branch for an employee-scoped request.
+    if (d.branchId && d.branchId !== employee.branchId) {
+      return { ok: false, error: "Employee does not belong to the selected branch" };
     }
 
-    // Branch managers can only submit for employees in their managed branches
-    if (s.role === "BRANCH_MANAGER") {
-      const user = await db.user.findUnique({ where: { id: s.sub } });
-      const managedBranches = await db.branch.findMany({ where: { companyId: s.tenantId!, managerId: user?.id }, select: { id: true } });
-      const managedIds = managedBranches.map(b => b.id);
-      if (!managedIds.includes(employee.branchId!)) {
-        return { ok: false, error: "You can only submit requests for employees in your managed branches" };
-      }
+    const isSelf = employee.userId === s.sub;
+    const permission = requestPermission(d.type, isSelf ? "self" : "manage");
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.sub,
+      legacyRole: s.role,
+      permission,
+      scope: {
+        branchId: employee.branchId,
+        departmentId: employee.departmentId,
+        targetUserId: employee.userId,
+      },
+    });
+    if (!authorization.allowed) {
+      return {
+        ok: false,
+        error: s.role === "EMPLOYEE" && !isSelf
+          ? "You can only submit requests for yourself"
+          : "You do not have permission to submit this request",
+      };
     }
 
     const requestedData: any = {};
@@ -84,9 +112,9 @@ export async function submitRequestAction(prev: any, formData: FormData) {
 
     const req = await db.approvalRequest.create({
       data: {
-        companyId: s.tenantId!,
+        companyId: s.tenantId,
         employeeId: d.employeeId,
-        branchId: d.branchId ?? employee.branchId,
+        branchId: employee.branchId,
         date: new Date(d.date),
         type: d.type,
         reason: d.reason,
@@ -96,7 +124,7 @@ export async function submitRequestAction(prev: any, formData: FormData) {
       },
     });
 
-    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "APPROVAL_SUBMITTED", entityType: "ApprovalRequest", entityId: req.id, reason: d.type });
+    await logTenantEvent({ companyId: s.tenantId, actorId: s.sub, actorEmail: s.email, action: "APPROVAL_SUBMITTED", entityType: "ApprovalRequest", entityId: req.id, reason: d.type });
     revalidatePath("/approvals");
     revalidatePath("/requests");
     return { ok: true };
@@ -107,7 +135,7 @@ export async function submitRequestAction(prev: any, formData: FormData) {
 }
 
 // ─────────────────────────────────────────────
-// Approve / Reject (manager / HR / owner)
+// Approve / Reject
 // ─────────────────────────────────────────────
 
 const DecideSchema = z.object({
@@ -119,9 +147,6 @@ const DecideSchema = z.object({
 export async function decideRequestAction(prev: any, formData: FormData) {
   try {
     const s = await requireTenant();
-    if (s.role !== "COMPANY_OWNER" && s.role !== "HR_ADMIN" && s.role !== "BRANCH_MANAGER") {
-      return { ok: false, error: "Only managers can approve/reject requests" };
-    }
     const parsed = DecideSchema.safeParse({
       requestId: formData.get("requestId"),
       decision: formData.get("decision"),
@@ -130,24 +155,47 @@ export async function decideRequestAction(prev: any, formData: FormData) {
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const { requestId, decision, managerNotes } = parsed.data;
 
-    const req = await db.approvalRequest.findFirst({ where: { id: requestId, companyId: s.tenantId! } });
+    const req = await db.approvalRequest.findFirst({ where: { id: requestId, companyId: s.tenantId } });
     if (!req) return { ok: false, error: "Request not found" };
     if (req.status !== "PENDING") return { ok: false, error: "Request is no longer pending" };
 
-    // Prevent self-approval
+    // Four-eyes rule: nobody may approve or reject their own request.
     if (req.requestedById === s.sub) {
       return { ok: false, error: "You cannot approve or reject your own request" };
     }
 
-    // Branch managers can only decide on their branch
-    if (s.role === "BRANCH_MANAGER") {
-      const managedBranchIds = await getManagedBranchIds(s.sub, s.tenantId!);
-      if (!req.branchId || !managedBranchIds.includes(req.branchId)) {
+    const employee = await db.employee.findFirst({
+      where: { id: req.employeeId, companyId: s.tenantId, deletedAt: null },
+      select: { id: true, branchId: true, departmentId: true, userId: true },
+    });
+    if (!employee) return { ok: false, error: "Employee not found" };
+
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.sub,
+      legacyRole: s.role,
+      permission: requestPermission(req.type, "approve"),
+      scope: {
+        branchId: req.branchId ?? employee.branchId,
+        departmentId: employee.departmentId,
+        targetUserId: employee.userId,
+      },
+    });
+    if (!authorization.allowed) {
+      return { ok: false, error: "You do not have permission to approve or reject this request" };
+    }
+
+    // During IAM migration, legacy branch-manager fallback must retain the old
+    // branch boundary. Provisioned/custom IAM assignments are already scope-
+    // checked by evaluatePermission above.
+    if (authorization.source === "legacy" && s.role === "BRANCH_MANAGER") {
+      const managedBranchIds = await getManagedBranchIds(s.sub, s.tenantId);
+      const requestBranchId = req.branchId ?? employee.branchId;
+      if (!requestBranchId || !managedBranchIds.includes(requestBranchId)) {
         return { ok: false, error: "You can only approve requests for your branch" };
       }
     }
 
-    // Update request
     await db.approvalRequest.update({
       where: { id: requestId },
       data: {
@@ -160,18 +208,17 @@ export async function decideRequestAction(prev: any, formData: FormData) {
       },
     });
 
-    // Side effects on approval
     if (decision === "APPROVED") {
       const dayStart = new Date(req.date!); dayStart.setHours(0, 0, 0, 0);
       if (req.type === "MANUAL_CLOCK_IN") {
         const data = req.requestedData ? JSON.parse(req.requestedData) : {};
         const ts = data.clockIn ? new Date(`${dayStart.toISOString().split("T")[0]}T${data.clockIn}:00`) : new Date();
-        await db.punch.create({ data: { companyId: s.tenantId!, employeeId: req.employeeId, branchId: req.branchId, type: "CLOCK_IN", timestamp: ts, source: "MANUAL_ADJUSTMENT", status: "ACCEPTED", insideGeofence: true, distanceMeters: 0 } });
+        await db.punch.create({ data: { companyId: s.tenantId, employeeId: req.employeeId, branchId: req.branchId, type: "CLOCK_IN", timestamp: ts, source: "MANUAL_ADJUSTMENT", status: "ACCEPTED", insideGeofence: true, distanceMeters: 0 } });
         await recalculateAttendanceDay({ employeeId: req.employeeId, date: dayStart });
       } else if (req.type === "MANUAL_CLOCK_OUT" || req.type === "MISSING_CLOCK_OUT") {
         const data = req.requestedData ? JSON.parse(req.requestedData) : {};
         const ts = data.clockOut ? new Date(`${dayStart.toISOString().split("T")[0]}T${data.clockOut}:00`) : new Date();
-        await db.punch.create({ data: { companyId: s.tenantId!, employeeId: req.employeeId, branchId: req.branchId, type: "CLOCK_OUT", timestamp: ts, source: "MANUAL_ADJUSTMENT", status: "ACCEPTED", insideGeofence: true, distanceMeters: 0 } });
+        await db.punch.create({ data: { companyId: s.tenantId, employeeId: req.employeeId, branchId: req.branchId, type: "CLOCK_OUT", timestamp: ts, source: "MANUAL_ADJUSTMENT", status: "ACCEPTED", insideGeofence: true, distanceMeters: 0 } });
         await recalculateAttendanceDay({ employeeId: req.employeeId, date: dayStart });
       } else if (req.type === "OUTSIDE_GEOFENCE") {
         if (req.relatedPunchId) {
@@ -182,17 +229,17 @@ export async function decideRequestAction(prev: any, formData: FormData) {
         const data = req.requestedData ? JSON.parse(req.requestedData) : {};
         const dateTo = data.dateTo ? new Date(data.dateTo) : dayStart;
         for (let dt = new Date(dayStart); dt <= dateTo; dt.setDate(dt.getDate() + 1)) {
-          await db.schedule.updateMany({ where: { companyId: s.tenantId!, employeeId: req.employeeId, date: new Date(dt) }, data: { status: "LEAVE" } });
+          await db.schedule.updateMany({ where: { companyId: s.tenantId, employeeId: req.employeeId, date: new Date(dt) }, data: { status: "LEAVE" } });
           await db.attendanceDay.upsert({
-            where: { companyId_employeeId_date: { companyId: s.tenantId!, employeeId: req.employeeId, date: new Date(dt) } },
+            where: { companyId_employeeId_date: { companyId: s.tenantId, employeeId: req.employeeId, date: new Date(dt) } },
             update: { status: "LEAVE" },
-            create: { companyId: s.tenantId!, employeeId: req.employeeId, date: new Date(dt), status: "LEAVE" },
+            create: { companyId: s.tenantId, employeeId: req.employeeId, date: new Date(dt), status: "LEAVE" },
           });
         }
       }
     }
 
-    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: decision === "APPROVED" ? "APPROVAL_APPROVED" : "APPROVAL_REJECTED", entityType: "ApprovalRequest", entityId: requestId, reason: req.type });
+    await logTenantEvent({ companyId: s.tenantId, actorId: s.sub, actorEmail: s.email, action: decision === "APPROVED" ? "APPROVAL_APPROVED" : "APPROVAL_REJECTED", entityType: "ApprovalRequest", entityId: requestId, reason: req.type });
     revalidatePath("/approvals");
     revalidatePath(`/approvals/${requestId}`);
     return { ok: true };
@@ -205,14 +252,34 @@ export async function decideRequestAction(prev: any, formData: FormData) {
 export async function cancelRequestAction(requestId: string) {
   try {
     const s = await requireTenant();
-    const req = await db.approvalRequest.findFirst({ where: { id: requestId, companyId: s.tenantId! } });
+    const req = await db.approvalRequest.findFirst({ where: { id: requestId, companyId: s.tenantId } });
     if (!req) return { ok: false, error: "Request not found" };
     if (req.status !== "PENDING") return { ok: false, error: "Only pending requests can be cancelled" };
-    if (req.requestedById !== s.sub && s.role !== "COMPANY_OWNER" && s.role !== "HR_ADMIN") {
-      return { ok: false, error: "You can only cancel your own requests" };
+
+    // The original requester may always withdraw a still-pending request. Any
+    // other user needs scoped team-management permission for the subject.
+    if (req.requestedById !== s.sub) {
+      const employee = await db.employee.findFirst({
+        where: { id: req.employeeId, companyId: s.tenantId, deletedAt: null },
+        select: { branchId: true, departmentId: true, userId: true },
+      });
+      if (!employee) return { ok: false, error: "Employee not found" };
+      const authorization = await evaluatePermission({
+        companyId: s.tenantId,
+        userId: s.sub,
+        legacyRole: s.role,
+        permission: requestPermission(req.type, "manage"),
+        scope: {
+          branchId: req.branchId ?? employee.branchId,
+          departmentId: employee.departmentId,
+          targetUserId: employee.userId,
+        },
+      });
+      if (!authorization.allowed) return { ok: false, error: "You do not have permission to cancel this request" };
     }
+
     await db.approvalRequest.update({ where: { id: requestId }, data: { status: "CANCELLED" } });
-    await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "APPROVAL_REJECTED", entityType: "ApprovalRequest", entityId: requestId, reason: "Cancelled by user" });
+    await logTenantEvent({ companyId: s.tenantId, actorId: s.sub, actorEmail: s.email, action: "APPROVAL_REJECTED", entityType: "ApprovalRequest", entityId: requestId, reason: "Cancelled by user" });
     revalidatePath("/approvals");
     revalidatePath("/requests");
     return { ok: true };
