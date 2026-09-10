@@ -17,6 +17,7 @@ export interface AttendanceTrustPolicy {
   reviewBelow: number;
   rejectBelow: number;
   blockCriticalRisk: boolean;
+  requireDeviceIntegrity: boolean;
   requireFace: boolean;
   requireLiveness: boolean;
 }
@@ -44,12 +45,13 @@ export interface AttendanceTrustAssessment {
 }
 
 export const DEFAULT_ATTENDANCE_TRUST_POLICY: AttendanceTrustPolicy = {
-  version: "trust-v1.0",
+  version: "trust-v1.1",
   reviewBelow: 75,
   rejectBelow: 30,
-  // Default policy is deliberately review-first. We do not hard reject an
-  // employee based on a new anti-fraud signal until the tenant opts into it.
+  // Default policy is deliberately review-first. Hard rejection only happens
+  // after a tenant explicitly opts into blocking critical verification risk.
   blockCriticalRisk: false,
+  requireDeviceIntegrity: false,
   requireFace: false,
   requireLiveness: false,
 };
@@ -104,12 +106,25 @@ export function assessAttendanceTrust(
     add("gps_accuracy", "UNKNOWN", 0, "GPS accuracy is not required for this attendance source");
   }
 
-  if (input.deviceTrusted === true) {
+  // Native-app device integrity is provider-verified. Mobile-web and kiosk have
+  // different trust mechanisms and are never penalized merely because a native
+  // attestation provider is not applicable to them.
+  if (input.source === "MOBILE_APP") {
+    if (input.deviceTrusted === true) {
+      add("device_trust", "PASS", 0, "Native device integrity verification passed");
+    } else if (input.deviceTrusted === false) {
+      add("device_trust", "FAIL", 40, "Native device integrity verification failed", true);
+    } else if (policy.requireDeviceIntegrity) {
+      add("device_trust", "FAIL", 45, "Device integrity verification is required but was not completed", true);
+    } else {
+      add("device_trust", "UNKNOWN", 0, "Native device integrity verification is not required by the current policy");
+    }
+  } else if (input.deviceTrusted === true) {
     add("device_trust", "PASS", 0, "Attendance came from a trusted registered device");
   } else if (input.deviceTrusted === false) {
     add("device_trust", "FAIL", 25, "Device trust verification failed");
   } else {
-    add("device_trust", "UNKNOWN", 0, "Device trust has not been verified yet");
+    add("device_trust", "UNKNOWN", 0, "Native device integrity verification is not applicable to this attendance source");
   }
 
   const mockRisk = input.mockLocationRisk ?? "UNKNOWN";
@@ -125,30 +140,38 @@ export function assessAttendanceTrust(
     add("mock_location", "UNKNOWN", 0, "Mock-location verification is not available yet");
   }
 
-  if (input.faceMatchScore == null) {
-    if (policy.requireFace) {
-      add("face_match", "FAIL", 50, "Face verification is required but was not completed", true);
-    } else {
-      add("face_match", "UNKNOWN", 0, "Face verification is not required by the current policy");
-    }
-  } else if (input.faceMatchScore >= 0.9) {
-    add("face_match", "PASS", 0, "Face match confidence is high");
-  } else if (input.faceMatchScore >= 0.75) {
-    add("face_match", "WARN", 15, "Face match confidence is below the preferred threshold");
+  // Face/liveness policy is currently bound to the native employee app. A
+  // company can continue to operate kiosk/web channels even after enabling
+  // native biometric verification.
+  if (input.source !== "MOBILE_APP") {
+    add("face_match", "UNKNOWN", 0, "Face verification is not applicable to this attendance source");
+    add("liveness", "UNKNOWN", 0, "Liveness verification is not applicable to this attendance source");
   } else {
-    add("face_match", "FAIL", 40, "Face match confidence is low");
-  }
+    if (input.faceMatchScore == null) {
+      if (policy.requireFace) {
+        add("face_match", "FAIL", 50, "Face verification is required but was not completed", true);
+      } else {
+        add("face_match", "UNKNOWN", 0, "Face verification is not required by the current policy");
+      }
+    } else if (input.faceMatchScore >= 0.9) {
+      add("face_match", "PASS", 0, "Face match confidence is high");
+    } else if (input.faceMatchScore >= 0.75) {
+      add("face_match", "WARN", 15, "Face match confidence is below the preferred threshold");
+    } else {
+      add("face_match", "FAIL", 40, "Face match confidence is low");
+    }
 
-  if (input.livenessPassed == null) {
-    if (policy.requireLiveness) {
-      add("liveness", "FAIL", 50, "Liveness verification is required but was not completed", true);
+    if (input.livenessPassed == null) {
+      if (policy.requireLiveness) {
+        add("liveness", "FAIL", 50, "Liveness verification is required but was not completed", true);
+      } else {
+        add("liveness", "UNKNOWN", 0, "Liveness verification is not required by the current policy");
+      }
+    } else if (input.livenessPassed) {
+      add("liveness", "PASS", 0, "Liveness verification passed");
     } else {
-      add("liveness", "UNKNOWN", 0, "Liveness verification is not required by the current policy");
+      add("liveness", "FAIL", 50, "Liveness verification failed", true);
     }
-  } else if (input.livenessPassed) {
-    add("liveness", "PASS", 0, "Liveness verification passed");
-  } else {
-    add("liveness", "FAIL", 50, "Liveness verification failed", true);
   }
 
   if (input.impossibleTravel === true) {
@@ -169,10 +192,6 @@ export function assessAttendanceTrust(
   if (criticalRisk && policy.blockCriticalRisk) decision = "REJECT";
   else if (finalScore < policy.reviewBelow || criticalRisk) decision = "REVIEW";
 
-  // `rejectBelow` is intentionally not an automatic hard reject while
-  // blockCriticalRisk=false. It is retained in the versioned policy contract so
-  // tenants can opt into stricter behavior once device/biometric providers are
-  // deployed and validated.
   if (policy.blockCriticalRisk && finalScore < policy.rejectBelow) decision = "REJECT";
 
   return {
