@@ -10,6 +10,7 @@ type TrustPolicySettings = Pick<
   | "trustReviewBelow"
   | "trustRejectBelow"
   | "trustBlockCriticalRisk"
+  | "trustRequireDeviceIntegrity"
   | "trustRequireFace"
   | "trustRequireLiveness"
 >;
@@ -33,6 +34,7 @@ export function attendanceTrustPolicyFromSettings(
     `review-${reviewBelow}`,
     `reject-${rejectBelow}`,
     `critical-${settings?.trustBlockCriticalRisk ? 1 : 0}`,
+    `device-${settings?.trustRequireDeviceIntegrity ? 1 : 0}`,
     `face-${settings?.trustRequireFace ? 1 : 0}`,
     `live-${settings?.trustRequireLiveness ? 1 : 0}`,
   ].join(":");
@@ -42,6 +44,7 @@ export function attendanceTrustPolicyFromSettings(
     reviewBelow,
     rejectBelow,
     blockCriticalRisk: settings?.trustBlockCriticalRisk ?? DEFAULT_ATTENDANCE_TRUST_POLICY.blockCriticalRisk,
+    requireDeviceIntegrity: settings?.trustRequireDeviceIntegrity ?? DEFAULT_ATTENDANCE_TRUST_POLICY.requireDeviceIntegrity,
     requireFace: settings?.trustRequireFace ?? DEFAULT_ATTENDANCE_TRUST_POLICY.requireFace,
     requireLiveness: settings?.trustRequireLiveness ?? DEFAULT_ATTENDANCE_TRUST_POLICY.requireLiveness,
   };
