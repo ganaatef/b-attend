@@ -23,7 +23,16 @@ function biometricError(error: BiometricIdentityError) {
   if (error.code === "BIOMETRIC_ENROLLMENT_REQUIRED") {
     return NextResponse.json({ error: error.code }, { status: 409 });
   }
-  if (error.code.startsWith("BIOMETRIC_PROVIDER_")) {
+  if (error.code === "BIOMETRIC_RECONSENT_REQUIRED") {
+    return NextResponse.json({ error: error.code }, { status: 428 });
+  }
+  if (error.code === "BIOMETRIC_NEW_CHALLENGE_REQUIRED") {
+    return NextResponse.json({ error: error.code }, { status: 409 });
+  }
+  if (error.code === "BIOMETRIC_SESSION_ALREADY_USED") {
+    return NextResponse.json({ error: error.code }, { status: 409 });
+  }
+  if (error.code.startsWith("BIOMETRIC_CONSENT_CONFIG_") || error.code.startsWith("BIOMETRIC_PROVIDER_")) {
     return NextResponse.json({ error: error.code }, { status: 503 });
   }
   return NextResponse.json({ error: "BIOMETRIC_SESSION_FAILED" }, { status: 400 });
