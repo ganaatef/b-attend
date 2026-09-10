@@ -39,6 +39,16 @@ describe("AWS Rekognition biometric adapter", () => {
     expect(subject).not.toContain("employee-secret-id");
   });
 
+  it("fails closed for a Rekognition region that does not support Face Liveness streaming", () => {
+    vi.stubEnv("AWS_REKOGNITION_REGION", "me-south-1");
+    vi.stubEnv("AWS_REKOGNITION_ACCESS_KEY_ID", "access-key-at-least-16");
+    vi.stubEnv("AWS_REKOGNITION_SECRET_ACCESS_KEY", "secret-key-that-is-at-least-32-characters");
+    vi.stubEnv("AWS_REKOGNITION_COLLECTION_ID", "collection");
+
+    expect(() => loadAwsRekognitionBiometricConfig()).toThrow(AwsRekognitionBiometricConfigurationError);
+    expect(() => loadAwsRekognitionBiometricConfig()).toThrow(/does not support Face Liveness/);
+  });
+
   it("fails closed when duplicate detection is weaker than face matching", () => {
     vi.stubEnv("AWS_REKOGNITION_REGION", "eu-west-1");
     vi.stubEnv("AWS_REKOGNITION_ACCESS_KEY_ID", "key");
@@ -82,7 +92,7 @@ describe("AWS Rekognition biometric adapter", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
-  it("normalizes liveness results and never requests audit images from the response", async () => {
+  it("normalizes liveness results and never propagates audit images", async () => {
     const bytes = Buffer.from("reference-image").toString("base64");
     const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
       SessionId: "12345678-1234-1234-1234-123456789abc",
