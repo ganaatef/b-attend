@@ -12,6 +12,7 @@ const dbMock = vi.hoisted(() => ({
   branch: { findFirst: vi.fn(), findMany: vi.fn() },
   employee: { findFirst: vi.fn(), findUnique: vi.fn() },
   user: { findUnique: vi.fn() },
+  userRoleAssignment: { findMany: vi.fn() },
   shiftPolicy: { findFirst: vi.fn() },
   schedule: { findUnique: vi.fn(), findMany: vi.fn(), create: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
   punch: { findMany: vi.fn(), findFirst: vi.fn(), create: vi.fn() },
@@ -59,6 +60,9 @@ function scheduleForm(overrides: Record<string, string>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Default to the migration-compatible legacy-role fallback. Individual IAM
+  // tests can override this with scoped role assignments when needed.
+  dbMock.userRoleAssignment.findMany.mockResolvedValue([]);
 });
 
 describe("Manager cannot write schedules across branches", () => {
@@ -126,6 +130,7 @@ describe("Employee cannot read or act on another employee", () => {
       status: "ACTIVE",
       userId: "user-different",
       branchId: "branch-a",
+      departmentId: null,
       branch: { latitude: 0, longitude: 0, geofenceRadius: 150 },
     });
 
