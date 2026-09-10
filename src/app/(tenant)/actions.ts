@@ -11,19 +11,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { evaluatePermission, requirePermission } from "@/lib/auth/authorization";
 import { logTenantEvent } from "@/lib/auth/audit";
 import { hashPassword } from "@/lib/auth/password";
 
 async function requireTenant() {
   const s = await getSession();
   if (!s || s.kind !== "tenant" || !s.tenantId) throw new Error("FORBIDDEN");
-  return s;
-}
-
-async function requireTenantAdmin() {
-  const s = await requireTenant();
-  if (s.role !== "COMPANY_OWNER" && s.role !== "HR_ADMIN") throw new Error("FORBIDDEN");
-  return s;
+  return { ...s, tenantId: s.tenantId };
 }
 
 // ─────────────────────────────────────────────
@@ -39,7 +34,7 @@ const OnboardingStep1Schema = z.object({
 
 export async function onboardingStep1Action(prev: any, formData: FormData) {
   try {
-    const s = await requireTenant();
+    const { session: s } = await requirePermission("company.settings.manage");
     const parsed = OnboardingStep1Schema.safeParse({
       industry: formData.get("industry") || undefined,
       timezone: formData.get("timezone"),
@@ -75,7 +70,7 @@ const OnboardingStep2Schema = z.object({
 
 export async function onboardingCreateBranchAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenant();
+    const { session: s } = await requirePermission("branches.manage");
     const parsed = OnboardingStep2Schema.safeParse({
       name: formData.get("name"),
       code: formData.get("code"),
@@ -113,7 +108,7 @@ const OnboardingStep3Schema = z.object({
 
 export async function onboardingCreateDepartmentsAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenant();
+    const { session: s } = await requirePermission("departments.manage");
     const parsed = OnboardingStep3Schema.safeParse({ names: formData.get("names") });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const names = parsed.data.names.split(",").map((n) => n.trim()).filter(Boolean);
@@ -147,7 +142,7 @@ const OnboardingStep4Schema = z.object({
 
 export async function onboardingCreatePolicyAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenant();
+    const { session: s } = await requirePermission("shift_policies.manage");
     const parsed = OnboardingStep4Schema.safeParse({
       name: formData.get("name"),
       startTime: formData.get("startTime"),
@@ -187,7 +182,7 @@ const BranchSchema = z.object({
 
 export async function createBranchAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenantAdmin();
+    const { session: s } = await requirePermission("branches.manage");
     const parsed = BranchSchema.safeParse({
       name: formData.get("name"), code: formData.get("code"),
       address: formData.get("address") || undefined, city: formData.get("city") || undefined, area: formData.get("area") || undefined,
@@ -213,7 +208,7 @@ export async function createBranchAction(prev: any, formData: FormData) {
 
 export async function updateBranchAction(branchId: string, data: Record<string, any>) {
   try {
-    const s = await requireTenantAdmin();
+    const { session: s } = await requirePermission("branches.manage", { branchId });
     const branch = await db.branch.findFirst({ where: { id: branchId, companyId: s.tenantId! } });
     if (!branch) return { ok: false, error: "Branch not found" };
     const allowed = ["name", "code", "address", "city", "area", "latitude", "longitude", "geofenceRadius", "status"];
@@ -234,7 +229,7 @@ export async function updateBranchAction(branchId: string, data: Record<string, 
 
 export async function deleteBranchAction(branchId: string) {
   try {
-    const s = await requireTenantAdmin();
+    const { session: s } = await requirePermission("branches.manage", { branchId });
     const branch = await db.branch.findFirst({ where: { id: branchId, companyId: s.tenantId! } });
     if (!branch) return { ok: false, error: "Branch not found" };
     await db.branch.update({ where: { id: branchId }, data: { deletedAt: new Date(), status: "ARCHIVED" } });
@@ -253,7 +248,7 @@ export async function deleteBranchAction(branchId: string) {
 
 export async function createDepartmentAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenantAdmin();
+    const { session: s } = await requirePermission("departments.manage");
     const name = String(formData.get("name") ?? "").trim();
     if (!name) return { ok: false, error: "Name is required" };
     const existing = await db.department.findFirst({ where: { companyId: s.tenantId!, name } });
@@ -270,7 +265,7 @@ export async function createDepartmentAction(prev: any, formData: FormData) {
 
 export async function deleteDepartmentAction(departmentId: string) {
   try {
-    const s = await requireTenantAdmin();
+    const { session: s } = await requirePermission("departments.manage", { departmentId });
     await db.department.deleteMany({ where: { id: departmentId, companyId: s.tenantId! } });
     await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "DEPARTMENT_DELETED", entityType: "Department", entityId: departmentId });
     revalidatePath("/departments");
@@ -300,7 +295,6 @@ const EmployeeSchema = z.object({
 
 export async function createEmployeeAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenantAdmin();
     const parsed = EmployeeSchema.safeParse({
       employeeCode: formData.get("employeeCode"),
       fullName: formData.get("fullName"),
@@ -315,6 +309,10 @@ export async function createEmployeeAction(prev: any, formData: FormData) {
     });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
+    const { session: s } = await requirePermission("employees.create", {
+      branchId: d.branchId,
+      departmentId: d.departmentId || null,
+    });
     // Plan limit
     const tenant = await db.tenant.findUnique({ where: { id: s.tenantId! }, include: { subscription: { include: { plan: true } } } });
     if (tenant?.subscription?.plan) {
@@ -368,9 +366,14 @@ export async function createEmployeeAction(prev: any, formData: FormData) {
 
 export async function updateEmployeeAction(employeeId: string, data: Record<string, any>) {
   try {
-    const s = await requireTenantAdmin();
-    const emp = await db.employee.findFirst({ where: { id: employeeId, companyId: s.tenantId! } });
+    const base = await requireTenant();
+    const emp = await db.employee.findFirst({ where: { id: employeeId, companyId: base.tenantId } });
     if (!emp) return { ok: false, error: "Employee not found" };
+    const { session: s } = await requirePermission("employees.edit", {
+      branchId: emp.branchId,
+      departmentId: emp.departmentId,
+      targetUserId: emp.userId,
+    });
     // pinCode is NOT a writable field. A new PIN is bcrypt-hashed and stored in
     // pinHash, replacing any previous hash so the old PIN stops working.
     const allowed = ["fullName", "arabicName", "phone", "email", "jobTitle", "branchId", "departmentId", "employmentType", "defaultShiftPolicyId", "status", "employeeCode"];
@@ -398,7 +401,14 @@ export async function updateEmployeeAction(employeeId: string, data: Record<stri
 
 export async function deleteEmployeeAction(employeeId: string) {
   try {
-    const s = await requireTenantAdmin();
+    const base = await requireTenant();
+    const emp = await db.employee.findFirst({ where: { id: employeeId, companyId: base.tenantId, deletedAt: null } });
+    if (!emp) return { ok: false, error: "Employee not found" };
+    const { session: s } = await requirePermission("employees.deactivate", {
+      branchId: emp.branchId,
+      departmentId: emp.departmentId,
+      targetUserId: emp.userId,
+    });
     await db.employee.update({ where: { id: employeeId, companyId: s.tenantId! }, data: { deletedAt: new Date(), status: "LEFT" } });
     await logTenantEvent({ companyId: s.tenantId!, actorId: s.sub, actorEmail: s.email, action: "EMPLOYEE_EDITED", entityType: "Employee", entityId: employeeId, reason: "Deactivated" });
     revalidatePath("/employees");
@@ -430,7 +440,7 @@ const PolicySchema = z.object({
 
 export async function createPolicyAction(prev: any, formData: FormData) {
   try {
-    const s = await requireTenantAdmin();
+    const { session: s } = await requirePermission("shift_policies.manage");
     const parsed = PolicySchema.safeParse({
       name: formData.get("name"),
       startTime: formData.get("startTime"),
@@ -492,13 +502,22 @@ export async function createScheduleAction(prev: any, formData: FormData) {
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
 
-    const employee = await db.employee.findFirst({ where: { id: d.employeeId, companyId: s.tenantId!, deletedAt: null } });
+    const employee = await db.employee.findFirst({ where: { id: d.employeeId, companyId: s.tenantId, deletedAt: null } });
     if (!employee) return { ok: false, error: "Employee not found or inactive" };
+    if (employee.branchId !== d.branchId) return { ok: false, error: "Employee must belong to the selected branch" };
 
-    if (isManager(s.role!)) {
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.sub,
+      legacyRole: s.role,
+      permission: "schedules.manage",
+      scope: { branchId: d.branchId, departmentId: employee.departmentId, targetUserId: employee.userId },
+    });
+    if (!authorization.allowed) return { ok: false, error: "Permission denied" };
+
+    if (authorization.source === "legacy" && isManager(s.role!)) {
       const managedBranches = await getManagedBranchIds(s.sub, s.tenantId!);
       if (!managedBranches.includes(d.branchId)) return { ok: false, error: "Cannot schedule for branches you don't manage" };
-      if (employee.branchId !== d.branchId) return { ok: false, error: "Employee must belong to the selected branch" };
     }
 
     const date = new Date(d.date);
@@ -552,8 +571,21 @@ export async function updateScheduleAction(scheduleId: string, data: { shiftPoli
     const s = await requireTenant();
     const schedule = await db.schedule.findFirst({ where: { id: scheduleId, companyId: s.tenantId! } });
     if (!schedule) return { ok: false, error: "Schedule not found" };
+    const employee = await db.employee.findFirst({
+      where: { id: schedule.employeeId, companyId: s.tenantId, deletedAt: null },
+      select: { branchId: true, departmentId: true, userId: true },
+    });
+    if (!employee) return { ok: false, error: "Employee not found" };
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.sub,
+      legacyRole: s.role,
+      permission: "schedules.manage",
+      scope: { branchId: schedule.branchId ?? employee.branchId, departmentId: employee.departmentId, targetUserId: employee.userId },
+    });
+    if (!authorization.allowed) return { ok: false, error: "Permission denied" };
 
-    if (isManager(s.role!) && schedule.branchId) {
+    if (authorization.source === "legacy" && isManager(s.role!) && schedule.branchId) {
       const managedBranches = await getManagedBranchIds(s.sub, s.tenantId!);
       if (!managedBranches.includes(schedule.branchId)) return { ok: false, error: "Cannot edit schedules for branches you don't manage" };
     }
@@ -628,13 +660,25 @@ export async function bulkScheduleAction(prev: any, formData: FormData) {
     const policy = await db.shiftPolicy.findFirst({ where: { id: d.shiftPolicyId, companyId: s.tenantId! } });
     if (!policy) return { ok: false, error: "Shift policy not found" };
 
-    if (isManager(s.role!)) {
-      const managedBranches = await getManagedBranchIds(s.sub, s.tenantId!);
+    // Always bind selected employees to the target branch; this is a data-
+    // integrity rule, not merely a branch-manager role rule.
+    const branchEmps = await db.employee.findMany({ where: { companyId: s.tenantId, branchId: d.branchId, deletedAt: null }, select: { id: true } });
+    const allowedIds = new Set(branchEmps.map((e) => e.id));
+    const invalid = employeeIds.filter((id) => !allowedIds.has(id));
+    if (invalid.length > 0) return { ok: false, error: "Some employees do not belong to the selected branch" };
+
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.sub,
+      legacyRole: s.role,
+      permission: "schedules.manage",
+      scope: { branchId: d.branchId },
+    });
+    if (!authorization.allowed) return { ok: false, error: "Permission denied" };
+
+    if (authorization.source === "legacy" && isManager(s.role!)) {
+      const managedBranches = await getManagedBranchIds(s.sub, s.tenantId);
       if (!managedBranches.includes(d.branchId)) return { ok: false, error: "Cannot schedule for branches you don't manage" };
-      const branchEmps = await db.employee.findMany({ where: { companyId: s.tenantId!, branchId: d.branchId, deletedAt: null }, select: { id: true } });
-      const allowedIds = new Set(branchEmps.map((e) => e.id));
-      const invalid = employeeIds.filter((id) => !allowedIds.has(id));
-      if (invalid.length > 0) return { ok: false, error: "Some employees do not belong to the selected branch" };
     }
 
     const weekendSet = new Set(d.weekendDays.split(",").map((x) => x.trim()));
@@ -682,7 +726,20 @@ export async function deleteScheduleAction(scheduleId: string) {
     const s = await requireTenant();
     const schedule = await db.schedule.findFirst({ where: { id: scheduleId, companyId: s.tenantId! } });
     if (!schedule) return { ok: false, error: "Schedule not found" };
-    if (typeof s.role === "string" && isManager(s.role) && schedule.branchId) {
+    const employee = await db.employee.findFirst({
+      where: { id: schedule.employeeId, companyId: s.tenantId, deletedAt: null },
+      select: { branchId: true, departmentId: true, userId: true },
+    });
+    if (!employee) return { ok: false, error: "Employee not found" };
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.sub,
+      legacyRole: s.role,
+      permission: "schedules.manage",
+      scope: { branchId: schedule.branchId ?? employee.branchId, departmentId: employee.departmentId, targetUserId: employee.userId },
+    });
+    if (!authorization.allowed) return { ok: false, error: "Permission denied" };
+    if (authorization.source === "legacy" && typeof s.role === "string" && isManager(s.role) && schedule.branchId) {
       const managedBranches = await getManagedBranchIds(s.sub, s.tenantId!);
       if (!managedBranches.includes(schedule.branchId)) return { ok: false, error: "Cannot delete schedule for branches you don't manage" };
     }
