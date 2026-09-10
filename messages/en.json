@@ -867,7 +867,11 @@
     "trustRejectBelow": "Reject threshold (strict mode)",
     "biometricRetentionHours": "Biometric evidence retention (hours)",
     "trustBlockCriticalRisk": "Block critical-risk attendance automatically",
-    "trustProviderNotice": "Face and liveness requirements stay disabled until a verified biometric provider is connected. Current policy uses server-verifiable location and device evidence only."
+    "trustProviderNotice": "Face and liveness requirements stay disabled until a verified biometric provider is connected. Current policy uses server-verifiable location and device evidence only.",
+    "trustRequireDeviceIntegrity": "Require native device integrity verification",
+    "trustRequireFace": "Require face match verification",
+    "trustRequireLiveness": "Require face liveness verification",
+    "verificationPolicyNotice": "Device, face, or liveness requirements cannot be enabled until a real verification provider is connected. B-Attend never treats client assertions as trusted evidence."
   },
   "billing": {
     "title": "Billing",

@@ -338,54 +338,55 @@ model Tenant {
   leads        Lead[]
 
   // Tenant-side relations (stubs — populated in later phases)
-  users                      User[]
-  tenantRoles                TenantRole[]
-  tenantRolePermissions      TenantRolePermission[]
-  userRoleAssignments        UserRoleAssignment[]
-  userInvitations            UserInvitation[]
-  userInvitationRoles        UserInvitationRole[]
-  settings                   CompanySettings?
-  branches                   Branch[]
-  departments                Department[]
-  employees                  Employee[]
-  shiftPolicies              ShiftPolicy[]
-  schedules                  Schedule[]
-  punches                    Punch[]
-  attendanceTrustAssessments AttendanceTrustAssessment[]
-  attendanceDays             AttendanceDay[]
-  approvals                  ApprovalRequest[]
-  notifications              Notification[]
-  auditLogs                  AuditLog[]
-  reportExports              ReportExportLog[]
-  supportTickets             SupportTicket[]
-  kioskDevices               KioskDevice[]
+  users                            User[]
+  tenantRoles                      TenantRole[]
+  tenantRolePermissions            TenantRolePermission[]
+  userRoleAssignments              UserRoleAssignment[]
+  userInvitations                  UserInvitation[]
+  userInvitationRoles              UserInvitationRole[]
+  settings                         CompanySettings?
+  branches                         Branch[]
+  departments                      Department[]
+  employees                        Employee[]
+  shiftPolicies                    ShiftPolicy[]
+  schedules                        Schedule[]
+  punches                          Punch[]
+  attendanceTrustAssessments       AttendanceTrustAssessment[]
+  attendanceVerificationChallenges AttendanceVerificationChallenge[]
+  attendanceDays                   AttendanceDay[]
+  approvals                        ApprovalRequest[]
+  notifications                    Notification[]
+  auditLogs                        AuditLog[]
+  reportExports                    ReportExportLog[]
+  supportTickets                   SupportTicket[]
+  kioskDevices                     KioskDevice[]
   // B-Coach AI module relations
-  dailyCoachContents         DailyCoachContent[]
-  coachTips                  CoachTip[]
-  employeeCoachSnapshots     EmployeeCoachSnapshot[]
-  teamCoachSnapshots         TeamCoachSnapshot[]
-  aiUsageLogs                AiUsageLog[]
-  tenantAiSetting            TenantAiSetting?
+  dailyCoachContents               DailyCoachContent[]
+  coachTips                        CoachTip[]
+  employeeCoachSnapshots           EmployeeCoachSnapshot[]
+  teamCoachSnapshots               TeamCoachSnapshot[]
+  aiUsageLogs                      AiUsageLog[]
+  tenantAiSetting                  TenantAiSetting?
   // HR module relations
-  jobTitles                  JobTitle[]
-  employeeContracts          EmployeeContract[]
-  employeeDocuments          EmployeeDocument[]
-  leaveTypes                 LeaveType[]
-  leavePolicies              LeavePolicy[]
-  leaveBalances              LeaveBalance[]
-  leaveRequests              LeaveRequest[]
-  employeeWarnings           EmployeeWarning[]
-  trainingCourses            TrainingCourse[]
-  trainingAssignments        TrainingAssignment[]
-  employeeSkills             EmployeeSkill[]
-  assets                     Asset[]
-  assetAssignments           AssetAssignment[]
-  onboardingTasks            OnboardingTask[]
-  offboardingTasks           OffboardingTask[]
-  payrollProfiles            PayrollProfile[]
-  payrollRuns                PayrollRun[]
-  payrollRunLines            PayrollRunLine[]
-  payrollAdjustments         PayrollAdjustment[]
+  jobTitles                        JobTitle[]
+  employeeContracts                EmployeeContract[]
+  employeeDocuments                EmployeeDocument[]
+  leaveTypes                       LeaveType[]
+  leavePolicies                    LeavePolicy[]
+  leaveBalances                    LeaveBalance[]
+  leaveRequests                    LeaveRequest[]
+  employeeWarnings                 EmployeeWarning[]
+  trainingCourses                  TrainingCourse[]
+  trainingAssignments              TrainingAssignment[]
+  employeeSkills                   EmployeeSkill[]
+  assets                           Asset[]
+  assetAssignments                 AssetAssignment[]
+  onboardingTasks                  OnboardingTask[]
+  offboardingTasks                 OffboardingTask[]
+  payrollProfiles                  PayrollProfile[]
+  payrollRuns                      PayrollRun[]
+  payrollRunLines                  PayrollRunLine[]
+  payrollAdjustments               PayrollAdjustment[]
 
   @@index([status])
   @@index([businessType])
@@ -683,6 +684,7 @@ model CompanySettings {
   trustReviewBelow                Int      @default(75)
   trustRejectBelow                Int      @default(30)
   trustBlockCriticalRisk          Boolean  @default(false)
+  trustRequireDeviceIntegrity     Boolean  @default(false)
   trustRequireFace                Boolean  @default(false)
   trustRequireLiveness            Boolean  @default(false)
   biometricRetentionHours         Int      @default(24)
@@ -788,27 +790,28 @@ model Employee {
   updatedAt             DateTime       @updatedAt
   deletedAt             DateTime?
 
-  punches             Punch[]
-  attendanceDays      AttendanceDay[]
-  approvalRequests    ApprovalRequest[]
-  coachSnapshots      EmployeeCoachSnapshot[]
-  schedules           Schedule[]
-  user                User?
-  accessInvitations   UserInvitation[]
+  punches                          Punch[]
+  attendanceVerificationChallenges AttendanceVerificationChallenge[]
+  attendanceDays                   AttendanceDay[]
+  approvalRequests                 ApprovalRequest[]
+  coachSnapshots                   EmployeeCoachSnapshot[]
+  schedules                        Schedule[]
+  user                             User?
+  accessInvitations                UserInvitation[]
   // HR relations
-  contracts           EmployeeContract[]
-  documents           EmployeeDocument[]
-  leaveBalances       LeaveBalance[]
-  leaveRequests       LeaveRequest[]
-  warnings            EmployeeWarning[]
-  trainingAssignments TrainingAssignment[]
-  skills              EmployeeSkill[]
-  assetAssignments    AssetAssignment[]
-  onboardingTasks     OnboardingTask[]
-  offboardingTasks    OffboardingTask[]
-  payrollProfile      PayrollProfile?
-  payrollRunLines     PayrollRunLine[]
-  payrollAdjustments  PayrollAdjustment[]
+  contracts                        EmployeeContract[]
+  documents                        EmployeeDocument[]
+  leaveBalances                    LeaveBalance[]
+  leaveRequests                    LeaveRequest[]
+  warnings                         EmployeeWarning[]
+  trainingAssignments              TrainingAssignment[]
+  skills                           EmployeeSkill[]
+  assetAssignments                 AssetAssignment[]
+  onboardingTasks                  OnboardingTask[]
+  offboardingTasks                 OffboardingTask[]
+  payrollProfile                   PayrollProfile?
+  payrollRunLines                  PayrollRunLine[]
+  payrollAdjustments               PayrollAdjustment[]
 
   @@unique([companyId, employeeCode])
   @@index([companyId])
@@ -914,6 +917,7 @@ model AttendanceTrustAssessment {
   source        PunchSource
   signalsJson   String
   reasonsJson   String?
+  evidenceJson  String?
   reviewStatus  AttendanceTrustReviewStatus @default(NOT_REQUIRED)
   reviewedById  String?
   reviewedAt    DateTime?
@@ -924,6 +928,24 @@ model AttendanceTrustAssessment {
   @@index([companyId, createdAt])
   @@index([companyId, riskLevel])
   @@index([companyId, reviewStatus])
+}
+
+model AttendanceVerificationChallenge {
+  id                    String    @id @default(cuid())
+  companyId             String
+  tenant                Tenant    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId            String
+  employee              Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  userId                String
+  nonceHash             String    @unique
+  providerKey           String
+  requestedCapabilities String
+  expiresAt             DateTime
+  consumedAt            DateTime?
+  createdAt             DateTime  @default(now())
+
+  @@index([companyId, employeeId, expiresAt])
+  @@index([companyId, consumedAt])
 }
 
 model AttendanceDay {
