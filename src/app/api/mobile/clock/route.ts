@@ -13,6 +13,7 @@ import {
   missingAttendanceVerificationCapabilities,
   requiredAttendanceVerificationCapabilities,
   sanitizeAttendanceVerificationResult,
+  type AttendanceVerificationResult,
 } from "@/lib/attendance/verification-provider";
 import {
   AttendanceVerificationChallengeError,
@@ -105,8 +106,6 @@ export async function POST(request: NextRequest) {
   const input = parsed.data;
   const { start, end } = dayRange();
 
-  // The idempotency key becomes part of the primary key. Concurrent network
-  // retries therefore resolve at the database boundary, not by timing luck.
   const punchId = `mobile:${context.employee.id}:${input.idempotencyKey}`;
   const duplicate = await db.punch.findUnique({ where: { id: punchId }, select: replaySelect });
   if (duplicate) {
@@ -122,8 +121,6 @@ export async function POST(request: NextRequest) {
       where: { companyId_employeeId_date: { companyId: context.employee.companyId, employeeId: context.employee.id, date: start } },
       include: { shiftPolicy: { select: { allowsMobileClockIn: true, allowNoScheduleClockIn: true } } },
     }),
-    // A hard-rejected punch is retained as forensic evidence but cannot advance
-    // the employee's valid CLOCK_IN/CLOCK_OUT state machine. Pending reviews do.
     db.punch.findFirst({
       where: {
         companyId: context.employee.companyId,
@@ -177,7 +174,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let verificationResult = null;
+  let verificationResult: AttendanceVerificationResult | null = null;
   if (input.verification) {
     if (verificationProvider.capabilities.length === 0) {
       return NextResponse.json({ error: "VERIFICATION_NOT_SUPPORTED" }, { status: 422 });
@@ -197,7 +194,7 @@ export async function POST(request: NextRequest) {
     }
 
     try {
-      verificationResult = await verificationProvider.verify({
+      const verified = await verificationProvider.verify({
         companyId: context.employee.companyId,
         employeeId: context.employee.id,
         userId: context.user.id,
@@ -208,15 +205,16 @@ export async function POST(request: NextRequest) {
           biometricToken: input.verification.biometricToken,
         },
       });
-      if (verificationResult.provider !== verificationProvider.key) {
+      if (verified.provider !== verificationProvider.key) {
         return NextResponse.json({ error: "VERIFICATION_PROVIDER_INVALID_RESPONSE" }, { status: 503 });
       }
       if (
-        verificationResult.faceMatchScore != null &&
-        (!Number.isFinite(verificationResult.faceMatchScore) || verificationResult.faceMatchScore < 0 || verificationResult.faceMatchScore > 1)
+        verified.faceMatchScore != null &&
+        (!Number.isFinite(verified.faceMatchScore) || verified.faceMatchScore < 0 || verified.faceMatchScore > 1)
       ) {
         return NextResponse.json({ error: "VERIFICATION_PROVIDER_INVALID_RESPONSE" }, { status: 503 });
       }
+      verificationResult = verified;
     } catch {
       return NextResponse.json({ error: "VERIFICATION_PROVIDER_FAILED" }, { status: 503 });
     }
