@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, release/**]
+    branches: [main, release/**, integration/**]
   pull_request:
     branches: [main]
 
@@ -17,6 +17,7 @@ jobs:
       DATABASE_URL: postgresql://dummy:dummy@localhost:5432/dummy
       SESSION_SECRET: ci-test-secret-for-build-only-32chars!!
       NEXT_PUBLIC_DEMO_MODE: "true"
+      RUN_PRISMA_MIGRATIONS: "false"
     strategy:
       matrix:
         node-version: [22]
@@ -40,7 +41,7 @@ jobs:
         run: npx prisma generate
 
       - name: TypeScript check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Lint
         run: npm run lint
@@ -54,11 +55,11 @@ jobs:
       - name: Build
         run: npm run build
 
-  # Deploy runs ONLY after build-test succeeds (needs: build-test).
-  # Production is deployed ONLY from main. Release branches deploy to Preview only.
+  # Deploy only from release/* (Preview) or main (Production).
+  # integration/* is verification-only and can never deploy from this workflow.
   deploy:
     needs: build-test
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
     runs-on: ubuntu-latest
     env:
       VERCEL_ORG_ID: team_Yv5yJW5Al6lnp1tkZSQjGTAo
@@ -81,7 +82,7 @@ jobs:
           tar --exclude=.git --exclude=node_modules --exclude=.next -cf - . | tar -xf - -C /tmp/b-attend-deploy
 
       - name: Deploy to Vercel (Preview) - release branches only
-        if: github.ref != 'refs/heads/main'
+        if: startsWith(github.ref, 'refs/heads/release/')
         working-directory: /tmp/b-attend-deploy
         run: npx vercel deploy --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
         env:
