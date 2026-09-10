@@ -50,6 +50,9 @@ export function CustomerSettingsForm({ settings }: { settings: CompanySettings |
           { key: "allowManualRequests", label: t("allowManualRequests"), def: true },
           { key: "enableEmployeeSelfService", label: t("enableEmployeeSelfService"), def: true },
           { key: "enableBranchManagerApprovals", label: t("enableBranchManagerApprovals"), def: true },
+          { key: "trustRequireDeviceIntegrity", label: t("trustRequireDeviceIntegrity"), def: false },
+          { key: "trustRequireFace", label: t("trustRequireFace"), def: false },
+          { key: "trustRequireLiveness", label: t("trustRequireLiveness"), def: false },
           { key: "trustBlockCriticalRisk", label: t("trustBlockCriticalRisk"), def: false },
           { key: "emailNotifications", label: `${t("emailNotifications")} (Coming soon)`, def: true },
           { key: "whatsappNotifications", label: `${t("whatsappNotifications")} (Coming soon)`, def: false },
@@ -61,8 +64,13 @@ export function CustomerSettingsForm({ settings }: { settings: CompanySettings |
         ))}
       </div>
 
-      <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
-        {t("trustProviderNotice")}
+      <div className="space-y-2">
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          {t("trustProviderNotice")}
+        </div>
+        <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+          {t("verificationPolicyNotice")}
+        </div>
       </div>
 
       {state.error && <p className="text-xs text-destructive">{state.error}</p>}
