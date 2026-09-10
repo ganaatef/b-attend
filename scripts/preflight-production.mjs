@@ -112,6 +112,7 @@ if (biometricProvider === "aws_rekognition") {
   requireEnv("AWS_REKOGNITION_ACCESS_KEY_ID", (value) => Boolean(value && value.length >= 16));
   requireEnv("AWS_REKOGNITION_SECRET_ACCESS_KEY", (value) => Boolean(value && value.length >= 32));
   requireEnv("AWS_REKOGNITION_COLLECTION_ID", (value) => /^[A-Za-z0-9_.-]{1,255}$/.test(value ?? ""));
+  requireEnv("BIOMETRIC_CONSENT_VERSION", (value) => /^[A-Za-z0-9._:-]{1,80}$/.test(value ?? ""));
   const liveness = parseThreshold("AWS_REKOGNITION_LIVENESS_THRESHOLD", 90);
   const face = parseThreshold("AWS_REKOGNITION_FACE_MATCH_THRESHOLD", 90);
   const duplicate = parseThreshold("AWS_REKOGNITION_DUPLICATE_THRESHOLD", 97);
