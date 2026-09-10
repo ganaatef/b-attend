@@ -1,2 +1,3 @@
 apply attendance trust normalization v2
 integrate tenant policy, evidence persistence, review lifecycle
+retry after idempotent foundation check
