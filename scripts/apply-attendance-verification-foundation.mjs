@@ -1,44 +1,60 @@
 import fs from "node:fs";
 import path from "node:path";
 
-function replaceOnce(file, from, to) {
-  const current = fs.readFileSync(file, "utf8");
-  if (current.includes(to)) return false;
-  if (!current.includes(from)) throw new Error(`Patch anchor not found in ${file}: ${from.slice(0, 120)}`);
-  fs.writeFileSync(file, current.replace(from, to));
+const schema = "prisma/schema.prisma";
+
+function updateModel(modelName, mutator) {
+  const current = fs.readFileSync(schema, "utf8");
+  const start = current.indexOf(`model ${modelName} {`);
+  if (start < 0) throw new Error(`Model not found: ${modelName}`);
+  const next = current.indexOf("\nmodel ", start + 1);
+  const end = next < 0 ? current.length : next;
+  const block = current.slice(start, end);
+  const changed = mutator(block);
+  if (changed === block) return false;
+  fs.writeFileSync(schema, current.slice(0, start) + changed + current.slice(end));
   return true;
 }
 
-const schema = "prisma/schema.prisma";
+function insertAfterLine(block, lineRegex, newLine, marker) {
+  if (block.includes(marker)) return block;
+  if (!lineRegex.test(block)) throw new Error(`Anchor not found for ${marker}`);
+  return block.replace(lineRegex, (line) => `${line}\n${newLine}`);
+}
 
-replaceOnce(
-  schema,
-  "  attendanceTrustAssessments AttendanceTrustAssessment[]\n  attendanceDays             AttendanceDay[]",
-  "  attendanceTrustAssessments AttendanceTrustAssessment[]\n  attendanceVerificationChallenges AttendanceVerificationChallenge[]\n  attendanceDays             AttendanceDay[]",
-);
+updateModel("Tenant", (block) => insertAfterLine(
+  block,
+  /^\s*attendanceTrustAssessments\s+AttendanceTrustAssessment\[\].*$/m,
+  "  attendanceVerificationChallenges AttendanceVerificationChallenge[]",
+  "attendanceVerificationChallenges",
+));
 
-replaceOnce(
-  schema,
-  "  trustBlockCriticalRisk          Boolean  @default(false)\n  trustRequireFace                 Boolean  @default(false)",
-  "  trustBlockCriticalRisk          Boolean  @default(false)\n  trustRequireDeviceIntegrity      Boolean  @default(false)\n  trustRequireFace                 Boolean  @default(false)",
-);
+updateModel("CompanySettings", (block) => insertAfterLine(
+  block,
+  /^\s*trustBlockCriticalRisk\s+Boolean\s+@default\(false\).*$/m,
+  "  trustRequireDeviceIntegrity      Boolean  @default(false)",
+  "trustRequireDeviceIntegrity",
+));
 
-replaceOnce(
-  schema,
-  "  punches             Punch[]\n  attendanceDays      AttendanceDay[]",
-  "  punches             Punch[]\n  attendanceVerificationChallenges AttendanceVerificationChallenge[]\n  attendanceDays      AttendanceDay[]",
-);
+updateModel("Employee", (block) => insertAfterLine(
+  block,
+  /^\s*punches\s+Punch\[\].*$/m,
+  "  attendanceVerificationChallenges AttendanceVerificationChallenge[]",
+  "attendanceVerificationChallenges",
+));
 
-replaceOnce(
-  schema,
-  "  reasonsJson   String?\n  reviewStatus  AttendanceTrustReviewStatus @default(NOT_REQUIRED)",
-  "  reasonsJson   String?\n  evidenceJson  String?\n  reviewStatus  AttendanceTrustReviewStatus @default(NOT_REQUIRED)",
-);
+updateModel("AttendanceTrustAssessment", (block) => insertAfterLine(
+  block,
+  /^\s*reasonsJson\s+String\?.*$/m,
+  "  evidenceJson  String?",
+  "evidenceJson",
+));
 
-replaceOnce(
-  schema,
-  "model AttendanceDay {",
-  `model AttendanceVerificationChallenge {
+let schemaText = fs.readFileSync(schema, "utf8");
+if (!schemaText.includes("model AttendanceVerificationChallenge {")) {
+  const marker = "model AttendanceDay {";
+  if (!schemaText.includes(marker)) throw new Error("AttendanceDay model anchor not found");
+  const model = `model AttendanceVerificationChallenge {
   id                    String   @id @default(cuid())
   companyId             String
   tenant                Tenant   @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -56,8 +72,10 @@ replaceOnce(
   @@index([companyId, consumedAt])
 }
 
-model AttendanceDay {`,
-);
+`;
+  schemaText = schemaText.replace(marker, model + marker);
+  fs.writeFileSync(schema, schemaText);
+}
 
 const migrationDir = "prisma/migrations/20260910110000_attendance_verification_foundation";
 fs.mkdirSync(migrationDir, { recursive: true });
