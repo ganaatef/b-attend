@@ -9,6 +9,7 @@
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { getSessionAllowInactive } from "@/lib/auth/session";
+import { getEffectivePermissions } from "@/lib/auth/authorization";
 import { AppShell, type AppShellSession } from "@/components/layout/AppShell";
 import { Suspense } from "react";
 import { getTranslations, getLocale } from "next-intl/server";
@@ -31,7 +32,14 @@ export default async function TenantLayout({ children }: { children: React.React
   });
   if (!tenant) redirect("/login?next=/dashboard");
 
-  const currentUser = await db.user.findUnique({ where: { id: session.sub } });
+  const [currentUser, permissions] = await Promise.all([
+    db.user.findUnique({ where: { id: session.sub } }),
+    getEffectivePermissions({
+      companyId: session.tenantId,
+      userId: session.sub,
+      legacyRole: session.role,
+    }),
+  ]);
 
   if (tenant.status === "REJECTED") {
     return (
@@ -55,6 +63,7 @@ export default async function TenantLayout({ children }: { children: React.React
     email: session.email,
     role: session.role,
     kind: "tenant",
+    permissions,
     subscriptionStatus: tenant.subscription?.status,
     trialEndsAt: tenant.subscription?.trialEndsAt?.toISOString() ?? null,
   };
