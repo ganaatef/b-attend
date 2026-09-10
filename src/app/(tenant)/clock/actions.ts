@@ -108,8 +108,16 @@ export async function clockAction(prev: any, formData: FormData) {
       }
     }
 
+    // Rejected punches are forensic records, not part of the employee's valid
+    // clock sequence. Pending-review punches remain sequence-active to prevent
+    // duplicate retries while a manager decision is outstanding.
     const lastPunch = await db.punch.findFirst({
-      where: { companyId: employee.companyId, employeeId: employee.id, timestamp: { gte: today, lt: tomorrow } },
+      where: {
+        companyId: employee.companyId,
+        employeeId: employee.id,
+        status: { not: "REJECTED" },
+        timestamp: { gte: today, lt: tomorrow },
+      },
       orderBy: { timestamp: "desc" },
     });
     if (d.type === "CLOCK_IN" && lastPunch?.type === "CLOCK_IN") {
@@ -143,9 +151,7 @@ export async function clockAction(prev: any, formData: FormData) {
       signals: trust.signals,
     };
 
-    // Punch + review request are one atomic domain transition. A suspicious
-    // punch can therefore never exist without the manager review item that is
-    // needed to resolve it.
+    // Punch + trust evidence + review request are one atomic domain transition.
     const punch = await db.$transaction(async (tx) => {
       const created = await tx.punch.create({
         data: {
@@ -315,12 +321,18 @@ export async function kioskLookupAction(prev: any, formData: FormData): Promise<
     if (!employee) return { ok: false, error: "Employee not found. Check code/PIN." };
 
     const today = new Date(); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
     const schedule = await db.schedule.findUnique({
       where: { companyId_employeeId_date: { companyId: s.tenantId, employeeId: employee.id, date: today } },
       include: { shiftPolicy: true },
     });
     const lastPunch = await db.punch.findFirst({
-      where: { companyId: s.tenantId, employeeId: employee.id },
+      where: {
+        companyId: s.tenantId,
+        employeeId: employee.id,
+        status: { not: "REJECTED" },
+        timestamp: { gte: today, lt: tomorrow },
+      },
       orderBy: { timestamp: "desc" },
     });
     return {
