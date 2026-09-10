@@ -1,5 +1,6 @@
 import fs from "node:fs";
 
+// One-off idempotent patcher. Remove after the generated route is committed.
 const path = "src/app/api/mobile/clock/route.ts";
 let source = fs.readFileSync(path, "utf8");
 
