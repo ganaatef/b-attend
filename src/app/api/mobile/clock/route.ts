@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireMobileEmployee } from "@/lib/auth/mobile";
 import { haversineMeters, isInsideGeofence, recalculateAttendanceDay } from "@/lib/attendance/engine";
+import { assessAttendanceTrust } from "@/lib/attendance/trust-engine";
 
 const ClockSchema = z.object({
   type: z.enum(["CLOCK_IN", "CLOCK_OUT"]),
@@ -20,6 +21,16 @@ function dayRange() {
   return { start, end };
 }
 
+function storedTrust(deviceInfo: string | null) {
+  if (!deviceInfo) return null;
+  try {
+    const parsed = JSON.parse(deviceInfo) as { trust?: unknown };
+    return parsed.trust ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const context = await requireMobileEmployee(request);
   if (!context) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
@@ -35,9 +46,20 @@ export async function POST(request: NextRequest) {
       employeeId: context.employee.id,
       deviceInfo: { contains: input.idempotencyKey },
     },
-    select: { id: true, type: true, timestamp: true, status: true, insideGeofence: true, distanceMeters: true },
+    select: {
+      id: true,
+      type: true,
+      timestamp: true,
+      status: true,
+      insideGeofence: true,
+      distanceMeters: true,
+      deviceInfo: true,
+    },
   });
-  if (duplicate) return NextResponse.json(duplicate);
+  if (duplicate) {
+    const { deviceInfo, ...response } = duplicate;
+    return NextResponse.json({ ...response, trust: storedTrust(deviceInfo), idempotentReplay: true });
+  }
 
   const [settings, schedule, lastPunch] = await Promise.all([
     db.companySettings.findUnique({ where: { companyId: context.employee.companyId } }),
@@ -73,11 +95,35 @@ export async function POST(request: NextRequest) {
     distanceMeters = haversineMeters(input.latitude, input.longitude, context.employee.branch.latitude, context.employee.branch.longitude);
     insideGeofence = isInsideGeofence(distanceMeters, context.employee.branch.geofenceRadius);
   }
-  const needsApproval = !insideGeofence && (settings?.requireApprovalOutsideGeofence ?? true);
+
+  // Trust v1 is server-computed from evidence the API can currently verify.
+  // Face/liveness, mock-location and device-integrity providers plug into the
+  // same deterministic engine later; client assertions are never trusted as
+  // authoritative anti-fraud signals.
+  const trust = assessAttendanceTrust({
+    source: "MOBILE_APP",
+    insideGeofence,
+    distanceMeters,
+    accuracyMeters: input.accuracyMeters ?? null,
+  });
+
+  const needsApproval =
+    (!insideGeofence && (settings?.requireApprovalOutsideGeofence ?? true))
+    || trust.decision !== "ACCEPT";
+
+  const persistedTrust = {
+    policyVersion: trust.policyVersion,
+    score: trust.score,
+    riskLevel: trust.riskLevel,
+    decision: trust.decision,
+    criticalRisk: trust.criticalRisk,
+    signals: trust.signals,
+  };
   const deviceInfo = JSON.stringify({
     platform: "MOBILE_APP",
     idempotencyKey: input.idempotencyKey,
     accuracyMeters: input.accuracyMeters ?? null,
+    trust: persistedTrust,
   });
 
   const punch = await db.punch.create({
@@ -110,7 +156,15 @@ export async function POST(request: NextRequest) {
         entityType: "Punch",
         entityId: punch.id,
         reason: "B-Attend Staff mobile app",
-        afterData: JSON.stringify({ insideGeofence, distanceMeters, status: punch.status }),
+        afterData: JSON.stringify({
+          insideGeofence,
+          distanceMeters,
+          status: punch.status,
+          trustScore: trust.score,
+          trustRisk: trust.riskLevel,
+          trustDecision: trust.decision,
+          trustPolicyVersion: trust.policyVersion,
+        }),
       },
     }),
   ]);
@@ -122,5 +176,12 @@ export async function POST(request: NextRequest) {
     status: punch.status,
     insideGeofence,
     distanceMeters,
+    trust: {
+      score: trust.score,
+      riskLevel: trust.riskLevel,
+      decision: trust.decision,
+      reasons: trust.reasons,
+      policyVersion: trust.policyVersion,
+    },
   }, { status: 201 });
 }
