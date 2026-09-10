@@ -69,7 +69,12 @@ export async function POST(request: NextRequest) {
   // pre-query, so two simultaneous retries cannot create two punches.
   const punchId = `mobile:${context.employee.id}:${input.idempotencyKey}`;
   const duplicate = await db.punch.findUnique({ where: { id: punchId }, select: replaySelect });
-  if (duplicate) return replayResponse(duplicate);
+  if (duplicate) {
+    if (duplicate.type !== input.type) {
+      return NextResponse.json({ error: "IDEMPOTENCY_KEY_REUSED" }, { status: 409 });
+    }
+    return replayResponse(duplicate);
+  }
 
   const [settings, schedule, lastPunch] = await Promise.all([
     db.companySettings.findUnique({ where: { companyId: context.employee.companyId } }),
@@ -117,9 +122,9 @@ export async function POST(request: NextRequest) {
     accuracyMeters: input.accuracyMeters ?? null,
   });
 
-  const needsApproval =
-    (!insideGeofence && (settings?.requireApprovalOutsideGeofence ?? true))
-    || trust.decision !== "ACCEPT";
+  const geofenceReviewRequired = !insideGeofence && (settings?.requireApprovalOutsideGeofence ?? true);
+  const trustReviewRequired = trust.criticalRisk || (insideGeofence && trust.decision !== "ACCEPT");
+  const needsApproval = geofenceReviewRequired || trustReviewRequired;
 
   const persistedTrust = {
     policyVersion: trust.policyVersion,
@@ -135,59 +140,96 @@ export async function POST(request: NextRequest) {
     accuracyMeters: input.accuracyMeters ?? null,
     trust: persistedTrust,
   });
+  const userAgent = request.headers.get("user-agent")?.slice(0, 500) ?? "B-Attend Staff";
 
   let punch;
   try {
-    punch = await db.punch.create({
-      data: {
-        id: punchId,
-        companyId: context.employee.companyId,
-        employeeId: context.employee.id,
-        branchId: context.employee.branchId,
-        scheduleId: schedule?.id,
-        type: input.type,
-        timestamp: new Date(),
-        latitude: input.latitude,
-        longitude: input.longitude,
-        distanceMeters,
-        insideGeofence,
-        source: "MOBILE_APP",
-        status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
-        deviceInfo,
-        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? "B-Attend Staff",
-      },
+    punch = await db.$transaction(async (tx) => {
+      const created = await tx.punch.create({
+        data: {
+          id: punchId,
+          companyId: context.employee.companyId,
+          employeeId: context.employee.id,
+          branchId: context.employee.branchId,
+          scheduleId: schedule?.id,
+          type: input.type,
+          timestamp: new Date(),
+          latitude: input.latitude,
+          longitude: input.longitude,
+          distanceMeters,
+          insideGeofence,
+          source: "MOBILE_APP",
+          status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
+          deviceInfo,
+          userAgent,
+        },
+      });
+
+      if (needsApproval) {
+        await tx.approvalRequest.create({
+          data: {
+            companyId: context.employee.companyId,
+            employeeId: context.employee.id,
+            branchId: context.employee.branchId,
+            date: start,
+            type: insideGeofence ? "ATTENDANCE_ADJUSTMENT" : "OUTSIDE_GEOFENCE",
+            reason: insideGeofence
+              ? `Attendance Trust Engine review (${trust.riskLevel}, ${trust.score}/100)`
+              : `Outside geofence (${Math.round(distanceMeters)}m) — Trust ${trust.score}/100`,
+            originalData: JSON.stringify({
+              punchType: input.type,
+              latitude: input.latitude,
+              longitude: input.longitude,
+              distanceMeters,
+              insideGeofence,
+            }),
+            requestedData: JSON.stringify({ trust: persistedTrust }),
+            status: "PENDING",
+            requestedById: context.user.id,
+            relatedPunchId: created.id,
+          },
+        });
+      }
+
+      await tx.auditLog.create({
+        data: {
+          companyId: context.employee.companyId,
+          actorId: context.user.id,
+          actorEmail: context.user.email,
+          action: input.type,
+          entityType: "Punch",
+          entityId: created.id,
+          reason: "B-Attend Staff mobile app",
+          userAgent,
+          afterData: JSON.stringify({
+            insideGeofence,
+            distanceMeters,
+            status: created.status,
+            trustScore: trust.score,
+            trustRisk: trust.riskLevel,
+            trustDecision: trust.decision,
+            trustPolicyVersion: trust.policyVersion,
+            approvalCreated: needsApproval,
+          }),
+        },
+      });
+
+      return created;
     });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const replay = await db.punch.findUnique({ where: { id: punchId }, select: replaySelect });
-      if (replay) return replayResponse(replay);
+      if (replay) {
+        if (replay.type !== input.type) {
+          return NextResponse.json({ error: "IDEMPOTENCY_KEY_REUSED" }, { status: 409 });
+        }
+        return replayResponse(replay);
+      }
     }
     throw error;
   }
 
-  await Promise.all([
-    recalculateAttendanceDay({ employeeId: context.employee.id, date: start }),
-    db.auditLog.create({
-      data: {
-        companyId: context.employee.companyId,
-        actorId: context.user.id,
-        actorEmail: context.user.email,
-        action: input.type,
-        entityType: "Punch",
-        entityId: punch.id,
-        reason: "B-Attend Staff mobile app",
-        afterData: JSON.stringify({
-          insideGeofence,
-          distanceMeters,
-          status: punch.status,
-          trustScore: trust.score,
-          trustRisk: trust.riskLevel,
-          trustDecision: trust.decision,
-          trustPolicyVersion: trust.policyVersion,
-        }),
-      },
-    }),
-  ]);
+  await recalculateAttendanceDay({ employeeId: context.employee.id, date: start });
 
   return NextResponse.json({
     id: punch.id,
@@ -203,5 +245,6 @@ export async function POST(request: NextRequest) {
       reasons: trust.reasons,
       policyVersion: trust.policyVersion,
     },
+    approvalRequired: needsApproval,
   }, { status: 201 });
 }
