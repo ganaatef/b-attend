@@ -138,9 +138,37 @@ export async function createEnrollmentLivenessSession(input: {
   if (!enrollment) throw new BiometricIdentityError("BIOMETRIC_ENROLLMENT_NOT_REQUESTED");
 
   const provider = client();
+  const now = new Date();
+  const activeSession = await db.biometricVerificationSession.findFirst({
+    where: {
+      companyId: input.companyId,
+      employeeId: input.employeeId,
+      userId: input.userId,
+      enrollmentId: enrollment.id,
+      purpose: "ENROLLMENT",
+      consumedAt: null,
+      expiresAt: { gt: now },
+      status: { in: ["CREATED", "PROCESSING", "SUCCEEDED"] },
+    },
+    orderBy: { createdAt: "desc" },
+    select: { id: true, providerSessionId: true, expiresAt: true },
+  });
+  if (activeSession) {
+    await db.biometricEnrollment.update({
+      where: { id: enrollment.id },
+      data: { consentVersion, consentedAt: now, consentedByUserId: input.userId },
+    });
+    return { ...activeSession, provider: SESSION_PROVIDER, region: provider.config.region };
+  }
+
+  const attempt = await db.biometricVerificationSession.count({
+    where: { enrollmentId: enrollment.id, purpose: "ENROLLMENT" },
+  });
   let remote;
   try {
-    remote = await provider.createLivenessSession(requestToken(enrollment.id, input.userId, String(enrollment.enrollmentVersion)));
+    remote = await provider.createLivenessSession(
+      requestToken(enrollment.id, input.userId, String(enrollment.enrollmentVersion), String(attempt + 1)),
+    );
   } catch (error) {
     mapProviderError(error);
   }
@@ -151,7 +179,8 @@ export async function createEnrollmentLivenessSession(input: {
         companyId: input.companyId,
         employeeId: input.employeeId,
         purpose: "ENROLLMENT",
-        status: { in: ["CREATED", "PROCESSING"] },
+        status: { in: ["CREATED", "PROCESSING", "SUCCEEDED"] },
+        consumedAt: null,
       },
       data: { status: "EXPIRED" },
     });
@@ -159,8 +188,10 @@ export async function createEnrollmentLivenessSession(input: {
       where: { id: enrollment.id },
       data: { consentVersion, consentedAt: new Date(), consentedByUserId: input.userId },
     });
-    return tx.biometricVerificationSession.create({
-      data: {
+    return tx.biometricVerificationSession.upsert({
+      where: { providerSessionId: remote.sessionId },
+      update: {},
+      create: {
         companyId: input.companyId,
         employeeId: input.employeeId,
         userId: input.userId,
@@ -332,9 +363,16 @@ export async function createAttendanceLivenessSession(input: {
     if (existing.companyId !== input.companyId || existing.employeeId !== input.employeeId || existing.userId !== input.userId) {
       throw new BiometricIdentityError("BIOMETRIC_SESSION_BINDING_MISMATCH");
     }
-    if (!existing.consumedAt && existing.expiresAt > new Date() && ["CREATED", "PROCESSING", "SUCCEEDED"].includes(existing.status)) {
+    if (existing.consumedAt || existing.status === "CONSUMED") {
+      throw new BiometricIdentityError("BIOMETRIC_SESSION_ALREADY_USED");
+    }
+    if (existing.expiresAt <= new Date() || ["FAILED", "EXPIRED"].includes(existing.status)) {
+      throw new BiometricIdentityError("BIOMETRIC_NEW_CHALLENGE_REQUIRED");
+    }
+    if (["CREATED", "PROCESSING", "SUCCEEDED"].includes(existing.status)) {
       return { id: existing.id, providerSessionId: existing.providerSessionId, expiresAt: existing.expiresAt, provider: SESSION_PROVIDER, region: client().config.region };
     }
+    throw new BiometricIdentityError("BIOMETRIC_SESSION_STATE_INVALID");
   }
 
   const provider = client();
@@ -345,8 +383,10 @@ export async function createAttendanceLivenessSession(input: {
     mapProviderError(error);
   }
 
-  const session = await db.biometricVerificationSession.create({
-    data: {
+  const session = await db.biometricVerificationSession.upsert({
+    where: { attendanceChallengeId: input.attendanceChallengeId },
+    update: {},
+    create: {
       companyId: input.companyId,
       employeeId: input.employeeId,
       userId: input.userId,
