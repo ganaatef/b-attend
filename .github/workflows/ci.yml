@@ -101,12 +101,13 @@ jobs:
       - name: Database-backed authorization and isolation tests
         run: npx vitest run --config vitest.runtime.config.ts
 
-  # Deploy only after both static/unit/build verification and real PostgreSQL
-  # runtime authorization/isolation tests succeed. Integration branches remain
-  # verification-only and can never deploy from this workflow.
-  deploy:
+  # Release branches may publish a preview only after every verification gate.
+  # Production is intentionally NOT deployed by a push to main. The separate
+  # Production Release workflow requires an explicit manual confirmation, exact
+  # main SHA, production preflight and a single controlled DB migration step.
+  deploy-preview:
     needs: [build-test, runtime-security]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/release/'))
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/heads/release/')
     runs-on: ubuntu-latest
     env:
       VERCEL_ORG_ID: team_Yv5yJW5Al6lnp1tkZSQjGTAo
@@ -128,16 +129,8 @@ jobs:
           mkdir -p /tmp/b-attend-deploy
           tar --exclude=.git --exclude=node_modules --exclude=.next -cf - . | tar -xf - -C /tmp/b-attend-deploy
 
-      - name: Deploy to Vercel (Preview) - release branches only
-        if: startsWith(github.ref, 'refs/heads/release/')
+      - name: Deploy to Vercel Preview
         working-directory: /tmp/b-attend-deploy
         run: npx vercel deploy --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-
-      - name: Deploy to Vercel (Production) - main only
-        if: github.ref == 'refs/heads/main'
-        working-directory: /tmp/b-attend-deploy
-        run: npx vercel deploy --prod --yes --token "$VERCEL_TOKEN" --scope "$VERCEL_ORG_ID"
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
