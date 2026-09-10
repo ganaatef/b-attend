@@ -27,6 +27,13 @@ export type AuthorizationDecision = {
   reason?: string;
 };
 
+export type PermissionAccessScopes = {
+  tenant: boolean;
+  branchIds: string[];
+  departmentIds: string[];
+  self: boolean;
+};
+
 function assignmentIsActive(assignment: { expiresAt: Date | null; revokedAt: Date | null }, now: Date) {
   if (assignment.revokedAt) return false;
   if (assignment.expiresAt && assignment.expiresAt <= now) return false;
@@ -160,6 +167,57 @@ async function loadAssignments(companyId: string, userId: string) {
     },
   });
   return assignments.filter((assignment) => assignmentIsActive(assignment, now));
+}
+
+/**
+ * Resolve all data scopes in which a user holds one permission. Query-oriented
+ * pages use this to build their database filter once, rather than loading a
+ * tenant-wide dataset and filtering it after the fact.
+ */
+export async function getPermissionAccessScopes(input: {
+  companyId: string;
+  userId: string;
+  legacyRole: string;
+  permission: PermissionKey;
+}): Promise<PermissionAccessScopes> {
+  const empty: PermissionAccessScopes = { tenant: false, branchIds: [], departmentIds: [], self: false };
+
+  if (input.legacyRole === "COMPANY_OWNER") return { ...empty, tenant: true };
+
+  const assignments = await loadAssignments(input.companyId, input.userId);
+  if (assignments.length === 0) {
+    if (!permissionsForLegacyRole(input.legacyRole).includes(input.permission)) return empty;
+    if (input.legacyRole === "HR_ADMIN") return { ...empty, tenant: true };
+    if (input.legacyRole === "EMPLOYEE") return { ...empty, self: true };
+    if (input.legacyRole === "BRANCH_MANAGER") {
+      const branches = await db.branch.findMany({
+        where: { companyId: input.companyId, managerId: input.userId, deletedAt: null },
+        select: { id: true },
+      });
+      return { ...empty, branchIds: branches.map((branch) => branch.id) };
+    }
+    return empty;
+  }
+
+  const branchIds = new Set<string>();
+  const departmentIds = new Set<string>();
+  let self = false;
+
+  for (const assignment of assignments) {
+    if (assignment.role.deletedAt || !assignment.role.permissions.some((item) => item.permissionKey === input.permission)) continue;
+    const scopeType = assignment.scopeType as AccessScopeType;
+    if (scopeType === "TENANT") return { ...empty, tenant: true };
+    if (scopeType === "BRANCH" && assignment.scopeId) branchIds.add(assignment.scopeId);
+    if (scopeType === "DEPARTMENT" && assignment.scopeId) departmentIds.add(assignment.scopeId);
+    if (scopeType === "SELF") self = true;
+  }
+
+  return {
+    tenant: false,
+    branchIds: [...branchIds],
+    departmentIds: [...departmentIds],
+    self,
+  };
 }
 
 export async function evaluatePermission(input: {
