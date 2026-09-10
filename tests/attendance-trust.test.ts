@@ -72,6 +72,44 @@ describe("Attendance Trust Engine", () => {
     expect(result.decision).toBe("REJECT");
   });
 
+  it("requires native device integrity only when the tenant policy enables it", () => {
+    const result = assessAttendanceTrust(
+      {
+        source: "MOBILE_APP",
+        insideGeofence: true,
+        accuracyMeters: 10,
+        mockLocationRisk: "NONE",
+      },
+      {
+        ...DEFAULT_ATTENDANCE_TRUST_POLICY,
+        requireDeviceIntegrity: true,
+      },
+    );
+
+    expect(result.criticalRisk).toBe(true);
+    expect(result.decision).toBe("REVIEW");
+    expect(result.signals.find((signal) => signal.key === "device_trust")?.state).toBe("FAIL");
+  });
+
+  it("hard-rejects failed native integrity when strict critical blocking is enabled", () => {
+    const result = assessAttendanceTrust(
+      {
+        source: "MOBILE_APP",
+        insideGeofence: true,
+        accuracyMeters: 10,
+        deviceTrusted: false,
+      },
+      {
+        ...DEFAULT_ATTENDANCE_TRUST_POLICY,
+        blockCriticalRisk: true,
+        requireDeviceIntegrity: true,
+      },
+    );
+
+    expect(result.criticalRisk).toBe(true);
+    expect(result.decision).toBe("REJECT");
+  });
+
   it("requires face and liveness only when the versioned policy requests them", () => {
     const result = assessAttendanceTrust(
       {
@@ -93,6 +131,29 @@ describe("Attendance Trust Engine", () => {
     expect(result.decision).toBe("REVIEW");
     expect(result.signals.find((signal) => signal.key === "face_match")?.state).toBe("FAIL");
     expect(result.signals.find((signal) => signal.key === "liveness")?.state).toBe("FAIL");
+  });
+
+  it("does not apply native biometric requirements to kiosk attendance", () => {
+    const result = assessAttendanceTrust(
+      {
+        source: "KIOSK",
+        insideGeofence: true,
+        deviceTrusted: true,
+        mockLocationRisk: "UNKNOWN",
+      },
+      {
+        ...DEFAULT_ATTENDANCE_TRUST_POLICY,
+        requireDeviceIntegrity: true,
+        requireFace: true,
+        requireLiveness: true,
+      },
+    );
+
+    expect(result.score).toBe(100);
+    expect(result.criticalRisk).toBe(false);
+    expect(result.decision).toBe("ACCEPT");
+    expect(result.signals.find((signal) => signal.key === "face_match")?.state).toBe("UNKNOWN");
+    expect(result.signals.find((signal) => signal.key === "liveness")?.state).toBe("UNKNOWN");
   });
 
   it("allows a trusted kiosk to score cleanly without GPS accuracy", () => {
