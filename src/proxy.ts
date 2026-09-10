@@ -39,6 +39,7 @@ const PUBLIC_ROUTES = new Set([
 
 const PUBLIC_PREFIXES = [
   "/api/health",
+  "/api/ready",
   "/api/public/",
   "/api/auth/",
   "/api/mobile/",
