@@ -2,11 +2,10 @@
  * B-Attend session — signed HttpOnly browser cookie plus a separately-audienced
  * native employee bearer token.
  *
- * Browser tenant sessions are validated against BOTH the live user identity and
- * the live tenant/subscription state. Suspending/deleting a user therefore
- * revokes their browser access immediately even if the signed cookie has not
- * expired. Recovery sessions bypass billing state only; they never bypass user
- * suspension/deletion.
+ * Browser sessions are authorization hints, never the source of truth for live
+ * identity state. Tenant and platform roles are reloaded from the database on
+ * every authenticated request so suspension, deletion and role demotion take
+ * effect immediately without waiting for the JWT cookie to expire.
  */
 
 import { SignJWT, jwtVerify } from "jose";
@@ -98,10 +97,10 @@ async function readVerifiedCookie(): Promise<SessionTokenPayload | null> {
   return verify(token);
 }
 
-async function isActiveTenantIdentity(session: SessionTokenPayload): Promise<boolean> {
-  if (session.kind !== "tenant") return true;
-  if (!session.tenantId) return false;
+type LiveIdentity = { role: string; name: string; email: string };
 
+async function loadActiveTenantIdentity(session: SessionTokenPayload): Promise<LiveIdentity | null> {
+  if (session.kind !== "tenant" || !session.tenantId) return null;
   const user = await db.user.findFirst({
     where: {
       id: session.sub,
@@ -109,9 +108,31 @@ async function isActiveTenantIdentity(session: SessionTokenPayload): Promise<boo
       status: "ACTIVE",
       deletedAt: null,
     },
-    select: { id: true },
+    select: { role: true, name: true, email: true },
   });
-  return Boolean(user);
+  return user ? { role: user.role, name: user.name, email: user.email } : null;
+}
+
+async function loadActivePlatformIdentity(session: SessionTokenPayload): Promise<LiveIdentity | null> {
+  if (session.kind !== "platform") return null;
+  const user = await db.platformUser.findFirst({
+    where: {
+      id: session.sub,
+      status: "ACTIVE",
+      deletedAt: null,
+    },
+    select: { role: true, name: true, email: true },
+  });
+  return user ? { role: user.role, name: user.name, email: user.email } : null;
+}
+
+function refreshIdentity(session: SessionTokenPayload, identity: LiveIdentity): SessionTokenPayload {
+  return {
+    ...session,
+    role: identity.role,
+    name: identity.name,
+    email: identity.email,
+  };
 }
 
 async function isOperationalTenantSession(session: SessionTokenPayload): Promise<boolean> {
@@ -153,27 +174,39 @@ export async function destroySession(): Promise<void> {
   c.delete(COOKIE_NAME);
 }
 
-/** Normal application access: identity + subscription must both be active. */
+/** Normal application access: live identity + tenant subscription must be active. */
 export async function getSession(): Promise<SessionTokenPayload | null> {
   const session = await readVerifiedCookie();
   if (!session) return null;
-  if (session.kind !== "tenant") return session;
-  const [identityActive, operational] = await Promise.all([
-    isActiveTenantIdentity(session),
+
+  if (session.kind === "platform") {
+    const identity = await loadActivePlatformIdentity(session);
+    return identity ? refreshIdentity(session, identity) : null;
+  }
+
+  const [identity, operational] = await Promise.all([
+    loadActiveTenantIdentity(session),
     isOperationalTenantSession(session),
   ]);
-  return identityActive && operational ? session : null;
+  return identity && operational ? refreshIdentity(session, identity) : null;
 }
 
 /**
  * Billing/support recovery access. This bypasses subscription state only. A
- * suspended/deleted tenant user can never use a recovery session.
+ * suspended/deleted tenant user can never use a recovery session, and live
+ * role changes are still applied immediately.
  */
 export async function getSessionAllowInactive(): Promise<SessionTokenPayload | null> {
   const session = await readVerifiedCookie();
   if (!session) return null;
-  if (session.kind !== "tenant") return session;
-  return (await isActiveTenantIdentity(session)) ? session : null;
+
+  if (session.kind === "platform") {
+    const identity = await loadActivePlatformIdentity(session);
+    return identity ? refreshIdentity(session, identity) : null;
+  }
+
+  const identity = await loadActiveTenantIdentity(session);
+  return identity ? refreshIdentity(session, identity) : null;
 }
 
 export async function requireSession(): Promise<SessionTokenPayload> {
