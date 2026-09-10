@@ -5,6 +5,7 @@ import { Shield, UserCheck, UserPlus, UsersRound } from "lucide-react";
 import { db } from "@/lib/db";
 import { ensureSystemRoles, getEffectivePermissions, requirePermission } from "@/lib/auth/authorization";
 import { AccessClient } from "./AccessClient";
+import { OwnershipTransferCard } from "./OwnershipTransferCard";
 import { RevokeInvitationAction, UserStatusAction } from "./AccessRowActions";
 
 export const dynamic = "force-dynamic";
@@ -65,6 +66,9 @@ export default async function AccessPage() {
   const unlinkedEmployees = employeeRecords.filter((employee) => !employee.user);
   const branchNames = new Map(branches.map((branch) => [branch.id, branch.name]));
   const departmentNames = new Map(departments.map((department) => [department.id, department.name]));
+  const ownershipCandidates = users
+    .filter((user) => user.id !== session.sub && user.status === "ACTIVE")
+    .map((user) => ({ id: user.id, name: user.name, email: user.email }));
 
   return (
     <div className="mx-auto max-w-7xl space-y-6" dir={isArabic ? "rtl" : "ltr"}>
@@ -96,6 +100,10 @@ export default async function AccessPage() {
         canManageRoles={canManageRoles}
         isArabic={isArabic}
       />
+
+      {session.role === "COMPANY_OWNER" ? (
+        <OwnershipTransferCard candidates={ownershipCandidates} isArabic={isArabic} />
+      ) : null}
 
       <section className="rounded-xl border border-border bg-card shadow-sm">
         <div className="border-b border-border px-5 py-4">
