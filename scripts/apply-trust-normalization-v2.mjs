@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { execFileSync } from "node:child_process";
 
 function replaceExact(file, from, to) {
   const current = fs.readFileSync(file, "utf8");
@@ -45,11 +46,24 @@ replaceExact(
 
 const migrationDir = "prisma/migrations/20260910020000_attendance_trust_normalization";
 fs.mkdirSync(migrationDir, { recursive: true });
-fs.writeFileSync(path.join(migrationDir, "migration.sql"), `CREATE TYPE "AttendanceTrustDecision" AS ENUM ('ACCEPT', 'REVIEW', 'REJECT');\nCREATE TYPE "AttendanceTrustRisk" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'CRITICAL');\nCREATE TYPE "AttendanceTrustReviewStatus" AS ENUM ('NOT_REQUIRED', 'PENDING', 'APPROVED', 'REJECTED');\n\nALTER TABLE "CompanySettings"\n  ADD COLUMN "trustPolicyVersion" TEXT NOT NULL DEFAULT 'tenant-trust-v1',\n  ADD COLUMN "trustReviewBelow" INTEGER NOT NULL DEFAULT 75,\n  ADD COLUMN "trustRejectBelow" INTEGER NOT NULL DEFAULT 30,\n  ADD COLUMN "trustBlockCriticalRisk" BOOLEAN NOT NULL DEFAULT false,\n  ADD COLUMN "trustRequireFace" BOOLEAN NOT NULL DEFAULT false,\n  ADD COLUMN "trustRequireLiveness" BOOLEAN NOT NULL DEFAULT false,\n  ADD COLUMN "biometricRetentionHours" INTEGER NOT NULL DEFAULT 24;\n\nCREATE TABLE "AttendanceTrustAssessment" (\n    "id" TEXT NOT NULL,\n    "companyId" TEXT NOT NULL,\n    "punchId" TEXT NOT NULL,\n    "policyVersion" TEXT NOT NULL,\n    "score" INTEGER NOT NULL,\n    "riskLevel" "AttendanceTrustRisk" NOT NULL,\n    "decision" "AttendanceTrustDecision" NOT NULL,\n    "criticalRisk" BOOLEAN NOT NULL DEFAULT false,\n    "source" "PunchSource" NOT NULL,\n    "signalsJson" TEXT NOT NULL,\n    "reasonsJson" TEXT,\n    "reviewStatus" "AttendanceTrustReviewStatus" NOT NULL DEFAULT 'NOT_REQUIRED',\n    "reviewedById" TEXT,\n    "reviewedAt" TIMESTAMP(3),\n    "reviewNotes" TEXT,\n    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,\n    "updatedAt" TIMESTAMP(3) NOT NULL,\n    CONSTRAINT "AttendanceTrustAssessment_pkey" PRIMARY KEY ("id")\n);\n\nCREATE UNIQUE INDEX "AttendanceTrustAssessment_punchId_key" ON "AttendanceTrustAssessment"("punchId");\nCREATE INDEX "AttendanceTrustAssessment_companyId_createdAt_idx" ON "AttendanceTrustAssessment"("companyId", "createdAt");\nCREATE INDEX "AttendanceTrustAssessment_companyId_riskLevel_idx" ON "AttendanceTrustAssessment"("companyId", "riskLevel");\nCREATE INDEX "AttendanceTrustAssessment_companyId_reviewStatus_idx" ON "AttendanceTrustAssessment"("companyId", "reviewStatus");\n\nALTER TABLE "AttendanceTrustAssessment" ADD CONSTRAINT "AttendanceTrustAssessment_companyId_fkey" FOREIGN KEY ("companyId") REFERENCES "Tenant"("id") ON DELETE CASCADE ON UPDATE CASCADE;\nALTER TABLE "AttendanceTrustAssessment" ADD CONSTRAINT "AttendanceTrustAssessment_punchId_fkey" FOREIGN KEY ("punchId") REFERENCES "Punch"("id") ON DELETE CASCADE ON UPDATE CASCADE;\n`);
+const migrationPath = path.join(migrationDir, "migration.sql");
+if (!fs.existsSync(migrationPath)) throw new Error("Trust normalization migration is missing");
 
-fs.mkdirSync("src/lib/attendance", { recursive: true });
-fs.writeFileSync("src/lib/attendance/trust-policy.ts", `import type { CompanySettings } from "@prisma/client";\nimport {\n  DEFAULT_ATTENDANCE_TRUST_POLICY,\n  type AttendanceTrustPolicy,\n} from "@/lib/attendance/trust-engine";\n\ntype TrustPolicySettings = Pick<\n  CompanySettings,\n  | "trustPolicyVersion"\n  | "trustReviewBelow"\n  | "trustRejectBelow"\n  | "trustBlockCriticalRisk"\n  | "trustRequireFace"\n  | "trustRequireLiveness"\n>;\n\nfunction boundedInt(value: number | null | undefined, fallback: number, min: number, max: number) {\n  if (!Number.isInteger(value)) return fallback;\n  return Math.max(min, Math.min(max, value as number));\n}\n\nexport function attendanceTrustPolicyFromSettings(\n  settings: TrustPolicySettings | null | undefined,\n): AttendanceTrustPolicy {\n  const reviewBelow = boundedInt(settings?.trustReviewBelow, DEFAULT_ATTENDANCE_TRUST_POLICY.reviewBelow, 1, 100);\n  const rejectBelow = Math.min(\n    reviewBelow - 1,\n    boundedInt(settings?.trustRejectBelow, DEFAULT_ATTENDANCE_TRUST_POLICY.rejectBelow, 0, 99),\n  );\n  const configuredVersion = settings?.trustPolicyVersion?.trim() || "tenant-trust-v1";\n  const fingerprint = [\n    configuredVersion,\n    \`review-\${reviewBelow}\`,\n    \`reject-\${rejectBelow}\`,\n    \`critical-\${settings?.trustBlockCriticalRisk ? 1 : 0}\`,\n    \`face-\${settings?.trustRequireFace ? 1 : 0}\`,\n    \`live-\${settings?.trustRequireLiveness ? 1 : 0}\`,\n  ].join(":");\n\n  return {\n    version: \`\${DEFAULT_ATTENDANCE_TRUST_POLICY.version}:\${fingerprint}\`,\n    reviewBelow,\n    rejectBelow,\n    blockCriticalRisk: settings?.trustBlockCriticalRisk ?? DEFAULT_ATTENDANCE_TRUST_POLICY.blockCriticalRisk,\n    requireFace: settings?.trustRequireFace ?? DEFAULT_ATTENDANCE_TRUST_POLICY.requireFace,\n    requireLiveness: settings?.trustRequireLiveness ?? DEFAULT_ATTENDANCE_TRUST_POLICY.requireLiveness,\n  };\n}\n`);
+await import("./integrate-trust-v2.mjs");
 
-fs.writeFileSync("src/lib/attendance/trust-persistence.ts", `import type { Prisma, PunchSource, AttendanceTrustReviewStatus } from "@prisma/client";\nimport type { AttendanceTrustAssessment as TrustEngineAssessment } from "@/lib/attendance/trust-engine";\n\ntype TrustWriter = Pick<Prisma.TransactionClient, "attendanceTrustAssessment">;\n\nexport async function persistAttendanceTrustAssessment(\n  tx: TrustWriter,\n  input: {\n    companyId: string;\n    punchId: string;\n    source: PunchSource;\n    assessment: TrustEngineAssessment;\n    reviewStatus?: AttendanceTrustReviewStatus;\n  },\n) {\n  return tx.attendanceTrustAssessment.create({\n    data: {\n      companyId: input.companyId,\n      punchId: input.punchId,\n      source: input.source,\n      policyVersion: input.assessment.policyVersion,\n      score: input.assessment.score,\n      riskLevel: input.assessment.riskLevel,\n      decision: input.assessment.decision,\n      criticalRisk: input.assessment.criticalRisk,\n      signalsJson: JSON.stringify(input.assessment.signals),\n      reasonsJson: JSON.stringify(input.assessment.reasons),\n      reviewStatus: input.reviewStatus ?? "NOT_REQUIRED",\n    },\n  });\n}\n\nexport function parseTrustReasons(value: string | null): string[] {\n  if (!value) return [];\n  try {\n    const parsed = JSON.parse(value);\n    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];\n  } catch {\n    return [];\n  }\n}\n`);
+// The verifier's existing commit step stages foundation paths. Stage integration
+// outputs here so they are committed only after all verification steps pass.
+execFileSync("git", ["add",
+  "src/app/(tenant)/clock/actions.ts",
+  "src/app/(tenant)/approvals/actions.ts",
+  "src/app/(tenant)/live/page.tsx",
+  "src/lib/attendance/engine.ts",
+  "src/app/(tenant)/settings/actions.ts",
+  "src/app/(tenant)/settings/CustomerSettingsForm.tsx",
+  "messages/en.json",
+  "messages/ar.json",
+  "tests/trust-policy.test.ts",
+  "tests/runtime/trust-approval.test.ts",
+]);
 
-console.log("Attendance Trust normalization patch applied.");
+console.log("Attendance Trust normalization + v2 integration patch applied.");
