@@ -7,6 +7,29 @@ import { haversineMeters, isInsideGeofence, recalculateAttendanceDay } from "@/l
 import { assessAttendanceTrust } from "@/lib/attendance/trust-engine";
 import { attendanceTrustPolicyFromSettings } from "@/lib/attendance/trust-policy";
 import { persistAttendanceTrustAssessment } from "@/lib/attendance/trust-persistence";
+import {
+  AttendanceVerificationProviderConfigurationError,
+  getAttendanceVerificationProvider,
+  missingAttendanceVerificationCapabilities,
+  requiredAttendanceVerificationCapabilities,
+  sanitizeAttendanceVerificationResult,
+} from "@/lib/attendance/verification-provider";
+import {
+  AttendanceVerificationChallengeError,
+  consumeAttendanceVerificationChallenge,
+  validateAttendanceVerificationChallenge,
+} from "@/lib/attendance/verification-challenge";
+
+const VerificationSchema = z.object({
+  challengeId: z.string().min(1),
+  challenge: z.string().min(20).max(512),
+  deviceIntegrityToken: z.string().min(8).max(20_000).optional(),
+  locationIntegrityToken: z.string().min(8).max(20_000).optional(),
+  biometricToken: z.string().min(8).max(20_000).optional(),
+}).strict().refine(
+  (value) => Boolean(value.deviceIntegrityToken || value.locationIntegrityToken || value.biometricToken),
+  { message: "Verification evidence is required" },
+);
 
 const ClockSchema = z.object({
   type: z.enum(["CLOCK_IN", "CLOCK_OUT"]),
@@ -14,7 +37,8 @@ const ClockSchema = z.object({
   longitude: z.number().min(-180).max(180),
   accuracyMeters: z.number().min(0).max(10_000).optional(),
   idempotencyKey: z.string().uuid(),
-});
+  verification: VerificationSchema.optional(),
+}).strict();
 
 const replaySelect = {
   id: true,
@@ -60,6 +84,16 @@ function replayResponse(punch: Prisma.PunchGetPayload<{ select: typeof replaySel
     trust: trustAssessment ?? storedTrust(deviceInfo),
     idempotentReplay: true,
   });
+}
+
+function challengeErrorResponse(error: AttendanceVerificationChallengeError) {
+  if (error.code === "CHALLENGE_ALREADY_USED") {
+    return NextResponse.json({ error: "VERIFICATION_CHALLENGE_ALREADY_USED" }, { status: 409 });
+  }
+  if (error.code === "CHALLENGE_EXPIRED") {
+    return NextResponse.json({ error: "VERIFICATION_CHALLENGE_EXPIRED" }, { status: 410 });
+  }
+  return NextResponse.json({ error: "VERIFICATION_CHALLENGE_INVALID" }, { status: 400 });
 }
 
 export async function POST(request: NextRequest) {
@@ -117,6 +151,77 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "CLOCK_IN_REQUIRED" }, { status: 409 });
   }
 
+  const trustPolicy = attendanceTrustPolicyFromSettings(settings);
+  let verificationProvider;
+  try {
+    verificationProvider = getAttendanceVerificationProvider();
+  } catch (error) {
+    if (error instanceof AttendanceVerificationProviderConfigurationError) {
+      return NextResponse.json({ error: "VERIFICATION_PROVIDER_MISCONFIGURED" }, { status: 503 });
+    }
+    throw error;
+  }
+
+  const requiredCapabilities = requiredAttendanceVerificationCapabilities(trustPolicy, "MOBILE_APP");
+  const missingCapabilities = missingAttendanceVerificationCapabilities(verificationProvider, requiredCapabilities);
+  if (missingCapabilities.length > 0) {
+    return NextResponse.json(
+      { error: "VERIFICATION_PROVIDER_UNAVAILABLE", missingCapabilities },
+      { status: 503 },
+    );
+  }
+  if (requiredCapabilities.length > 0 && !input.verification) {
+    return NextResponse.json(
+      { error: "VERIFICATION_REQUIRED", requiredCapabilities },
+      { status: 422 },
+    );
+  }
+
+  let verificationResult = null;
+  if (input.verification) {
+    if (verificationProvider.capabilities.length === 0) {
+      return NextResponse.json({ error: "VERIFICATION_NOT_SUPPORTED" }, { status: 422 });
+    }
+    try {
+      await validateAttendanceVerificationChallenge({
+        id: input.verification.challengeId,
+        challenge: input.verification.challenge,
+        companyId: context.employee.companyId,
+        employeeId: context.employee.id,
+        userId: context.user.id,
+        providerKey: verificationProvider.key,
+      });
+    } catch (error) {
+      if (error instanceof AttendanceVerificationChallengeError) return challengeErrorResponse(error);
+      throw error;
+    }
+
+    try {
+      verificationResult = await verificationProvider.verify({
+        companyId: context.employee.companyId,
+        employeeId: context.employee.id,
+        userId: context.user.id,
+        challenge: input.verification.challenge,
+        evidence: {
+          deviceIntegrityToken: input.verification.deviceIntegrityToken,
+          locationIntegrityToken: input.verification.locationIntegrityToken,
+          biometricToken: input.verification.biometricToken,
+        },
+      });
+      if (verificationResult.provider !== verificationProvider.key) {
+        return NextResponse.json({ error: "VERIFICATION_PROVIDER_INVALID_RESPONSE" }, { status: 503 });
+      }
+      if (
+        verificationResult.faceMatchScore != null &&
+        (!Number.isFinite(verificationResult.faceMatchScore) || verificationResult.faceMatchScore < 0 || verificationResult.faceMatchScore > 1)
+      ) {
+        return NextResponse.json({ error: "VERIFICATION_PROVIDER_INVALID_RESPONSE" }, { status: 503 });
+      }
+    } catch {
+      return NextResponse.json({ error: "VERIFICATION_PROVIDER_FAILED" }, { status: 503 });
+    }
+  }
+
   let distanceMeters = 0;
   let insideGeofence = true;
   if (context.employee.branch?.latitude != null && context.employee.branch.longitude != null) {
@@ -124,12 +229,15 @@ export async function POST(request: NextRequest) {
     insideGeofence = isInsideGeofence(distanceMeters, context.employee.branch.geofenceRadius);
   }
 
-  const trustPolicy = attendanceTrustPolicyFromSettings(settings);
   const trust = assessAttendanceTrust({
     source: "MOBILE_APP",
     insideGeofence,
     distanceMeters,
     accuracyMeters: input.accuracyMeters ?? null,
+    deviceTrusted: verificationResult?.deviceTrusted ?? null,
+    mockLocationRisk: verificationResult?.mockLocationRisk ?? null,
+    faceMatchScore: verificationResult?.faceMatchScore ?? null,
+    livenessPassed: verificationResult?.livenessPassed ?? null,
   }, trustPolicy);
 
   const geofenceReviewRequired = !insideGeofence && (settings?.requireApprovalOutsideGeofence ?? true);
@@ -148,10 +256,16 @@ export async function POST(request: NextRequest) {
     criticalRisk: trust.criticalRisk,
     signals: trust.signals,
   };
+  const sanitizedVerification = sanitizeAttendanceVerificationResult(verificationResult);
+  const verificationAudit = {
+    challengeId: input.verification?.challengeId ?? null,
+    result: sanitizedVerification,
+  };
   const deviceInfo = JSON.stringify({
     platform: "MOBILE_APP",
     idempotencyKey: input.idempotencyKey,
     accuracyMeters: input.accuracyMeters ?? null,
+    verification: verificationAudit,
     trust: persistedTrust,
   });
   const userAgent = request.headers.get("user-agent")?.slice(0, 500) ?? "B-Attend Staff";
@@ -160,6 +274,15 @@ export async function POST(request: NextRequest) {
   let approvalRequestId: string | null = null;
   try {
     const result = await db.$transaction(async (tx) => {
+      if (input.verification) {
+        await consumeAttendanceVerificationChallenge(tx, {
+          id: input.verification.challengeId,
+          companyId: context.employee.companyId,
+          employeeId: context.employee.id,
+          userId: context.user.id,
+        });
+      }
+
       const created = await tx.punch.create({
         data: {
           id: punchId,
@@ -186,6 +309,7 @@ export async function POST(request: NextRequest) {
         source: "MOBILE_APP",
         assessment: trust,
         reviewStatus: punchStatus === "NEEDS_APPROVAL" ? "PENDING" : "NOT_REQUIRED",
+        evidence: verificationAudit,
       });
 
       let requestId: string | null = null;
@@ -207,7 +331,7 @@ export async function POST(request: NextRequest) {
               distanceMeters,
               insideGeofence,
             }),
-            requestedData: JSON.stringify({ trust: persistedTrust }),
+            requestedData: JSON.stringify({ trust: persistedTrust, verification: verificationAudit }),
             status: "PENDING",
             requestedById: context.user.id,
             relatedPunchId: created.id,
@@ -234,6 +358,8 @@ export async function POST(request: NextRequest) {
             trustRisk: trust.riskLevel,
             trustDecision: trust.decision,
             trustPolicyVersion: trust.policyVersion,
+            verificationProvider: sanitizedVerification?.provider ?? "none",
+            verificationChallengeId: input.verification?.challengeId ?? null,
             approvalRequestId: requestId,
           }),
         },
@@ -244,6 +370,7 @@ export async function POST(request: NextRequest) {
     punch = result.created;
     approvalRequestId = result.requestId;
   } catch (error) {
+    if (error instanceof AttendanceVerificationChallengeError) return challengeErrorResponse(error);
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       const replay = await db.punch.findUnique({ where: { id: punchId }, select: replaySelect });
       if (replay) {
@@ -266,6 +393,9 @@ export async function POST(request: NextRequest) {
     insideGeofence,
     distanceMeters,
     approvalRequestId,
+    verification: sanitizedVerification
+      ? { provider: sanitizedVerification.provider, verifiedAt: sanitizedVerification.verifiedAt }
+      : null,
     trust: {
       score: trust.score,
       riskLevel: trust.riskLevel,
