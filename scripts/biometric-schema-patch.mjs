@@ -1,5 +1,6 @@
 import fs from "node:fs";
 
+// One-off idempotent patcher. Remove after the generated schema is committed.
 const path = "prisma/schema.prisma";
 let schema = fs.readFileSync(path, "utf8");
 
