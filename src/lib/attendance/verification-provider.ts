@@ -3,6 +3,10 @@ import type {
   AttendanceTrustPolicy,
   MockLocationRisk,
 } from "@/lib/attendance/trust-engine";
+import {
+  createGooglePlayIntegrityProvider,
+  GooglePlayIntegrityConfigurationError,
+} from "@/lib/attendance/providers/google-play-integrity";
 
 export const ATTENDANCE_VERIFICATION_CAPABILITIES = [
   "DEVICE_INTEGRITY",
@@ -69,14 +73,25 @@ const noopProvider: AttendanceVerificationProvider = {
 };
 
 /**
- * Provider registry boundary. Production integrations belong here (for example
- * Play Integrity/App Attest plus a face/liveness vendor) and must verify opaque
+ * Provider registry boundary. Production integrations must verify opaque,
  * server-verifiable artifacts. Client booleans/scores are never accepted as
  * authoritative evidence.
  */
 export function getAttendanceVerificationProvider(): AttendanceVerificationProvider {
   const configured = (process.env.ATTENDANCE_VERIFICATION_PROVIDER || "none").trim().toLowerCase();
   if (configured === "" || configured === "none") return noopProvider;
+
+  if (configured === "google_play_integrity") {
+    try {
+      return createGooglePlayIntegrityProvider();
+    } catch (error) {
+      if (error instanceof GooglePlayIntegrityConfigurationError) {
+        throw new AttendanceVerificationProviderConfigurationError(error.message);
+      }
+      throw error;
+    }
+  }
+
   throw new AttendanceVerificationProviderConfigurationError(
     `Unsupported ATTENDANCE_VERIFICATION_PROVIDER: ${configured}`,
   );
