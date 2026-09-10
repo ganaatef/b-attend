@@ -11,6 +11,8 @@ export async function persistAttendanceTrustAssessment(
     source: PunchSource;
     assessment: TrustEngineAssessment;
     reviewStatus?: AttendanceTrustReviewStatus;
+    /** Sanitized provider metadata only. Never raw verification tokens/media. */
+    evidence?: unknown;
   },
 ) {
   return tx.attendanceTrustAssessment.create({
@@ -25,6 +27,7 @@ export async function persistAttendanceTrustAssessment(
       criticalRisk: input.assessment.criticalRisk,
       signalsJson: JSON.stringify(input.assessment.signals),
       reasonsJson: JSON.stringify(input.assessment.reasons),
+      evidenceJson: input.evidence == null ? null : JSON.stringify(input.evidence),
       reviewStatus: input.reviewStatus ?? "NOT_REQUIRED",
     },
   });
