@@ -2,7 +2,9 @@
  * Runtime tests — Leave conflicts and unauthorized access patterns.
  *
  * Requires DATABASE_URL pointing to a test database.
- * Access-control tests invoke the real handlers with real signed sessions.
+ * Access-control tests invoke the real handlers with real signed sessions and
+ * real tenant/user/subscription rows so the suite exercises the same session
+ * revocation contract as production.
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
@@ -21,6 +23,7 @@ import { createPayrollRunAction } from "@/app/(tenant)/hr/actions";
 import { hasHrPermission } from "@/lib/hr/permissions";
 
 const SECRET = "battend-test-secret-1234567890-abcdefgh";
+const PASSWORD_HASH_FIXTURE = "$2b$10$runtimefixturehashnotusedforpasswordlogin000000000000000000";
 
 const db = new PrismaClient();
 
@@ -30,6 +33,10 @@ let branchA: string;
 let employeeA: string;
 let employeeB: string;
 let policyId: string;
+let planId: string;
+let ownerUserId: string;
+let employeeUserId: string;
+let managerUserId: string;
 
 async function signSession(payload: Record<string, unknown>): Promise<string> {
   return new SignJWT(payload)
@@ -49,12 +56,28 @@ function mockCookie(value: string) {
 
 beforeAll(async () => {
   vi.stubEnv("SESSION_SECRET", SECRET);
+  const unique = Date.now();
+
+  const plan = await db.plan.create({
+    data: {
+      slug: `runtime-security-${unique}`,
+      name: "Runtime Security Test Plan",
+      priceMonthly: 1,
+      priceAnnual: 10,
+      maxBranches: 10,
+      maxEmployees: 100,
+      maxManagers: 20,
+      maxKiosks: 10,
+      isActive: true,
+    },
+  });
+  planId = plan.id;
 
   const tA = await db.tenant.create({
     data: {
       name: "Leave Test Tenant A",
-      slug: `leave-test-a-${Date.now()}`,
-      ownerEmail: `leave-a-${Date.now()}@test.com`,
+      slug: `leave-test-a-${unique}`,
+      ownerEmail: `leave-a-${unique}@test.com`,
       ownerName: "Leave A",
       ownerPhone: "+201000000077",
       status: "ACTIVE",
@@ -65,8 +88,8 @@ beforeAll(async () => {
   const tB = await db.tenant.create({
     data: {
       name: "Leave Test Tenant B",
-      slug: `leave-test-b-${Date.now()}`,
-      ownerEmail: `leave-b-${Date.now()}@test.com`,
+      slug: `leave-test-b-${unique}`,
+      ownerEmail: `leave-b-${unique}@test.com`,
       ownerName: "Leave B",
       ownerPhone: "+201000000076",
       status: "ACTIVE",
@@ -74,9 +97,72 @@ beforeAll(async () => {
   });
   tenantB = tB.id;
 
+  const now = new Date();
+  const periodEnd = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+  await db.subscription.createMany({
+    data: [
+      {
+        tenantId: tenantA,
+        planId,
+        status: "ACTIVE",
+        billingCycle: "MONTHLY",
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        monthlyAmount: 1,
+        annualAmount: 10,
+      },
+      {
+        tenantId: tenantB,
+        planId,
+        status: "ACTIVE",
+        billingCycle: "MONTHLY",
+        currentPeriodStart: now,
+        currentPeriodEnd: periodEnd,
+        monthlyAmount: 1,
+        annualAmount: 10,
+      },
+    ],
+  });
+
+  const [owner, employeeUser, manager] = await Promise.all([
+    db.user.create({
+      data: {
+        companyId: tenantA,
+        email: `owner-${unique}@leave.test`,
+        passwordHash: PASSWORD_HASH_FIXTURE,
+        name: "Owner",
+        role: "COMPANY_OWNER",
+        status: "ACTIVE",
+      },
+    }),
+    db.user.create({
+      data: {
+        companyId: tenantA,
+        email: `employee-${unique}@leave.test`,
+        passwordHash: PASSWORD_HASH_FIXTURE,
+        name: "Employee",
+        role: "EMPLOYEE",
+        status: "ACTIVE",
+      },
+    }),
+    db.user.create({
+      data: {
+        companyId: tenantA,
+        email: `manager-${unique}@leave.test`,
+        passwordHash: PASSWORD_HASH_FIXTURE,
+        name: "Manager",
+        role: "BRANCH_MANAGER",
+        status: "ACTIVE",
+      },
+    }),
+  ]);
+  ownerUserId = owner.id;
+  employeeUserId = employeeUser.id;
+  managerUserId = manager.id;
+
   branchA = (
     await db.branch.create({
-      data: { companyId: tenantA, name: "Leave Branch", code: "LB", status: "ACTIVE" },
+      data: { companyId: tenantA, name: "Leave Branch", code: "LB", status: "ACTIVE", managerId: managerUserId },
     })
   ).id;
 
@@ -94,7 +180,7 @@ beforeAll(async () => {
 
   employeeA = (
     await db.employee.create({
-      data: { companyId: tenantA, employeeCode: "LEA001", fullName: "Leave Emp A", branchId: branchA, status: "ACTIVE" },
+      data: { companyId: tenantA, employeeCode: "LEA001", fullName: "Leave Emp A", branchId: branchA, status: "ACTIVE", userId: employeeUserId },
     })
   ).id;
 
@@ -113,7 +199,11 @@ afterAll(async () => {
   await db.shiftPolicy.deleteMany({ where: { id: policyId } });
   await db.employee.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
   await db.branch.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
+  await db.userRoleAssignment.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
+  await db.user.deleteMany({ where: { companyId: { in: [tenantA, tenantB] } } });
+  await db.subscription.deleteMany({ where: { tenantId: { in: [tenantA, tenantB] } } });
   await db.tenant.deleteMany({ where: { id: { in: [tenantA, tenantB] } } });
+  await db.plan.deleteMany({ where: { id: planId } });
   await db.$disconnect();
 });
 
@@ -122,7 +212,6 @@ describe("Approved leave conflicts", () => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
 
-    // Mark employee as on leave
     await db.schedule.create({
       data: {
         companyId: tenantA,
@@ -134,15 +223,12 @@ describe("Approved leave conflicts", () => {
       },
     });
 
-    // Check if schedule already exists for this date
     const existing = await db.schedule.findUnique({
       where: { companyId_employeeId_date: { companyId: tenantA, employeeId: employeeA, date } },
     });
     expect(existing).not.toBeNull();
     expect(existing?.status).toBe("LEAVE");
 
-    // A new schedule for the same date should be blocked
-    // (application checks for existing schedule before creating)
     await db.schedule.deleteMany({ where: { companyId: tenantA, employeeId: employeeA } });
   });
 
@@ -150,7 +236,6 @@ describe("Approved leave conflicts", () => {
     const date = new Date();
     date.setHours(0, 0, 0, 0);
 
-    // Create a scheduled shift
     const schedule = await db.schedule.create({
       data: {
         companyId: tenantA,
@@ -164,8 +249,7 @@ describe("Approved leave conflicts", () => {
       },
     });
 
-    // Submit leave request
-    const leaveReq = await db.approvalRequest.create({
+    await db.approvalRequest.create({
       data: {
         companyId: tenantA,
         employeeId: employeeA,
@@ -178,13 +262,7 @@ describe("Approved leave conflicts", () => {
       },
     });
 
-    // Simulate approval: update schedule to LEAVE
-    await db.schedule.update({
-      where: { id: schedule.id },
-      data: { status: "LEAVE" },
-    });
-
-    // Also upsert attendance day
+    await db.schedule.update({ where: { id: schedule.id }, data: { status: "LEAVE" } });
     await db.attendanceDay.upsert({
       where: { companyId_employeeId_date: { companyId: tenantA, employeeId: employeeA, date } },
       update: { status: "LEAVE" },
@@ -193,13 +271,11 @@ describe("Approved leave conflicts", () => {
 
     const updatedSchedule = await db.schedule.findUnique({ where: { id: schedule.id } });
     expect(updatedSchedule?.status).toBe("LEAVE");
-
     const attendanceDay = await db.attendanceDay.findUnique({
       where: { companyId_employeeId_date: { companyId: tenantA, employeeId: employeeA, date } },
     });
     expect(attendanceDay?.status).toBe("LEAVE");
 
-    // Cleanup
     await db.attendanceDay.deleteMany({ where: { companyId: tenantA } });
     await db.approvalRequest.deleteMany({ where: { companyId: tenantA } });
     await db.schedule.deleteMany({ where: { companyId: tenantA } });
@@ -212,7 +288,7 @@ describe("Unauthorized payroll access", () => {
       kind: "tenant",
       role: "EMPLOYEE",
       tenantId: tenantA,
-      sub: "user-emp",
+      sub: employeeUserId,
       name: "Employee",
       email: "emp@leave.test",
     }));
@@ -225,7 +301,6 @@ describe("Unauthorized payroll access", () => {
 
     expect(r.ok).toBe(false);
     if (!r.ok) expect(r.error).toContain("Permission denied");
-
     const runs = await db.payrollRun.findMany({ where: { companyId: tenantA } });
     expect(runs).toHaveLength(0);
   });
@@ -235,7 +310,7 @@ describe("Unauthorized payroll access", () => {
       kind: "tenant",
       role: "COMPANY_OWNER",
       tenantId: tenantA,
-      sub: "user-owner",
+      sub: ownerUserId,
       name: "Owner",
       email: "owner@leave.test",
     }));
@@ -245,7 +320,7 @@ describe("Unauthorized payroll access", () => {
       kind: "tenant",
       role: "BRANCH_MANAGER",
       tenantId: tenantA,
-      sub: "user-mgr",
+      sub: managerUserId,
       name: "Manager",
       email: "mgr@leave.test",
     }));
@@ -254,12 +329,12 @@ describe("Unauthorized payroll access", () => {
 });
 
 describe("Unauthorized platform access", () => {
-  it("rejects a tenant session from platform admin APIs", async () => {
+  it("rejects a valid tenant session from platform admin APIs", async () => {
     mockCookie(await signSession({
       kind: "tenant",
       role: "BRANCH_MANAGER",
       tenantId: tenantA,
-      sub: "user-mgr",
+      sub: managerUserId,
       name: "Manager",
       email: "mgr@leave.test",
     }));
@@ -299,16 +374,9 @@ describe("Cross-tenant approval isolation", () => {
       },
     });
 
-    // Querying with tenantB's companyId should not find this request
-    const wrongTenant = await db.approvalRequest.findFirst({
-      where: { id: req.id, companyId: tenantB },
-    });
+    const wrongTenant = await db.approvalRequest.findFirst({ where: { id: req.id, companyId: tenantB } });
     expect(wrongTenant).toBeNull();
-
-    // Correct tenant finds it
-    const correctTenant = await db.approvalRequest.findFirst({
-      where: { id: req.id, companyId: tenantA },
-    });
+    const correctTenant = await db.approvalRequest.findFirst({ where: { id: req.id, companyId: tenantA } });
     expect(correctTenant).not.toBeNull();
 
     await db.approvalRequest.delete({ where: { id: req.id } });
