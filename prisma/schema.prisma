@@ -201,6 +201,26 @@ enum PunchStatus {
   REJECTED
 }
 
+enum AttendanceTrustDecision {
+  ACCEPT
+  REVIEW
+  REJECT
+}
+
+enum AttendanceTrustRisk {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AttendanceTrustReviewStatus {
+  NOT_REQUIRED
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 enum AttendanceDayStatus {
   ON_TIME
   LATE
@@ -318,53 +338,54 @@ model Tenant {
   leads        Lead[]
 
   // Tenant-side relations (stubs — populated in later phases)
-  users                  User[]
-  tenantRoles            TenantRole[]
-  tenantRolePermissions  TenantRolePermission[]
-  userRoleAssignments    UserRoleAssignment[]
-  userInvitations        UserInvitation[]
-  userInvitationRoles    UserInvitationRole[]
-  settings               CompanySettings?
-  branches               Branch[]
-  departments            Department[]
-  employees              Employee[]
-  shiftPolicies          ShiftPolicy[]
-  schedules              Schedule[]
-  punches                Punch[]
-  attendanceDays         AttendanceDay[]
-  approvals              ApprovalRequest[]
-  notifications          Notification[]
-  auditLogs              AuditLog[]
-  reportExports          ReportExportLog[]
-  supportTickets         SupportTicket[]
-  kioskDevices           KioskDevice[]
+  users                      User[]
+  tenantRoles                TenantRole[]
+  tenantRolePermissions      TenantRolePermission[]
+  userRoleAssignments        UserRoleAssignment[]
+  userInvitations            UserInvitation[]
+  userInvitationRoles        UserInvitationRole[]
+  settings                   CompanySettings?
+  branches                   Branch[]
+  departments                Department[]
+  employees                  Employee[]
+  shiftPolicies              ShiftPolicy[]
+  schedules                  Schedule[]
+  punches                    Punch[]
+  attendanceTrustAssessments AttendanceTrustAssessment[]
+  attendanceDays             AttendanceDay[]
+  approvals                  ApprovalRequest[]
+  notifications              Notification[]
+  auditLogs                  AuditLog[]
+  reportExports              ReportExportLog[]
+  supportTickets             SupportTicket[]
+  kioskDevices               KioskDevice[]
   // B-Coach AI module relations
-  dailyCoachContents     DailyCoachContent[]
-  coachTips              CoachTip[]
-  employeeCoachSnapshots EmployeeCoachSnapshot[]
-  teamCoachSnapshots     TeamCoachSnapshot[]
-  aiUsageLogs            AiUsageLog[]
-  tenantAiSetting        TenantAiSetting?
+  dailyCoachContents         DailyCoachContent[]
+  coachTips                  CoachTip[]
+  employeeCoachSnapshots     EmployeeCoachSnapshot[]
+  teamCoachSnapshots         TeamCoachSnapshot[]
+  aiUsageLogs                AiUsageLog[]
+  tenantAiSetting            TenantAiSetting?
   // HR module relations
-  jobTitles              JobTitle[]
-  employeeContracts      EmployeeContract[]
-  employeeDocuments      EmployeeDocument[]
-  leaveTypes             LeaveType[]
-  leavePolicies          LeavePolicy[]
-  leaveBalances          LeaveBalance[]
-  leaveRequests          LeaveRequest[]
-  employeeWarnings       EmployeeWarning[]
-  trainingCourses        TrainingCourse[]
-  trainingAssignments    TrainingAssignment[]
-  employeeSkills         EmployeeSkill[]
-  assets                 Asset[]
-  assetAssignments       AssetAssignment[]
-  onboardingTasks        OnboardingTask[]
-  offboardingTasks       OffboardingTask[]
-  payrollProfiles        PayrollProfile[]
-  payrollRuns            PayrollRun[]
-  payrollRunLines        PayrollRunLine[]
-  payrollAdjustments     PayrollAdjustment[]
+  jobTitles                  JobTitle[]
+  employeeContracts          EmployeeContract[]
+  employeeDocuments          EmployeeDocument[]
+  leaveTypes                 LeaveType[]
+  leavePolicies              LeavePolicy[]
+  leaveBalances              LeaveBalance[]
+  leaveRequests              LeaveRequest[]
+  employeeWarnings           EmployeeWarning[]
+  trainingCourses            TrainingCourse[]
+  trainingAssignments        TrainingAssignment[]
+  employeeSkills             EmployeeSkill[]
+  assets                     Asset[]
+  assetAssignments           AssetAssignment[]
+  onboardingTasks            OnboardingTask[]
+  offboardingTasks           OffboardingTask[]
+  payrollProfiles            PayrollProfile[]
+  payrollRuns                PayrollRun[]
+  payrollRunLines            PayrollRunLine[]
+  payrollAdjustments         PayrollAdjustment[]
 
   @@index([status])
   @@index([businessType])
@@ -658,6 +679,13 @@ model CompanySettings {
   allowManualRequests             Boolean  @default(true)
   enableEmployeeSelfService       Boolean  @default(true)
   enableBranchManagerApprovals    Boolean  @default(true)
+  trustPolicyVersion              String   @default("tenant-trust-v1")
+  trustReviewBelow                Int      @default(75)
+  trustRejectBelow                Int      @default(30)
+  trustBlockCriticalRisk          Boolean  @default(false)
+  trustRequireFace                Boolean  @default(false)
+  trustRequireLiveness            Boolean  @default(false)
+  biometricRetentionHours         Int      @default(24)
   payrollIntegration              String?
   whatsappNotifications           Boolean  @default(false)
   emailNotifications              Boolean  @default(true)
@@ -843,32 +871,59 @@ model Schedule {
 }
 
 model Punch {
-  id             String      @id @default(cuid())
-  companyId      String
-  tenant         Tenant      @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  employeeId     String
-  employee       Employee    @relation(fields: [employeeId], references: [id], onDelete: Cascade)
-  branchId       String?
-  branch         Branch?     @relation(fields: [branchId], references: [id])
-  scheduleId     String?
-  schedule       Schedule?   @relation(fields: [scheduleId], references: [id])
-  type           PunchType
-  timestamp      DateTime
-  latitude       Float?
-  longitude      Float?
-  distanceMeters Int?
-  insideGeofence Boolean     @default(true)
-  source         PunchSource @default(MOBILE_WEB)
-  status         PunchStatus @default(ACCEPTED)
-  deviceInfo     String?
-  ipAddress      String?
-  userAgent      String?
-  createdAt      DateTime    @default(now())
+  id              String                     @id @default(cuid())
+  companyId       String
+  tenant          Tenant                     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  employeeId      String
+  employee        Employee                   @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  branchId        String?
+  branch          Branch?                    @relation(fields: [branchId], references: [id])
+  scheduleId      String?
+  schedule        Schedule?                  @relation(fields: [scheduleId], references: [id])
+  type            PunchType
+  timestamp       DateTime
+  latitude        Float?
+  longitude       Float?
+  distanceMeters  Int?
+  insideGeofence  Boolean                    @default(true)
+  source          PunchSource                @default(MOBILE_WEB)
+  status          PunchStatus                @default(ACCEPTED)
+  deviceInfo      String?
+  ipAddress       String?
+  userAgent       String?
+  createdAt       DateTime                   @default(now())
+  trustAssessment AttendanceTrustAssessment?
 
   @@index([companyId, employeeId])
   @@index([companyId, timestamp])
   @@index([employeeId])
   @@index([branchId])
+}
+
+model AttendanceTrustAssessment {
+  id            String                      @id @default(cuid())
+  companyId     String
+  tenant        Tenant                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  punchId       String                      @unique
+  punch         Punch                       @relation(fields: [punchId], references: [id], onDelete: Cascade)
+  policyVersion String
+  score         Int
+  riskLevel     AttendanceTrustRisk
+  decision      AttendanceTrustDecision
+  criticalRisk  Boolean                     @default(false)
+  source        PunchSource
+  signalsJson   String
+  reasonsJson   String?
+  reviewStatus  AttendanceTrustReviewStatus @default(NOT_REQUIRED)
+  reviewedById  String?
+  reviewedAt    DateTime?
+  reviewNotes   String?
+  createdAt     DateTime                    @default(now())
+  updatedAt     DateTime                    @updatedAt
+
+  @@index([companyId, createdAt])
+  @@index([companyId, riskLevel])
+  @@index([companyId, reviewStatus])
 }
 
 model AttendanceDay {
