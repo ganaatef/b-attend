@@ -211,8 +211,33 @@ export async function decideRequestAction(prev: any, formData: FormData) {
       },
     });
 
+    const dayStart = new Date(req.date ?? new Date());
+    dayStart.setHours(0, 0, 0, 0);
+
+    // Trust/geofence reviews point to the original Punch. Resolve that Punch on
+    // both approval and rejection so it can never remain stuck in
+    // NEEDS_APPROVAL after a manager has already made a decision.
+    let relatedPunchResolved = false;
+    if (req.relatedPunchId) {
+      const relatedPunch = await db.punch.findFirst({
+        where: {
+          id: req.relatedPunchId,
+          companyId: s.tenantId,
+          employeeId: req.employeeId,
+        },
+        select: { id: true },
+      });
+      if (relatedPunch) {
+        await db.punch.update({
+          where: { id: relatedPunch.id },
+          data: { status: decision === "APPROVED" ? "ACCEPTED" : "REJECTED" },
+        });
+        await recalculateAttendanceDay({ employeeId: req.employeeId, date: dayStart });
+        relatedPunchResolved = true;
+      }
+    }
+
     if (decision === "APPROVED") {
-      const dayStart = new Date(req.date!); dayStart.setHours(0, 0, 0, 0);
       if (req.type === "MANUAL_CLOCK_IN") {
         const data = req.requestedData ? JSON.parse(req.requestedData) : {};
         const ts = data.clockIn ? new Date(`${dayStart.toISOString().split("T")[0]}T${data.clockIn}:00`) : new Date();
@@ -223,10 +248,9 @@ export async function decideRequestAction(prev: any, formData: FormData) {
         const ts = data.clockOut ? new Date(`${dayStart.toISOString().split("T")[0]}T${data.clockOut}:00`) : new Date();
         await db.punch.create({ data: { companyId: s.tenantId, employeeId: req.employeeId, branchId: req.branchId, type: "CLOCK_OUT", timestamp: ts, source: "MANUAL_ADJUSTMENT", status: "ACCEPTED", insideGeofence: true, distanceMeters: 0 } });
         await recalculateAttendanceDay({ employeeId: req.employeeId, date: dayStart });
-      } else if (req.type === "OUTSIDE_GEOFENCE") {
-        if (req.relatedPunchId) {
-          await db.punch.update({ where: { id: req.relatedPunchId }, data: { status: "ACCEPTED" } });
-        }
+      } else if (req.type === "OUTSIDE_GEOFENCE" && !relatedPunchResolved) {
+        // Legacy requests may not have a relatedPunchId. Keep their historical
+        // behavior without allowing a cross-tenant punch lookup.
         await recalculateAttendanceDay({ employeeId: req.employeeId, date: dayStart });
       } else if (req.type === "LEAVE_REQUEST") {
         const data = req.requestedData ? JSON.parse(req.requestedData) : {};
@@ -242,9 +266,20 @@ export async function decideRequestAction(prev: any, formData: FormData) {
       }
     }
 
-    await logTenantEvent({ companyId: s.tenantId, actorId: s.sub, actorEmail: s.email, action: decision === "APPROVED" ? "APPROVAL_APPROVED" : "APPROVAL_REJECTED", entityType: "ApprovalRequest", entityId: requestId, reason: req.type });
+    await logTenantEvent({
+      companyId: s.tenantId,
+      actorId: s.sub,
+      actorEmail: s.email,
+      action: decision === "APPROVED" ? "APPROVAL_APPROVED" : "APPROVAL_REJECTED",
+      entityType: "ApprovalRequest",
+      entityId: requestId,
+      reason: req.type,
+      afterData: req.relatedPunchId ? { relatedPunchId: req.relatedPunchId, punchStatus: decision === "APPROVED" ? "ACCEPTED" : "REJECTED" } : undefined,
+    });
     revalidatePath("/approvals");
     revalidatePath(`/approvals/${requestId}`);
+    revalidatePath("/live");
+    revalidatePath("/dashboard");
     return { ok: true };
   } catch (e) {
     console.error("[actions] decideRequestAction failed:", e);
