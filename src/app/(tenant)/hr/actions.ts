@@ -14,8 +14,9 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { getSession } from "@/lib/auth/session";
+import { evaluatePermission, type AuthorizationScope } from "@/lib/auth/authorization";
 import { logTenantEvent } from "@/lib/auth/audit";
-import { getRolePermissions, getManagedBranchIds, type HrPermission } from "@/lib/hr/permissions";
+import { HR_PERMISSION_IAM_MAP, getManagedBranchIds, type HrPermission } from "@/lib/hr/permissions";
 import { canUseHrFeature } from "@/lib/hr/feature-gates";
 
 async function requireHrSession(): Promise<{ tenantId: string; userId: string; role: string; email: string }> {
@@ -24,8 +25,19 @@ async function requireHrSession(): Promise<{ tenantId: string; userId: string; r
   return { tenantId: s.tenantId, userId: s.sub, role: s.role, email: s.email };
 }
 
-function hasPermission(role: string, permission: HrPermission): boolean {
-  return getRolePermissions(role).includes(permission);
+async function hasPermission(
+  s: { tenantId: string; userId: string; role: string },
+  permission: HrPermission,
+  scope: AuthorizationScope = {},
+): Promise<boolean> {
+  const decision = await evaluatePermission({
+    companyId: s.tenantId,
+    userId: s.userId,
+    legacyRole: s.role,
+    permission: HR_PERMISSION_IAM_MAP[permission],
+    scope,
+  });
+  return decision.allowed;
 }
 
 // ─────────────────────────────────────────────
@@ -39,7 +51,7 @@ const DepartmentSchema = z.object({
 export async function createHrDepartmentAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_DEPARTMENTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_DEPARTMENTS")) return { ok: false, error: "Permission denied" };
     const parsed = DepartmentSchema.safeParse({ name: formData.get("name") });
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const name = parsed.data.name.trim();
@@ -60,7 +72,7 @@ export async function createHrDepartmentAction(prev: any, formData: FormData) {
 export async function updateHrDepartmentAction(departmentId: string, data: Record<string, any>) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_DEPARTMENTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_DEPARTMENTS")) return { ok: false, error: "Permission denied" };
     const dept = await db.department.findFirst({ where: { id: departmentId, companyId: s.tenantId } });
     if (!dept) return { ok: false, error: "Department not found" };
     await db.department.update({ where: { id: departmentId }, data });
@@ -76,7 +88,7 @@ export async function updateHrDepartmentAction(departmentId: string, data: Recor
 export async function deleteHrDepartmentAction(departmentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_DEPARTMENTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_DEPARTMENTS")) return { ok: false, error: "Permission denied" };
     const dept = await db.department.findFirst({ where: { id: departmentId, companyId: s.tenantId } });
     if (!dept) return { ok: false, error: "Department not found" };
 
@@ -112,7 +124,7 @@ const JobTitleSchema = z.object({
 export async function createJobTitleAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_JOB_TITLES")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_JOB_TITLES")) return { ok: false, error: "Permission denied" };
     const parsed = JobTitleSchema.safeParse({
       title: formData.get("title"),
       departmentId: formData.get("departmentId") || undefined,
@@ -138,7 +150,7 @@ export async function createJobTitleAction(prev: any, formData: FormData) {
 export async function updateJobTitleAction(jobTitleId: string, data: Record<string, any>) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_JOB_TITLES")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_JOB_TITLES")) return { ok: false, error: "Permission denied" };
     const jt = await db.jobTitle.findFirst({ where: { id: jobTitleId, companyId: s.tenantId } });
     if (!jt) return { ok: false, error: "Job title not found" };
     await db.jobTitle.update({ where: { id: jobTitleId }, data });
@@ -154,7 +166,7 @@ export async function updateJobTitleAction(jobTitleId: string, data: Record<stri
 export async function deleteJobTitleAction(jobTitleId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_JOB_TITLES")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_JOB_TITLES")) return { ok: false, error: "Permission denied" };
     const jt = await db.jobTitle.findFirst({ where: { id: jobTitleId, companyId: s.tenantId } });
     if (!jt) return { ok: false, error: "Job title not found" };
 
@@ -194,7 +206,7 @@ const ContractSchema = z.object({
 export async function createContractAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
     const parsed = ContractSchema.safeParse({
       employeeId: formData.get("employeeId"),
       contractNumber: formData.get("contractNumber"),
@@ -240,7 +252,7 @@ export async function createContractAction(prev: any, formData: FormData) {
 export async function updateContractAction(contractId: string, data: Record<string, any>) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
     const contract = await db.employeeContract.findFirst({ where: { id: contractId, companyId: s.tenantId } });
     if (!contract) return { ok: false, error: "Contract not found" };
     const updateData: Record<string, any> = {};
@@ -263,7 +275,7 @@ export async function updateContractAction(contractId: string, data: Record<stri
 export async function deleteContractAction(contractId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
     const contract = await db.employeeContract.findFirst({ where: { id: contractId, companyId: s.tenantId } });
     if (!contract) return { ok: false, error: "Contract not found" };
     if (contract.status !== "DRAFT") return { ok: false, error: "Only draft contracts can be deleted. Use Terminate for active contracts." };
@@ -281,7 +293,7 @@ export async function deleteContractAction(contractId: string) {
 export async function renewContractAction(contractId: string, newEndDate: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
     const contract = await db.employeeContract.findFirst({ where: { id: contractId, companyId: s.tenantId } });
     if (!contract) return { ok: false, error: "Contract not found" };
     if (contract.status !== "ACTIVE" && contract.status !== "EXPIRED") return { ok: false, error: "Can only renew active or expired contracts" };
@@ -316,7 +328,7 @@ export async function renewContractAction(contractId: string, newEndDate: string
 export async function terminateContractAction(contractId: string, reason?: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_CONTRACTS")) return { ok: false, error: "Permission denied" };
     const contract = await db.employeeContract.findFirst({ where: { id: contractId, companyId: s.tenantId } });
     if (!contract) return { ok: false, error: "Contract not found" };
     if (contract.status !== "ACTIVE") return { ok: false, error: "Can only terminate active contracts" };
@@ -351,7 +363,7 @@ const DocumentSchema = z.object({
 export async function createDocumentAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
     const parsed = DocumentSchema.safeParse({
       employeeId: formData.get("employeeId"),
       documentType: formData.get("documentType"),
@@ -390,7 +402,7 @@ export async function createDocumentAction(prev: any, formData: FormData) {
 export async function updateDocumentAction(documentId: string, data: Record<string, any>) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
     const doc = await db.employeeDocument.findFirst({ where: { id: documentId, companyId: s.tenantId } });
     if (!doc) return { ok: false, error: "Document not found" };
     const updateData: Record<string, any> = {};
@@ -413,7 +425,7 @@ export async function updateDocumentAction(documentId: string, data: Record<stri
 export async function deleteDocumentAction(documentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
     const doc = await db.employeeDocument.findFirst({ where: { id: documentId, companyId: s.tenantId } });
     if (!doc) return { ok: false, error: "Document not found" };
     await db.employeeDocument.delete({ where: { id: documentId } });
@@ -430,7 +442,7 @@ export async function deleteDocumentAction(documentId: string) {
 export async function markDocumentExpiredAction(documentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
     const doc = await db.employeeDocument.findFirst({ where: { id: documentId, companyId: s.tenantId } });
     if (!doc) return { ok: false, error: "Document not found" };
     await db.employeeDocument.update({ where: { id: documentId }, data: { status: "EXPIRED" } });
@@ -447,7 +459,7 @@ export async function markDocumentExpiredAction(documentId: string) {
 export async function markDocumentMissingAction(documentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_DOCUMENTS")) return { ok: false, error: "Permission denied" };
     const doc = await db.employeeDocument.findFirst({ where: { id: documentId, companyId: s.tenantId } });
     if (!doc) return { ok: false, error: "Document not found" };
     await db.employeeDocument.update({ where: { id: documentId }, data: { status: "MISSING" } });
@@ -477,7 +489,7 @@ const LeaveTypeSchema = z.object({
 export async function createLeaveTypeAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_LEAVE_TYPES")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_LEAVE_TYPES")) return { ok: false, error: "Permission denied" };
     const parsed = LeaveTypeSchema.safeParse({
       name: formData.get("name"),
       code: formData.get("code"),
@@ -506,7 +518,7 @@ export async function createLeaveTypeAction(prev: any, formData: FormData) {
 export async function updateLeaveTypeAction(leaveTypeId: string, data: Record<string, any>) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_LEAVE_TYPES")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_LEAVE_TYPES")) return { ok: false, error: "Permission denied" };
     const lt = await db.leaveType.findFirst({ where: { id: leaveTypeId, companyId: s.tenantId } });
     if (!lt) return { ok: false, error: "Leave type not found" };
     const updateData: Record<string, any> = {};
@@ -529,7 +541,7 @@ export async function updateLeaveTypeAction(leaveTypeId: string, data: Record<st
 export async function deleteLeaveTypeAction(leaveTypeId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_LEAVE_TYPES")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_LEAVE_TYPES")) return { ok: false, error: "Permission denied" };
     const lt = await db.leaveType.findFirst({ where: { id: leaveTypeId, companyId: s.tenantId } });
     if (!lt) return { ok: false, error: "Leave type not found" };
 
@@ -566,7 +578,6 @@ const LeaveRequestSchema = z.object({
 export async function createLeaveRequestAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "APPROVE_LEAVE") && !hasPermission(s.role, "MANAGE_LEAVE_BALANCES")) return { ok: false, error: "Permission denied" };
     const parsed = LeaveRequestSchema.safeParse({
       employeeId: formData.get("employeeId"),
       leaveTypeId: formData.get("leaveTypeId"),
@@ -578,6 +589,10 @@ export async function createLeaveRequestAction(prev: any, formData: FormData) {
 
     const emp = await db.employee.findFirst({ where: { id: parsed.data.employeeId, companyId: s.tenantId, deletedAt: null } });
     if (!emp) return { ok: false, error: "Employee not found" };
+    const targetScope = { branchId: emp.branchId, departmentId: emp.departmentId, targetUserId: emp.userId };
+    const canApprove = await hasPermission(s, "APPROVE_LEAVE", targetScope);
+    const canManageBalance = await hasPermission(s, "MANAGE_LEAVE_BALANCES", targetScope);
+    if (!canApprove && !canManageBalance) return { ok: false, error: "Permission denied" };
 
     const lt = await db.leaveType.findFirst({ where: { id: parsed.data.leaveTypeId, companyId: s.tenantId, active: true } });
     if (!lt) return { ok: false, error: "Leave type not found" };
@@ -626,17 +641,33 @@ export async function createLeaveRequestAction(prev: any, formData: FormData) {
 export async function approveLeaveRequestAction(leaveRequestId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "APPROVE_LEAVE")) return { ok: false, error: "Permission denied" };
     const lr = await db.leaveRequest.findFirst({ where: { id: leaveRequestId, companyId: s.tenantId } });
     if (!lr) return { ok: false, error: "Leave request not found" };
+    const targetEmployee = await db.employee.findFirst({
+      where: { id: lr.employeeId, companyId: s.tenantId, deletedAt: null },
+      select: { branchId: true, departmentId: true, userId: true },
+    });
+    if (!targetEmployee) return { ok: false, error: "Employee not found" };
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.userId,
+      legacyRole: s.role,
+      permission: HR_PERMISSION_IAM_MAP.APPROVE_LEAVE,
+      scope: {
+        branchId: targetEmployee.branchId,
+        departmentId: targetEmployee.departmentId,
+        targetUserId: targetEmployee.userId,
+      },
+    });
+    if (!authorization.allowed) return { ok: false, error: "Permission denied" };
     if (lr.status !== "PENDING") return { ok: false, error: "Request is not pending" };
 
-    if (s.role === "BRANCH_MANAGER") {
-      const emp = await db.employee.findFirst({ where: { id: lr.employeeId, companyId: s.tenantId, deletedAt: null } });
-      if (!emp) return { ok: false, error: "Employee not found" };
-      if (!emp.branchId) return { ok: false, error: "Employee has no branch assigned" };
+    // Only the legacy-role fallback needs the historical managerId boundary.
+    // Explicit IAM assignments have already been scope-matched above.
+    if (authorization.source === "legacy" && s.role === "BRANCH_MANAGER") {
+      if (!targetEmployee.branchId) return { ok: false, error: "Employee has no branch assigned" };
       const managedIds = await getManagedBranchIds(s.userId, s.tenantId);
-      if (!managedIds.includes(emp.branchId)) return { ok: false, error: "Permission denied: employee not in your branch" };
+      if (!managedIds.includes(targetEmployee.branchId)) return { ok: false, error: "Permission denied: employee not in your branch" };
     }
 
     const start = new Date(lr.startDate);
@@ -687,17 +718,33 @@ export async function approveLeaveRequestAction(leaveRequestId: string) {
 export async function rejectLeaveRequestAction(leaveRequestId: string, managerNotes?: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "APPROVE_LEAVE")) return { ok: false, error: "Permission denied" };
     const lr = await db.leaveRequest.findFirst({ where: { id: leaveRequestId, companyId: s.tenantId } });
     if (!lr) return { ok: false, error: "Leave request not found" };
+    const targetEmployee = await db.employee.findFirst({
+      where: { id: lr.employeeId, companyId: s.tenantId, deletedAt: null },
+      select: { branchId: true, departmentId: true, userId: true },
+    });
+    if (!targetEmployee) return { ok: false, error: "Employee not found" };
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.userId,
+      legacyRole: s.role,
+      permission: HR_PERMISSION_IAM_MAP.APPROVE_LEAVE,
+      scope: {
+        branchId: targetEmployee.branchId,
+        departmentId: targetEmployee.departmentId,
+        targetUserId: targetEmployee.userId,
+      },
+    });
+    if (!authorization.allowed) return { ok: false, error: "Permission denied" };
     if (lr.status !== "PENDING") return { ok: false, error: "Request is not pending" };
 
-    if (s.role === "BRANCH_MANAGER") {
-      const emp = await db.employee.findFirst({ where: { id: lr.employeeId, companyId: s.tenantId, deletedAt: null } });
-      if (!emp) return { ok: false, error: "Employee not found" };
-      if (!emp.branchId) return { ok: false, error: "Employee has no branch assigned" };
+    // Only the legacy-role fallback needs the historical managerId boundary.
+    // Explicit IAM assignments have already been scope-matched above.
+    if (authorization.source === "legacy" && s.role === "BRANCH_MANAGER") {
+      if (!targetEmployee.branchId) return { ok: false, error: "Employee has no branch assigned" };
       const managedIds = await getManagedBranchIds(s.userId, s.tenantId);
-      if (!managedIds.includes(emp.branchId)) return { ok: false, error: "Permission denied: employee not in your branch" };
+      if (!managedIds.includes(targetEmployee.branchId)) return { ok: false, error: "Permission denied: employee not in your branch" };
     }
 
     await db.leaveRequest.update({
@@ -722,20 +769,36 @@ export async function rejectLeaveRequestAction(leaveRequestId: string, managerNo
 export async function cancelLeaveRequestAction(leaveRequestId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "APPROVE_LEAVE")) return { ok: false, error: "Permission denied" };
     const lr = await db.leaveRequest.findFirst({ where: { id: leaveRequestId, companyId: s.tenantId } });
     if (!lr) return { ok: false, error: "Leave request not found" };
+    const targetEmployee = await db.employee.findFirst({
+      where: { id: lr.employeeId, companyId: s.tenantId, deletedAt: null },
+      select: { branchId: true, departmentId: true, userId: true },
+    });
+    if (!targetEmployee) return { ok: false, error: "Employee not found" };
+    const authorization = await evaluatePermission({
+      companyId: s.tenantId,
+      userId: s.userId,
+      legacyRole: s.role,
+      permission: HR_PERMISSION_IAM_MAP.APPROVE_LEAVE,
+      scope: {
+        branchId: targetEmployee.branchId,
+        departmentId: targetEmployee.departmentId,
+        targetUserId: targetEmployee.userId,
+      },
+    });
+    if (!authorization.allowed) return { ok: false, error: "Permission denied" };
     if (lr.status !== "PENDING") {
       if (lr.status === "APPROVED") return { ok: false, error: "Approved leave reversal is not available in this version. Please handle this through a future HR-only reversal workflow." };
       return { ok: false, error: "Cannot cancel request in current status" };
     }
 
-    if (s.role === "BRANCH_MANAGER") {
-      const emp = await db.employee.findFirst({ where: { id: lr.employeeId, companyId: s.tenantId, deletedAt: null } });
-      if (!emp) return { ok: false, error: "Employee not found" };
-      if (!emp.branchId) return { ok: false, error: "Employee has no branch assigned" };
+    // Only the legacy-role fallback needs the historical managerId boundary.
+    // Explicit IAM assignments have already been scope-matched above.
+    if (authorization.source === "legacy" && s.role === "BRANCH_MANAGER") {
+      if (!targetEmployee.branchId) return { ok: false, error: "Employee has no branch assigned" };
       const managedIds = await getManagedBranchIds(s.userId, s.tenantId);
-      if (!managedIds.includes(emp.branchId)) return { ok: false, error: "Permission denied: employee not in your branch" };
+      if (!managedIds.includes(targetEmployee.branchId)) return { ok: false, error: "Permission denied: employee not in your branch" };
     }
 
     await db.$transaction(async (tx) => {
@@ -866,7 +929,7 @@ const warningSchema = z.object({ employeeId: z.string().min(1), type: z.string()
 export async function createWarningAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_WARNINGS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_WARNINGS")) return { ok: false, error: "Permission denied" };
 
     const parsed = warningSchema.safeParse({ employeeId: formData.get("employeeId"), type: formData.get("type"), severity: formData.get("severity"), date: formData.get("date"), reason: formData.get("reason"), actionTaken: formData.get("actionTaken") || undefined, notes: formData.get("notes") || undefined, branchId: formData.get("branchId") || undefined });
     if (!parsed.success) return { ok: false, error: parsed.error.flatten().fieldErrors.employeeId?.[0] ?? "Invalid data" };
@@ -891,7 +954,7 @@ export async function createWarningAction(prev: any, formData: FormData) {
 export async function updateWarningAction(warningId: string, data: { status?: string; notes?: string; actionTaken?: string }) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_WARNINGS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_WARNINGS")) return { ok: false, error: "Permission denied" };
     const w = await db.employeeWarning.findFirst({ where: { id: warningId, companyId: s.tenantId } });
     if (!w) return { ok: false, error: "Warning not found" };
 
@@ -933,7 +996,7 @@ export async function acknowledgeWarningAction(warningId: string) {
 export async function resolveWarningAction(warningId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_WARNINGS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_WARNINGS")) return { ok: false, error: "Permission denied" };
     const w = await db.employeeWarning.findFirst({ where: { id: warningId, companyId: s.tenantId } });
     if (!w) return { ok: false, error: "Warning not found" };
 
@@ -952,7 +1015,7 @@ export async function resolveWarningAction(warningId: string) {
 export async function cancelWarningAction(warningId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_WARNINGS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_WARNINGS")) return { ok: false, error: "Permission denied" };
     const w = await db.employeeWarning.findFirst({ where: { id: warningId, companyId: s.tenantId } });
     if (!w) return { ok: false, error: "Warning not found" };
 
@@ -977,7 +1040,7 @@ const courseSchema = z.object({ title: z.string().min(1), description: z.string(
 export async function createTrainingCourseAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
 
     const parsed = courseSchema.safeParse({ title: formData.get("title"), description: formData.get("description") || undefined, category: formData.get("category"), requiredForJobTitle: formData.get("requiredForJobTitle") || undefined, validityMonths: formData.get("validityMonths") || undefined });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
@@ -999,7 +1062,7 @@ export async function createTrainingCourseAction(prev: any, formData: FormData) 
 export async function updateTrainingCourseAction(courseId: string, data: { title?: string; description?: string; category?: string; active?: boolean }) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
     const c = await db.trainingCourse.findFirst({ where: { id: courseId, companyId: s.tenantId } });
     if (!c) return { ok: false, error: "Course not found" };
 
@@ -1030,7 +1093,7 @@ const assignTrainingSchema = z.object({ employeeId: z.string().min(1), courseId:
 export async function assignTrainingAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
 
     const parsed = assignTrainingSchema.safeParse({ employeeId: formData.get("employeeId"), courseId: formData.get("courseId"), dueDate: formData.get("dueDate") || undefined, notes: formData.get("notes") || undefined });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
@@ -1062,7 +1125,7 @@ export async function assignTrainingAction(prev: any, formData: FormData) {
 export async function markTrainingInProgressAction(assignmentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
     const a = await db.trainingAssignment.findFirst({ where: { id: assignmentId, companyId: s.tenantId } });
     if (!a) return { ok: false, error: "Assignment not found" };
     if (a.status !== "ASSIGNED") return { ok: false, error: "Assignment must be ASSIGNED" };
@@ -1081,7 +1144,7 @@ export async function markTrainingInProgressAction(assignmentId: string) {
 export async function markTrainingCompletedAction(assignmentId: string, score?: number) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
     const a = await db.trainingAssignment.findFirst({ where: { id: assignmentId, companyId: s.tenantId } });
     if (!a) return { ok: false, error: "Assignment not found" };
     if (a.status === "CANCELLED") return { ok: false, error: "Cannot complete a cancelled assignment" };
@@ -1101,7 +1164,7 @@ export async function markTrainingCompletedAction(assignmentId: string, score?: 
 export async function cancelTrainingAssignmentAction(assignmentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
     const a = await db.trainingAssignment.findFirst({ where: { id: assignmentId, companyId: s.tenantId } });
     if (!a) return { ok: false, error: "Assignment not found" };
 
@@ -1121,7 +1184,7 @@ const skillSchema = z.object({ employeeId: z.string().min(1), skillName: z.strin
 export async function addEmployeeSkillAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
 
     const parsed = skillSchema.safeParse({ employeeId: formData.get("employeeId"), skillName: formData.get("skillName"), level: formData.get("level") });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
@@ -1145,7 +1208,7 @@ export async function addEmployeeSkillAction(prev: any, formData: FormData) {
 export async function updateEmployeeSkillAction(skillId: string, data: { level?: string }) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_TRAINING")) return { ok: false, error: "Permission denied" };
     const sk = await db.employeeSkill.findFirst({ where: { id: skillId, companyId: s.tenantId } });
     if (!sk) return { ok: false, error: "Skill not found" };
 
@@ -1168,7 +1231,7 @@ const assetSchema = z.object({ name: z.string().min(1), type: z.string().min(1),
 export async function createAssetAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
 
     const parsed = assetSchema.safeParse({ name: formData.get("name"), type: formData.get("type"), code: formData.get("code") || undefined, notes: formData.get("notes") || undefined });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
@@ -1194,7 +1257,7 @@ export async function createAssetAction(prev: any, formData: FormData) {
 export async function updateAssetAction(assetId: string, data: { name?: string; type?: string; notes?: string }) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
     const a = await db.asset.findFirst({ where: { id: assetId, companyId: s.tenantId } });
     if (!a) return { ok: false, error: "Asset not found" };
 
@@ -1214,7 +1277,7 @@ const assignAssetSchema = z.object({ assetId: z.string().min(1), employeeId: z.s
 export async function assignAssetAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
 
     const parsed = assignAssetSchema.safeParse({ assetId: formData.get("assetId"), employeeId: formData.get("employeeId"), conditionOnAssign: formData.get("conditionOnAssign") || undefined, notes: formData.get("notes") || undefined });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
@@ -1245,7 +1308,7 @@ export async function assignAssetAction(prev: any, formData: FormData) {
 export async function returnAssetAction(assignmentId: string, conditionOnReturn?: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
     const aa = await db.assetAssignment.findFirst({ where: { id: assignmentId, companyId: s.tenantId } });
     if (!aa) return { ok: false, error: "Assignment not found" };
     if (aa.status !== "ASSIGNED") return { ok: false, error: "Assignment is not active" };
@@ -1269,7 +1332,7 @@ export async function returnAssetAction(assignmentId: string, conditionOnReturn?
 export async function markAssetLostAction(assignmentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
     const aa = await db.assetAssignment.findFirst({ where: { id: assignmentId, companyId: s.tenantId } });
     if (!aa) return { ok: false, error: "Assignment not found" };
     if (aa.status !== "ASSIGNED") return { ok: false, error: "Only active assignments can be marked as lost" };
@@ -1291,7 +1354,7 @@ export async function markAssetLostAction(assignmentId: string) {
 export async function markAssetDamagedAction(assignmentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
     const aa = await db.assetAssignment.findFirst({ where: { id: assignmentId, companyId: s.tenantId } });
     if (!aa) return { ok: false, error: "Assignment not found" };
     if (aa.status !== "ASSIGNED") return { ok: false, error: "Only active assignments can be marked as damaged" };
@@ -1313,7 +1376,7 @@ export async function markAssetDamagedAction(assignmentId: string) {
 export async function retireAssetAction(assetId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ASSETS")) return { ok: false, error: "Permission denied" };
     const a = await db.asset.findFirst({ where: { id: assetId, companyId: s.tenantId } });
     if (!a) return { ok: false, error: "Asset not found" };
     if (a.status !== "AVAILABLE") return { ok: false, error: "Only available assets can be retired" };
@@ -1341,7 +1404,7 @@ const onboardingTaskSchema = z.object({ employeeId: z.string().min(1), title: z.
 export async function createOnboardingTaskAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
 
     const parsed = onboardingTaskSchema.safeParse({ employeeId: formData.get("employeeId"), title: formData.get("title"), description: formData.get("description") || undefined, dueDate: formData.get("dueDate") || undefined });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
@@ -1366,7 +1429,7 @@ export async function createOnboardingTaskAction(prev: any, formData: FormData) 
 export async function updateOnboardingTaskAction(taskId: string, data: { title?: string; description?: string; dueDate?: Date }) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
     const t = await db.onboardingTask.findFirst({ where: { id: taskId, companyId: s.tenantId } });
     if (!t) return { ok: false, error: "Task not found" };
 
@@ -1384,7 +1447,7 @@ export async function updateOnboardingTaskAction(taskId: string, data: { title?:
 export async function completeOnboardingTaskAction(taskId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
     const t = await db.onboardingTask.findFirst({ where: { id: taskId, companyId: s.tenantId } });
     if (!t) return { ok: false, error: "Task not found" };
     if (t.status === "COMPLETED") return { ok: false, error: "Already completed" };
@@ -1404,7 +1467,7 @@ export async function completeOnboardingTaskAction(taskId: string) {
 export async function cancelOnboardingTaskAction(taskId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
     const t = await db.onboardingTask.findFirst({ where: { id: taskId, companyId: s.tenantId } });
     if (!t) return { ok: false, error: "Task not found" };
 
@@ -1422,7 +1485,7 @@ export async function cancelOnboardingTaskAction(taskId: string) {
 export async function createDefaultOnboardingChecklistAction(employeeId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_ONBOARDING")) return { ok: false, error: "Permission denied" };
 
     const employee = await db.employee.findFirst({ where: { id: employeeId, companyId: s.tenantId, deletedAt: null } });
     if (!employee) return { ok: false, error: "Employee not found or does not belong to your company" };
@@ -1470,7 +1533,7 @@ const offboardingTaskSchema = z.object({ employeeId: z.string().min(1), title: z
 export async function startOffboardingAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
 
     const employeeId = formData.get("employeeId") as string;
     const lastDay = formData.get("lastWorkingDay") as string;
@@ -1511,7 +1574,7 @@ export async function startOffboardingAction(prev: any, formData: FormData) {
 export async function createOffboardingTaskAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
 
     const parsed = offboardingTaskSchema.safeParse({ employeeId: formData.get("employeeId"), title: formData.get("title"), description: formData.get("description") || undefined, dueDate: formData.get("dueDate") || undefined });
     if (!parsed.success) return { ok: false, error: "Invalid data" };
@@ -1533,7 +1596,7 @@ export async function createOffboardingTaskAction(prev: any, formData: FormData)
 export async function completeOffboardingTaskAction(taskId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
     const t = await db.offboardingTask.findFirst({ where: { id: taskId, companyId: s.tenantId } });
     if (!t) return { ok: false, error: "Task not found" };
 
@@ -1551,7 +1614,7 @@ export async function completeOffboardingTaskAction(taskId: string) {
 export async function cancelOffboardingTaskAction(taskId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
     const t = await db.offboardingTask.findFirst({ where: { id: taskId, companyId: s.tenantId } });
     if (!t) return { ok: false, error: "Task not found" };
 
@@ -1569,7 +1632,7 @@ export async function cancelOffboardingTaskAction(taskId: string) {
 export async function finalizeOffboardingAction(employeeId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
 
     const employee = await db.employee.findFirst({ where: { id: employeeId, companyId: s.tenantId, deletedAt: null } });
     if (!employee) return { ok: false, error: "Employee not found" };
@@ -1602,7 +1665,7 @@ export async function finalizeOffboardingAction(employeeId: string) {
 export async function disableEmployeeUserAccessAction(employeeId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_OFFBOARDING")) return { ok: false, error: "Permission denied" };
 
     const employee = await db.employee.findFirst({ where: { id: employeeId, companyId: s.tenantId, deletedAt: null } });
     if (!employee) return { ok: false, error: "Employee not found" };
@@ -1641,7 +1704,7 @@ const payrollProfileSchema = z.object({
 export async function createPayrollProfileAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
     if (s.role === "BRANCH_MANAGER") return { ok: false, error: "Branch Manager cannot manage payroll" };
 
     const parsed = payrollProfileSchema.safeParse({
@@ -1685,7 +1748,7 @@ export async function createPayrollProfileAction(prev: any, formData: FormData) 
 export async function updatePayrollProfileAction(profileId: string, data: Record<string, any>) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
     if (s.role === "BRANCH_MANAGER") return { ok: false, error: "Branch Manager cannot manage payroll" };
 
     const profile = await db.payrollProfile.findFirst({ where: { id: profileId, companyId: s.tenantId } });
@@ -1721,7 +1784,7 @@ export async function updatePayrollProfileAction(profileId: string, data: Record
 export async function deactivatePayrollProfileAction(profileId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const profile = await db.payrollProfile.findFirst({ where: { id: profileId, companyId: s.tenantId } });
     if (!profile) return { ok: false, error: "Payroll profile not found" };
@@ -1752,7 +1815,7 @@ const payrollRunSchema = z.object({
 export async function createPayrollRunAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
     if (s.role === "BRANCH_MANAGER") return { ok: false, error: "Branch Manager cannot create payroll runs" };
 
     const parsed = payrollRunSchema.safeParse({
@@ -1788,7 +1851,7 @@ export async function createPayrollRunAction(prev: any, formData: FormData) {
 export async function generatePayrollLinesAction(runId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const run = await db.payrollRun.findFirst({ where: { id: runId, companyId: s.tenantId } });
     if (!run) return { ok: false, error: "Payroll run not found" };
@@ -1823,7 +1886,7 @@ export async function generatePayrollLinesAction(runId: string) {
 export async function recalculatePayrollRunAction(runId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const run = await db.payrollRun.findFirst({ where: { id: runId, companyId: s.tenantId } });
     if (!run) return { ok: false, error: "Payroll run not found" };
@@ -1852,7 +1915,7 @@ export async function recalculatePayrollRunAction(runId: string) {
 export async function movePayrollRunToReviewAction(runId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const run = await db.payrollRun.findFirst({ where: { id: runId, companyId: s.tenantId } });
     if (!run) return { ok: false, error: "Payroll run not found" };
@@ -1875,7 +1938,7 @@ export async function movePayrollRunToReviewAction(runId: string) {
 export async function approvePayrollRunAction(runId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const run = await db.payrollRun.findFirst({ where: { id: runId, companyId: s.tenantId } });
     if (!run) return { ok: false, error: "Payroll run not found" };
@@ -2009,7 +2072,7 @@ export async function checkPayrollLockReadiness(
 export async function lockPayrollRunAction(runId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const run = await db.payrollRun.findFirst({ where: { id: runId, companyId: s.tenantId } });
     if (!run) return { ok: false, error: "Payroll run not found" };
@@ -2044,7 +2107,7 @@ export async function lockPayrollRunAction(runId: string) {
 export async function cancelPayrollRunAction(runId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const run = await db.payrollRun.findFirst({ where: { id: runId, companyId: s.tenantId } });
     if (!run) return { ok: false, error: "Payroll run not found" };
@@ -2077,7 +2140,7 @@ const payrollAdjustmentSchema = z.object({
 export async function createPayrollAdjustmentAction(prev: any, formData: FormData) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const parsed = payrollAdjustmentSchema.safeParse({
       employeeId: formData.get("employeeId"),
@@ -2124,7 +2187,7 @@ export async function createPayrollAdjustmentAction(prev: any, formData: FormDat
 export async function approvePayrollAdjustmentAction(adjustmentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const adj = await db.payrollAdjustment.findFirst({ where: { id: adjustmentId, companyId: s.tenantId } });
     if (!adj) return { ok: false, error: "Adjustment not found" };
@@ -2159,7 +2222,7 @@ export async function approvePayrollAdjustmentAction(adjustmentId: string) {
 export async function rejectPayrollAdjustmentAction(adjustmentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const adj = await db.payrollAdjustment.findFirst({ where: { id: adjustmentId, companyId: s.tenantId } });
     if (!adj) return { ok: false, error: "Adjustment not found" };
@@ -2194,7 +2257,7 @@ export async function rejectPayrollAdjustmentAction(adjustmentId: string) {
 export async function cancelPayrollAdjustmentAction(adjustmentId: string) {
   try {
     const s = await requireHrSession();
-    if (!hasPermission(s.role, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
+    if (!await hasPermission(s, "MANAGE_PAYROLL")) return { ok: false, error: "Permission denied" };
 
     const adj = await db.payrollAdjustment.findFirst({ where: { id: adjustmentId, companyId: s.tenantId } });
     if (!adj) return { ok: false, error: "Adjustment not found" };
