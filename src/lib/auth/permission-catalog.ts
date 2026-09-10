@@ -30,6 +30,7 @@ export const PERMISSIONS = [
   "attendance.manage",
   "attendance.approve",
   "attendance.export",
+  "biometrics.manage",
   "schedules.self.view",
   "schedules.team.view",
   "schedules.manage",
@@ -103,7 +104,7 @@ export const PERMISSION_GROUPS: ReadonlyArray<{
   },
   {
     key: "attendance",
-    label: "Attendance, schedules & shift policies",
+    label: "Attendance, biometrics, schedules & shift policies",
     permissions: [
       "attendance.self.view",
       "attendance.self.clock",
@@ -112,6 +113,7 @@ export const PERMISSION_GROUPS: ReadonlyArray<{
       "attendance.manage",
       "attendance.approve",
       "attendance.export",
+      "biometrics.manage",
       "schedules.self.view",
       "schedules.team.view",
       "schedules.manage",
