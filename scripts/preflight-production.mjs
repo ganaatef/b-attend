@@ -31,13 +31,22 @@ const paymentProvider = String(process.env.PAYMENT_PROVIDER ?? "manual").toLower
 if (!["sales_assisted", "self_service"].includes(billingMode)) {
   failures.push("BILLING_MODE must be 'sales_assisted' or 'self_service'");
 }
+
 if (billingMode === "self_service") {
-  if (!paymentProvider || paymentProvider === "manual") {
-    failures.push("Self-service billing requires a real PAYMENT_PROVIDER");
+  // Paymob is the only provider for which the current production contract has
+  // explicit credentials and HMAC/webhook verification fields. Refuse to call
+  // another provider "ready" until its adapter and secret contract exist.
+  if (paymentProvider !== "paymob") {
+    failures.push("Self-service production billing currently requires PAYMENT_PROVIDER='paymob'");
   }
   requireEnv("PAYMENT_WEBHOOK_SECRET", (value) => Boolean(value && value.length >= 24));
+  requireEnv("PAYMOB_API_KEY", (value) => Boolean(value && value.length >= 16));
+  requireEnv("PAYMOB_INTEGRATION_ID", (value) => /^\d+$/.test(value ?? ""));
+  requireEnv("PAYMOB_HMAC_SECRET", (value) => Boolean(value && value.length >= 24));
 } else if (paymentProvider === "manual") {
   warnings.push("Sales-assisted billing is using manual payment confirmation; this is valid, but public card checkout is disabled");
+} else if (paymentProvider !== "paymob") {
+  warnings.push(`PAYMENT_PROVIDER='${paymentProvider || "<missing>"}' is not an active production adapter in the current release`);
 }
 
 if (process.env.DEMO_SEED_CONFIRM === "true") {
