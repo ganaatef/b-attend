@@ -88,8 +88,15 @@ export async function POST(request: NextRequest) {
       where: { companyId_employeeId_date: { companyId: context.employee.companyId, employeeId: context.employee.id, date: start } },
       include: { shiftPolicy: { select: { allowsMobileClockIn: true, allowNoScheduleClockIn: true } } },
     }),
+    // A hard-rejected punch is retained as forensic evidence but cannot advance
+    // the employee's valid CLOCK_IN/CLOCK_OUT state machine. Pending reviews do.
     db.punch.findFirst({
-      where: { companyId: context.employee.companyId, employeeId: context.employee.id, timestamp: { gte: start, lt: end } },
+      where: {
+        companyId: context.employee.companyId,
+        employeeId: context.employee.id,
+        status: { not: "REJECTED" },
+        timestamp: { gte: start, lt: end },
+      },
       orderBy: { timestamp: "desc" },
     }),
   ]);
