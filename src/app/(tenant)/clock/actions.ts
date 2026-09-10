@@ -44,7 +44,6 @@ export async function clockAction(prev: any, formData: FormData) {
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
 
-    // Find employee
     const employee = await db.employee.findUnique({
       where: { id: d.employeeId, companyId: s.tenantId },
       include: { branch: true },
@@ -54,8 +53,7 @@ export async function clockAction(prev: any, formData: FormData) {
 
     // Browser/mobile-web punches are permission-scoped. Employees can clock only
     // themselves; delegated users need attendance.manage in the employee's
-    // branch/department scope. Kiosk punches use the independent trusted-device
-    // credential path below instead of inheriting the browser user's privileges.
+    // branch/department scope. Kiosk punches use independent device credentials.
     if (d.source === "MOBILE_WEB") {
       const isSelf = employee.userId === s.sub;
       const decision = await evaluatePermission({
@@ -79,8 +77,6 @@ export async function clockAction(prev: any, formData: FormData) {
       }
     }
 
-    // Kiosk clocks must come from a trusted, registered device bound to the
-    // employee's branch — never from an unauthenticated or unregistered client.
     if (d.source === "KIOSK") {
       if (!employee.branchId) return { ok: false, error: "Employee has no assigned branch" };
       const device = await validateKioskDevice({
@@ -92,30 +88,25 @@ export async function clockAction(prev: any, formData: FormData) {
       if (!device.ok) return { ok: false, error: KIOSK_DEVICE_ERROR };
     }
 
-    // Find today's schedule
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
     const schedule = await db.schedule.findUnique({
       where: { companyId_employeeId_date: { companyId: employee.companyId, employeeId: employee.id, date: today } },
     });
 
-    // Geofence check (skip for kiosk — registered kiosk is branch-bound)
     let distanceMeters = 0;
     let insideGeofence = true;
     if (d.source === "MOBILE_WEB" && employee.branch) {
-      if (employee.branch.latitude && employee.branch.longitude) {
+      if (employee.branch.latitude != null && employee.branch.longitude != null) {
         distanceMeters = haversineMeters(d.latitude, d.longitude, employee.branch.latitude, employee.branch.longitude);
         insideGeofence = isInsideGeofence(distanceMeters, employee.branch.geofenceRadius);
       }
     }
 
-    // Validate action sequence
-    const existingPunches = await db.punch.findMany({
-      where: { employeeId: employee.id, timestamp: { gte: today, lt: tomorrow } },
+    const lastPunch = await db.punch.findFirst({
+      where: { companyId: employee.companyId, employeeId: employee.id, timestamp: { gte: today, lt: tomorrow } },
       orderBy: { timestamp: "desc" },
-      take: 1,
     });
-    const lastPunch = existingPunches[0];
     if (d.type === "CLOCK_IN" && lastPunch?.type === "CLOCK_IN") {
       return { ok: false, error: "Already clocked in. Clock out first." };
     }
@@ -131,41 +122,71 @@ export async function clockAction(prev: any, formData: FormData) {
       deviceTrusted: d.source === "KIOSK" ? true : null,
     });
     const needsApproval = !insideGeofence || trust.decision !== "ACCEPT";
+    const persistedTrust = {
+      policyVersion: trust.policyVersion,
+      score: trust.score,
+      riskLevel: trust.riskLevel,
+      decision: trust.decision,
+      criticalRisk: trust.criticalRisk,
+      signals: trust.signals,
+    };
 
-    // Create punch. Trust evidence is persisted in the existing deviceInfo
-    // envelope for v1 so the scoring rollout is backwards-compatible. A
-    // dedicated normalized assessment model is the next Trust Engine phase.
-    const punch = await db.punch.create({
-      data: {
-        companyId: employee.companyId,
-        employeeId: employee.id,
-        branchId: employee.branchId,
-        scheduleId: schedule?.id,
-        type: d.type,
-        timestamp: new Date(),
-        latitude: d.latitude,
-        longitude: d.longitude,
-        distanceMeters,
-        insideGeofence,
-        source: d.source,
-        status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
-        deviceInfo: JSON.stringify({
-          platform: d.source,
-          accuracyMeters: d.accuracyMeters ?? null,
-          trust: {
-            policyVersion: trust.policyVersion,
-            score: trust.score,
-            riskLevel: trust.riskLevel,
-            decision: trust.decision,
-            criticalRisk: trust.criticalRisk,
-            signals: trust.signals,
+    // Punch + review request are one atomic domain transition. A suspicious
+    // punch can therefore never exist without the manager review item that is
+    // needed to resolve it.
+    const punch = await db.$transaction(async (tx) => {
+      const created = await tx.punch.create({
+        data: {
+          companyId: employee.companyId,
+          employeeId: employee.id,
+          branchId: employee.branchId,
+          scheduleId: schedule?.id,
+          type: d.type,
+          timestamp: new Date(),
+          latitude: d.latitude,
+          longitude: d.longitude,
+          distanceMeters,
+          insideGeofence,
+          source: d.source,
+          status: needsApproval ? "NEEDS_APPROVAL" : "ACCEPTED",
+          deviceInfo: JSON.stringify({
+            platform: d.source,
+            accuracyMeters: d.accuracyMeters ?? null,
+            trust: persistedTrust,
+          }),
+          userAgent: "server-action",
+        },
+      });
+
+      if (needsApproval) {
+        await tx.approvalRequest.create({
+          data: {
+            companyId: employee.companyId,
+            employeeId: employee.id,
+            branchId: employee.branchId,
+            date: today,
+            type: insideGeofence ? "ATTENDANCE_ADJUSTMENT" : "OUTSIDE_GEOFENCE",
+            reason: insideGeofence
+              ? `Attendance Trust Engine review (${trust.riskLevel}, ${trust.score}/100)`
+              : `Outside geofence (${Math.round(distanceMeters)}m) — Trust ${trust.score}/100`,
+            originalData: JSON.stringify({
+              punchType: d.type,
+              latitude: d.latitude,
+              longitude: d.longitude,
+              distanceMeters,
+              insideGeofence,
+            }),
+            requestedData: JSON.stringify({ trust: persistedTrust }),
+            status: "PENDING",
+            requestedById: s.sub,
+            relatedPunchId: created.id,
           },
-        }),
-        userAgent: "server-action",
-      },
+        });
+      }
+
+      return created;
     });
 
-    // Recalculate attendance day
     await recalculateAttendanceDay({ employeeId: employee.id, date: today });
 
     await logTenantEvent({
@@ -184,12 +205,15 @@ export async function clockAction(prev: any, formData: FormData) {
         trustRisk: trust.riskLevel,
         trustDecision: trust.decision,
         trustPolicyVersion: trust.policyVersion,
+        approvalCreated: needsApproval,
       },
     });
 
     revalidatePath("/clock");
     revalidatePath("/today");
     revalidatePath("/live");
+    revalidatePath("/approvals");
+    revalidatePath("/dashboard");
 
     return {
       ok: true,
@@ -205,6 +229,7 @@ export async function clockAction(prev: any, formData: FormData) {
         reasons: trust.reasons,
         policyVersion: trust.policyVersion,
       },
+      approvalRequired: needsApproval,
     };
   } catch (e) {
     console.error("[actions] clockAction failed:", e);
@@ -250,13 +275,9 @@ export async function kioskLookupAction(prev: any, formData: FormData): Promise<
     if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message };
     const d = parsed.data;
 
-    // Verify branch belongs to tenant
     const branch = await db.branch.findFirst({ where: { id: d.branchId, companyId: s.tenantId } });
     if (!branch) return { ok: false, error: "Branch not found" };
 
-    // Verify device trust + employee credentials.
-    // Employee is identified by employeeCode only; the PIN is verified via
-    // bcrypt against pinHash. No plaintext PIN is ever read.
     const auth = await verifyKioskCredentials({
       tenantId: s.tenantId,
       branchId: d.branchId,
@@ -272,15 +293,14 @@ export async function kioskLookupAction(prev: any, formData: FormData): Promise<
       include: { branch: true, defaultShiftPolicy: true },
     });
     if (!employee) return { ok: false, error: "Employee not found. Check code/PIN." };
-    // Get today's schedule
+
     const today = new Date(); today.setHours(0, 0, 0, 0);
     const schedule = await db.schedule.findUnique({
       where: { companyId_employeeId_date: { companyId: s.tenantId, employeeId: employee.id, date: today } },
       include: { shiftPolicy: true },
     });
-    // Last punch
     const lastPunch = await db.punch.findFirst({
-      where: { employeeId: employee.id },
+      where: { companyId: s.tenantId, employeeId: employee.id },
       orderBy: { timestamp: "desc" },
     });
     return {
