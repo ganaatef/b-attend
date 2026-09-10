@@ -1,6 +1,17 @@
 const failures = [];
 const warnings = [];
 
+const REKOGNITION_FACE_LIVENESS_REGIONS = new Set([
+  "us-east-1",
+  "us-west-2",
+  "eu-west-1",
+  "ap-south-1",
+  "ap-northeast-1",
+  "sa-east-1",
+  "ap-southeast-5",
+  "ap-southeast-7",
+]);
+
 function requireEnv(name, predicate = (value) => Boolean(value)) {
   const value = process.env[name];
   if (!predicate(value)) failures.push(`${name} is missing or invalid`);
@@ -108,7 +119,7 @@ if (!["none", "aws_rekognition"].includes(biometricProvider)) {
   failures.push(`ATTENDANCE_BIOMETRIC_PROVIDER='${biometricProvider || "<missing>"}' is not an active production adapter`);
 }
 if (biometricProvider === "aws_rekognition") {
-  requireEnv("AWS_REKOGNITION_REGION", (value) => /^[a-z]{2}(?:-gov)?-[a-z]+-\d$/.test(value ?? ""));
+  requireEnv("AWS_REKOGNITION_REGION", (value) => REKOGNITION_FACE_LIVENESS_REGIONS.has(value ?? ""));
   requireEnv("AWS_REKOGNITION_ACCESS_KEY_ID", (value) => Boolean(value && value.length >= 16));
   requireEnv("AWS_REKOGNITION_SECRET_ACCESS_KEY", (value) => Boolean(value && value.length >= 32));
   requireEnv("AWS_REKOGNITION_COLLECTION_ID", (value) => /^[A-Za-z0-9_.-]{1,255}$/.test(value ?? ""));
